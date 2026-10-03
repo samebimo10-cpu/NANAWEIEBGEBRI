@@ -1,0 +1,14 @@
+{
+  "name": "Lamp & Path: Bible Journey",
+  "short_name": "Lamp & Path",
+  "description": "Explore the lands of the Bible, read scripture (KJV), learn its context, play daily Bible games and grow in prayer.",
+  "start_url": "./index.html#journey",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#17112b",
+  "theme_color": "#1a1330",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Lamp &amp; Path: Bible Journey</title>
+  <meta name="description" content="Explore the lands of the Bible, read scripture (KJV), learn its context, play daily Bible games and grow in prayer.">
+  <meta name="theme-color" content="#1a1330">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#lamp"/></svg>
+      <span>Lamp <em>&amp;</em> Path</span>
+    </div>
+    <nav class="tabs" aria-label="Main">
+      <button class="tab" data-view="journey"><span class="ti">🗺️</span><span>Journey</span></button>
+      <button class="tab" data-view="daily"><span class="ti">☀️</span><span>Daily</span></button>
+      <button class="tab" data-view="study"><span class="ti">📖</span><span>Study</span></button>
+      <button class="tab" data-view="prayer"><span class="ti">🙏</span><span>Prayer</span></button>
+    </nav>
+    <button class="profile" id="profileBtn" aria-label="Profile and progress">
+      <span class="lvl" id="lvl">1</span>
+      <span class="pinfo">
+        <span class="ptitle" id="lvlTitle">Seeker</span>
+        <span class="xpbar"><i id="xpfill"></i></span>
+      </span>
+      <span class="streak">🔥<b id="streak">0</b></span>
+    </button>
+  </header>
+
+  <main>
+    <section id="view-journey" class="view">
+      <canvas id="world" aria-label="Map of Bible lands"></canvas>
+      <div class="vignette"></div>
+
+      <div class="hud hud-tl">
+        <div class="hud-title">The Pilgrim's Journey</div>
+        <div class="hud-row"><span class="lamp-ic">🪔</span> Lamps lit <b id="lampCount">0/23</b></div>
+        <div class="hud-row small">Next: <b id="nextSite">—</b></div>
+        <div class="hud-row small muted" id="tod">☀️ Day</div>
+      </div>
+
+      <div class="hud hud-tr">
+        <canvas id="minimap" title="Tap a lit site to travel there"></canvas>
+        <div class="hud-buttons">
+          <button class="icon-btn" id="guideBtn" title="Guide me to the next site">🧭</button>
+          <button class="icon-btn" id="zoomIn" title="Zoom in">＋</button>
+          <button class="icon-btn" id="zoomOut" title="Zoom out">－</button>
+        </div>
+      </div>
+
+      <button id="prompt" class="prompt hidden"></button>
+
+      <div class="intro" id="intro">
+        <div class="intro-card">
+          <svg class="intro-lamp" viewBox="0 0 64 64" aria-hidden="true"><use href="#lamp"/></svg>
+          <h1>Lamp <em>&amp;</em> Path</h1>
+          <p class="intro-verse">"Thy word is a lamp unto my feet, and a light unto my path."<br><span>Psalm 119:105</span></p>
+          <ul class="how">
+            <li><b>Explore</b> the lands of the Bible, from Eden to Patmos.</li>
+            <li><b>Read</b> the scripture at each glowing site, with its setting and background.</li>
+            <li><b>Answer</b> the quiz to light a lamp and open the road ahead.</li>
+            <li><b>Return daily</b> for the verse of the day, games and guided prayer.</li>
+          </ul>
+          <p class="controls">Move with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys, or tap and hold the map. Press <kbd>E</kbd> or tap a site to read.</p>
+          <div id="loading" class="loading"><div class="load-track"><i id="loadBar"></i></div><small>Preparing the land…</small></div>
+          <button class="btn primary big hidden" id="introStart">Begin the pilgrimage</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-daily" class="view scroll"><div class="page" id="dailyPage"></div></section>
+    <section id="view-study" class="view scroll"><div class="page" id="studyPage"></div></section>
+    <section id="view-prayer" class="view scroll"><div class="page" id="prayerPage"></div></section>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button class="close" data-close aria-label="Close">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="lampGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#c8862e"/></linearGradient>
+      <radialGradient id="lampFlame" cx=".5" cy=".6" r=".6"><stop offset="0" stop-color="#fff8d0"/><stop offset=".5" stop-color="#ffb43a"/><stop offset="1" stop-color="#ff6a1a" stop-opacity="0"/></radialGradient>
+      <symbol id="lamp" viewBox="0 0 64 64">
+        <circle cx="44" cy="20" r="16" fill="url(#lampFlame)"/>
+        <path d="M44 6c4 6 6 9 6 13a6 6 0 0 1-12 0c0-4 2-7 6-13z" fill="#ffcf5a"/>
+        <path d="M44 12c2 4 3 6 3 8a3 3 0 0 1-6 0c0-2 1-4 3-8z" fill="#fff6d0"/>
+        <path d="M6 36c0-4 8-7 22-7s22 2 24 6l-6 4c-2 7-10 11-20 11S10 46 8 41C6 40 6 38 6 36z" fill="url(#lampGold)"/>
+        <path d="M46 35l8-6c1 0 2 1 1 2l-5 6z" fill="#e3a447"/>
+        <ellipse cx="28" cy="33" rx="12" ry="3" fill="#8a5a22" opacity=".6"/>
+        <rect x="20" y="50" width="16" height="4" rx="2" fill="#b0702a"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <script src="js/data/journey.js"></script>
+  <script src="js/data/library.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
