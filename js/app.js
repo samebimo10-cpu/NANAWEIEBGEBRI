@@ -7,7 +7,7 @@
   const J = window.JOURNEY;
 
   /* ================= Navigation ================= */
-  const VIEWS = ['journey', 'daily', 'study', 'prayer'];
+  const VIEWS = ['journey', 'bible', 'daily', 'study', 'prayer'];
   let current = null;
 
   function show(view) {
@@ -19,6 +19,7 @@
     if (view === 'daily') renderDaily();
     if (view === 'study') renderStudy();
     if (view === 'prayer') renderPrayer();
+    if (view === 'bible') window.Reader.render(); else window.Reader.stop();
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
     Speech.stop();
   }
@@ -115,12 +116,14 @@
         </div>
         <div id="ctxBox" class="collapse">${contextHTML(loc)}</div>
         <div class="reflect"><div class="reflect-label">Reflect</div><p>${esc(loc.reflect)}</p></div>
-        <div class="row end">
+        <div class="row end gap wrap">
+          <button class="btn ghost" id="fullCh">📜 Read the whole chapter</button>
           <button class="btn primary" id="quizBtn">Take the quiz ✦</button>
         </div>
       </div>`, { cls: 'parchment' });
     bindListen($('#listenBtn'), passageText(loc.passages));
     $('#ctxBtn').addEventListener('click', () => $('#ctxBox').classList.toggle('open'));
+    $('#fullCh').addEventListener('click', () => { closeModal(); window.Reader.openRef(loc.passages[0].ref.replace(/\s*–.*$/, '')); });
     $('#quizBtn').addEventListener('click', () => {
       Speech.stop();
       state.readLocs = state.readLocs || {};
@@ -282,6 +285,7 @@
         <div class="verse-ref">${esc(d.verse.ref)} <span class="kjv">KJV</span></div>
         <div class="row gap center">
           <button class="btn ghost" id="vListen">🔊 Listen</button>
+          <button class="btn ghost" id="vContext">📜 Read in context</button>
           <button class="btn primary" id="vRead" ${t.verse ? 'disabled' : ''}>${t.verse ? '✓ Read today' : 'Amen, I have read it (+5 XP)'}</button>
         </div>
       </section>
@@ -309,6 +313,7 @@
         <button class="btn ghost" id="goPrayer">Guided prayer →</button>
       </section>`;
     bindListen($('#vListen'), d.verse.ref + '. ' + d.verse.text);
+    $('#vContext').addEventListener('click', () => window.Reader.openRef(d.verse.ref));
     $('#vRead').addEventListener('click', () => {
       if (window.Core.markDaily('verse')) window.Core.addXP(5, 'Verse of the day');
       Sound.play('correct');
@@ -587,6 +592,7 @@
         <textarea id="notes" class="notes" placeholder="What is God showing you in this passage?">${esc(state.notes[loc.id] || '')}</textarea>
         <div class="muted small" id="saved">Notes are saved on this device.</div>
         <div class="row end gap">
+          <button class="btn ghost" id="fullCh">📜 Read the whole chapter</button>
           ${unlocked ? '<button class="btn primary" id="goMap">🗺️ Visit on the map</button>' : '<span class="muted small">🔒 Unlocks as you travel the journey</span>'}
         </div>
       </div>`, { cls: 'parchment' });
@@ -596,6 +602,7 @@
       clearTimeout(tmr);
       tmr = setTimeout(() => { state.notes[loc.id] = e.target.value; save(); $('#saved').textContent = '✓ Saved'; }, 400);
     });
+    $('#fullCh').addEventListener('click', () => { closeModal(); window.Reader.openRef(loc.passages[0].ref.replace(/\s*–.*$/, '')); });
     if (unlocked) $('#goMap').addEventListener('click', () => { closeModal(); show('journey'); window.Game.travelTo(loc.id); });
   }
 
@@ -615,15 +622,41 @@
   let prayerSecs = 60, prayerTimer = null;
   function stopPrayerTimer() { if (prayerTimer) { clearInterval(prayerTimer); prayerTimer = null; } }
 
+  let prayerTab = 'pray';
+  const PRAYER_TABS = [['pray', '🙏 Pray'], ['people', '🤲 Who I pray for'], ['reminders', '🔔 Reminders'], ['journal', '📖 Journal']];
   function renderPrayer() {
     const t = window.Core.today();
-    $('#prayerPage').innerHTML = `
+    const head = `
       <section class="hero slim">
         <div><div class="eyebrow">Prayer</div><h1>Pray without ceasing</h1>
         <p class="muted">"Lord, teach us to pray." (Luke 11:1)</p></div>
         <div class="hero-stats"><div class="flame-big">🙏<span>${state.prayers}</span></div><div class="muted small">sessions prayed</div></div>
       </section>
-
+      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'reminders' && state.reminders.filter(r => r.enabled).length ? ` <span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}</button>`).join('')}</div>`;
+    const bindTabs = () => $$('.ptabs .seg-btn').forEach(b => b.addEventListener('click', () => { prayerTab = b.dataset.pt; Sound.play('tap'); renderPrayer(); }));
+    if (prayerTab === 'people') { $('#prayerPage').innerHTML = head + '<div id="peopleHost"></div>'; bindTabs(); window.PrayList.renderPeople($('#peopleHost')); return; }
+    if (prayerTab === 'reminders') { $('#prayerPage').innerHTML = head + '<div id="remindersHost"></div>'; bindTabs(); window.PrayList.renderReminders($('#remindersHost')); return; }
+    if (prayerTab === 'journal') {
+      $('#prayerPage').innerHTML = head + `
+        <div class="journal-add">
+          <textarea id="jText" placeholder="Write a prayer request or a note of thanks…" maxlength="600"></textarea>
+          <button class="btn primary" id="jAdd">Add to journal</button>
+        </div>
+        <div class="journal" id="journal"></div>`;
+      bindTabs();
+      $('#jAdd').addEventListener('click', () => {
+        const v = $('#jText').value.trim();
+        if (!v) return;
+        state.journal.unshift({ id: Date.now(), text: v, date: new Date().toISOString(), answered: false });
+        save(); window.Core.checkBadges();
+        Sound.play('tap');
+        $('#jText').value = '';
+        renderJournal();
+      });
+      renderJournal();
+      return;
+    }
+    $('#prayerPage').innerHTML = head + `
       <section class="acts-card">
         <div class="acts-letters">${window.ACTS_STEPS.map(s => `<div class="acts-l" style="--c:${s.color}"><b>${s.key}</b><small>${s.name}</small></div>`).join('')}</div>
         <h2>Guided prayer</h2>
@@ -639,28 +672,19 @@
         <details class="prayer-item">
           <summary><span>${esc(p.title)}</span><span class="muted small">${esc(p.ref)}</span></summary>
           <p class="scripture">${verseHTML(p.text)}</p>
-          <button class="btn ghost small" data-listen="${i}">🔊 Pray along</button>
+          <div class="row gap"><button class="btn ghost small" data-listen="${i}">🔊 Pray along</button><button class="btn ghost small" data-ctx="${esc(p.ref)}">📜 In context</button></div>
         </details>`).join('')}</div>
 
-      <h2 class="section-title">Prayer journal</h2>
-      <div class="journal-add">
-        <textarea id="jText" placeholder="Write a prayer request or a note of thanks…" maxlength="600"></textarea>
-        <button class="btn primary" id="jAdd">Add to journal</button>
-      </div>
-      <div class="journal" id="journal"></div>`;
-    $$('.seg.small .seg-btn').forEach(b => b.addEventListener('click', () => { prayerSecs = +b.dataset.s; renderPrayer(); }));
+      <section class="cta-card alt">
+        <div><div class="eyebrow">Intercession</div><h3>${state.people.length ? `${state.people.length} ${state.people.length === 1 ? 'person' : 'people'} on your prayer list` : 'Start a prayer list'}</h3></div>
+        <button class="btn ghost" id="goPeople">Who I pray for →</button>
+      </section>`;
+    bindTabs();
+    $$('.acts-card .seg-btn').forEach(b => b.addEventListener('click', () => { prayerSecs = +b.dataset.s; renderPrayer(); }));
     $('#startPrayer').addEventListener('click', () => guidedPrayer(0));
     $$('[data-listen]').forEach(b => { const p = window.SCRIPTURE_PRAYERS[+b.dataset.listen]; bindListen(b, p.text); });
-    $('#jAdd').addEventListener('click', () => {
-      const v = $('#jText').value.trim();
-      if (!v) return;
-      state.journal.unshift({ id: Date.now(), text: v, date: new Date().toISOString(), answered: false });
-      save(); window.Core.checkBadges();
-      Sound.play('tap');
-      $('#jText').value = '';
-      renderJournal();
-    });
-    renderJournal();
+    $$('[data-ctx]').forEach(b => b.addEventListener('click', () => window.Reader.openRef(b.dataset.ctx)));
+    $('#goPeople').addEventListener('click', () => { prayerTab = 'people'; renderPrayer(); });
   }
 
   function renderJournal() {
@@ -771,17 +795,42 @@
         <h3 class="section-title">Settings</h3>
         <div class="row gap wrap">
           <button class="btn ghost" id="sndBtn">${state.sound ? '🔔 Sound on' : '🔕 Sound off'}</button>
+          <button class="btn ghost" id="exportBtn">💾 Back up my data</button>
+          <label class="btn ghost" id="importLbl">📂 Restore backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
           <button class="btn ghost danger" id="resetBtn">Reset all progress</button>
         </div>
         <p class="muted small credit">All scripture is from the King James Version, which is in the public domain. Context notes and quizzes are original to this app.</p>
       </div>`);
     $('#sndBtn').addEventListener('click', e => { state.sound = !state.sound; save(); e.target.textContent = state.sound ? '🔔 Sound on' : '🔕 Sound off'; Sound.play('tap'); });
+    $('#exportBtn').addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' }));
+      a.download = `lamp-and-path-backup-${window.Core.dateKey()}.json`;
+      document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 500);
+      toast('💾 Backup downloaded. Keep it somewhere safe.');
+    });
+    $('#importFile').addEventListener('change', async e => {
+      const f = e.target.files[0]; if (!f) return;
+      try {
+        const data = JSON.parse(await f.text());
+        if (typeof data !== 'object' || !('xp' in data)) throw new Error('bad file');
+        if (!confirm('Replace everything on this device with this backup?')) return;
+        localStorage.setItem('lamp-and-path-v1', JSON.stringify(data));
+        location.reload();
+      } catch (err) { toast('That file is not a Lamp & Path backup'); }
+    });
     $('#resetBtn').addEventListener('click', () => {
       if (!confirm('This will erase your journey, streaks, notes and journal on this device. Continue?')) return;
       localStorage.removeItem('lamp-and-path-v1');
       location.reload();
     });
   }
+
+  window.UI = {
+    openModal, closeModal, show,
+    onModalClose: fn => { modalOnClose = fn; },
+    startGuidedPrayer: () => guidedPrayer(0)
+  };
 
   /* ================= Boot ================= */
   function boot() {
@@ -828,6 +877,7 @@
     });
 
     show(location.hash.slice(1) || 'journey');
+    window.PrayList.startScheduler();
     window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

@@ -15,7 +15,13 @@
     badges: [],
     player: null,      // { x, y }
     sound: true,
-    introSeen: false
+    introSeen: false,
+    highlights: {},    // 'book.chapter.verse' -> { color, text, at }
+    verseNotes: {},    // 'book.chapter.verse' -> { text, at }
+    bibleLast: { b: 0, c: 1 },
+    bibleFont: 1.2,
+    people: [],        // prayer list: { id, name, category, reasons[], scriptures[], notes, prayedCount, lastPrayed }
+    reminders: []      // { id, time 'HH:MM', days [0-6], label, personId, enabled, lastFired }
   };
 
   function load() {
@@ -140,7 +146,10 @@
     { id: 'prayer5', icon: '🙏', name: 'Prayer Warrior', desc: 'Finish 5 guided prayer sessions', test: s => s.prayers >= 5 },
     { id: 'quiz10', icon: '🎯', name: 'Quiz Master', desc: 'Score 10 perfect quizzes', test: s => s.perfectQuizzes >= 10 },
     { id: 'memory', icon: '🧩', name: 'Hidden in My Heart', desc: 'Solve 5 verse scrambles', test: s => s.scrambles >= 5 },
-    { id: 'journal', icon: '📖', name: 'Remembrancer', desc: 'Write 5 prayer journal entries', test: s => s.journal.length >= 5 }
+    { id: 'journal', icon: '📖', name: 'Remembrancer', desc: 'Write 5 prayer journal entries', test: s => s.journal.length >= 5 },
+    { id: 'marker', icon: '🖍️', name: 'Treasure Marker', desc: 'Highlight 10 verses in the Bible', test: s => Object.keys(s.highlights || {}).length >= 10 },
+    { id: 'intercessor', icon: '🤲', name: 'Intercessor', desc: 'Add 5 people to your prayer list', test: s => (s.people || []).length >= 5 },
+    { id: 'answered', icon: '🙌', name: 'He Answers', desc: 'Mark a prayer request as answered', test: s => (s.people || []).some(p => p.reasons.some(r => r.answered)) || s.journal.some(j => j.answered) }
   ];
 
   function checkBadges() {
@@ -159,6 +168,7 @@
   function toast(msg, kind = '') {
     const host = document.getElementById('toasts');
     if (!host) return;
+    while (host.children.length >= 3) host.firstChild.remove();
     const el = document.createElement('div');
     el.className = 'toast ' + kind;
     el.textContent = msg;

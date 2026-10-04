@@ -6,6 +6,16 @@
 
 ## Features
 
+### 📜 The full King James Bible
+- **All 66 books, 1,189 chapters, 31,102 verses**, readable offline at any time. Books load as you open them.
+- **Highlight** verses in five colours. Tap verses to select them, then pick a colour.
+- **Verse notes**: attach your own notes to any verse.
+- **"Pray this"**: send any verse to someone on your prayer list.
+- **Search the whole Bible** for words or an `"exact phrase"`, or type a reference such as `Phil 4:6-7`, `Ps 23` or `1 John 1:9` to jump straight to it.
+- **Listen**: the chapter is read aloud verse by verse, with the current verse lit up.
+- Copy verses, adjust the text size, and the app remembers where you were reading.
+- A **My highlights & notes** list, filterable by colour.
+
 ### 🗺️ The Pilgrim's Journey (exploration game)
 - A hand-drawn map of the Bible lands: the Mediterranean, Egypt and the Nile, Sinai, Canaan, Galilee, Mesopotamia, Greece and the Aegean islands.
 - Everything is drawn in code: shaded terrain, animated water, swaying palms, cedars and olive groves, drifting clouds and their shadows, fireflies, and a full **day and night cycle** with lit lamps and lantern light.
@@ -28,6 +38,14 @@
 - **All 66 books of the Bible**, each with its section and a one-line summary, filterable by section (Law, History, Poetry, Prophets, Gospels, Epistles and so on).
 
 ### 🙏 Prayer
+- **Who I'm praying for**: a prayer list sorted into groups (Family, Friends, Church, Work & School, Sick & Healing, Salvation, Leaders & Nation, Missions, Myself). For each person you can keep:
+  - **prayer requests** (the reasons you are praying), which you can mark as **answered 🙌**,
+  - the **scriptures you are praying over them**, looked up from the KJV by reference,
+  - notes, and how many times and how recently you have prayed for them.
+  - **Pray now** brings their requests and scriptures together into one focused prayer. "Today, pray for…" suggests the people you have prayed for least recently.
+- **Prayer reminders**: set the times and days, and optionally link a person.
+  - **Notifications** fire while the app is open (including in a background tab), and missed reminders catch up when you return within the hour.
+  - **📅 Add to calendar** downloads a repeating calendar event with an alert, so your phone reminds you **even when the app is closed**. A browser web app cannot schedule notifications by itself once it is closed.
 - **Guided A.C.T.S. prayer** (Adoration, Confession, Thanksgiving, Supplication), with a scripture for each step, a timer ring and a breathing cue.
 - **Prayers from Scripture**: the Lord's Prayer, Psalm 23, the Priestly Blessing and more, with "pray along" read-aloud.
 - A **prayer journal** where you can mark prayers as answered.
@@ -37,7 +55,7 @@
 
 ## Scripture & copyright
 
-All scripture text in the app is from the **King James Version (KJV)**, which is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes and prayer guides were written for this app.
+All scripture text in the app is from the **King James Version (KJV)**. The full text in `js/kjv/` was built from two public KJV datasets ([thiagobodruk/bible](https://github.com/thiagobodruk/bible) and [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)), cross-checked word by word against each other. 41 verses where translators' margin notes had leaked into the verse text were cleaned, and the spacing before punctuation was fixed. All scripture is, which is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes and prayer guides were written for this app.
 
 ## Running it
 
@@ -52,6 +70,9 @@ python3 -m http.server 8000
 You can also open `index.html` directly in a browser. Serving it over HTTP adds offline support and lets you **install it to a phone home screen** (it is a PWA).
 
 To publish it, upload the folder to any static host, such as GitHub Pages, Netlify or Vercel.
+
+### Your data
+Everything (progress, highlights, notes, prayer list, reminders) is stored on your device. Use **Profile → 💾 Back up my data** to save a backup file, and **📂 Restore backup** to move it to another phone or browser.
 
 ### Controls (Journey)
 | Action | Keyboard | Touch / mouse |
@@ -69,6 +90,10 @@ index.html            App shell
 css/styles.css        All styling (desktop + mobile)
 js/data/journey.js    23 sites: KJV passages, context, reflections, quizzes, map positions
 js/data/library.js    Daily verses, quiz bank, 66 books, scripture prayers, ACTS guide
+js/kjv/01.js … 66.js  The full KJV text, one file per book
+js/bible.js           Bible loading, reference parsing ("Phil 4:6-7"), lookup and search
+js/reader.js          Bible reader UI: highlights, notes, search, listen
+js/praylist.js        "Who I'm praying for", prayer reminders, calendar export, reminder scheduler
 js/core.js            Saving, XP/levels, streaks, badges, sound, read-aloud, toasts
 js/game.js            Map rendering engine (terrain, sprites, lighting, particles, input)
 js/app.js             UI: reader, quizzes, daily games, study, prayer, profile
