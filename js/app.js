@@ -705,8 +705,8 @@
       if (j.answered) { Sound.play('badge'); toast('Praise God for answered prayer! 🙌'); }
       renderJournal();
     }));
-    $$('[data-del]').forEach(b => b.addEventListener('click', () => {
-      if (!confirm('Delete this journal entry?')) return;
+    $$('[data-del]').forEach(b => b.addEventListener('click', async () => {
+      if (!(await window.UI.ask('Delete this journal entry?', 'Delete'))) return;
       state.journal = state.journal.filter(x => x.id !== +b.dataset.del); save(); renderJournal();
     }));
   }
@@ -814,20 +814,38 @@
       try {
         const data = JSON.parse(await f.text());
         if (typeof data !== 'object' || !('xp' in data)) throw new Error('bad file');
-        if (!confirm('Replace everything on this device with this backup?')) return;
+        if (!(await window.UI.ask('Replace everything on this device with this backup?', 'Replace'))) return;
         localStorage.setItem('lamp-and-path-v1', JSON.stringify(data));
         location.reload();
       } catch (err) { toast('That file is not a Lamp & Path backup'); }
     });
-    $('#resetBtn').addEventListener('click', () => {
-      if (!confirm('This will erase your journey, streaks, notes and journal on this device. Continue?')) return;
+    $('#resetBtn').addEventListener('click', async () => {
+      if (!(await window.UI.ask('This erases your journey, streaks, highlights, notes, prayer list and journal on this device.', 'Erase everything'))) return;
       localStorage.removeItem('lamp-and-path-v1');
       location.reload();
     });
   }
 
+  /* In-page confirmation (browser confirm() dialogs are blocked in some viewers). */
+  function ask(message, okLabel = 'OK') {
+    return new Promise(resolve => {
+      const box = document.createElement('div');
+      box.className = 'ask-overlay';
+      box.innerHTML = `<div class="ask-card" role="alertdialog" aria-modal="true">
+        <p>${esc(message)}</p>
+        <div class="row end gap"><button class="btn ghost" data-a="0">Cancel</button><button class="btn primary danger-fill" data-a="1">${esc(okLabel)}</button></div>
+      </div>`;
+      document.body.appendChild(box);
+      const done = v => { box.remove(); window.removeEventListener('keydown', key, true); resolve(v); };
+      const key = e => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } };
+      window.addEventListener('keydown', key, true);
+      box.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) done(b.dataset.a === '1'); else if (e.target === box) done(false); });
+      box.querySelector('[data-a="1"]').focus();
+    });
+  }
+
   window.UI = {
-    openModal, closeModal, show,
+    openModal, closeModal, show, ask,
     onModalClose: fn => { modalOnClose = fn; },
     startGuidedPrayer: () => guidedPrayer(0)
   };

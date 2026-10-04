@@ -191,8 +191,8 @@
     $('#pdPray').addEventListener('click', () => prayFor(p.id));
     $('#pdRemind').addEventListener('click', () => editReminder(null, p.id));
     $('#pdEdit').addEventListener('click', () => editPerson(p.id));
-    $('#pdDel').addEventListener('click', () => {
-      if (!confirm(`Remove ${p.name} from your prayer list?`)) return;
+    $('#pdDel').addEventListener('click', async () => {
+      if (!(await UI().ask(`Remove ${p.name} from your prayer list?`, 'Remove'))) return;
       state.people = state.people.filter(x => x.id !== p.id);
       state.reminders.forEach(r => { if (r.personId === p.id) r.personId = null; });
       save(); UI().closeModal(); refreshList();
@@ -355,7 +355,7 @@
     }));
     $$('[data-tog]').forEach(c => c.addEventListener('change', () => { const r = state.reminders.find(x => x.id === c.dataset.tog); r.enabled = c.checked; save(); renderReminders(host); }));
     $$('[data-redit]').forEach(b => b.addEventListener('click', () => editReminder(b.dataset.redit)));
-    $$('[data-rmdel]').forEach(b => b.addEventListener('click', () => { if (!confirm('Delete this reminder?')) return; state.reminders = state.reminders.filter(x => x.id !== b.dataset.rmdel); save(); renderReminders(host); }));
+    $$('[data-rmdel]').forEach(b => b.addEventListener('click', async () => { if (!(await UI().ask('Delete this reminder?', 'Delete'))) return; state.reminders = state.reminders.filter(x => x.id !== b.dataset.rmdel); save(); renderReminders(host); }));
     $$('[data-ics]').forEach(b => b.addEventListener('click', () => downloadICS(state.reminders.find(x => x.id === b.dataset.ics))));
     $('#testRem').addEventListener('click', () => fire({ id: 'test', label: 'Test reminder', time: '00:00', days: [], personId: state.people[0] ? state.people[0].id : null }, true));
   }

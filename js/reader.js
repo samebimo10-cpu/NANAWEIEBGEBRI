@@ -192,7 +192,10 @@
   async function copySel() {
     const txt = `"${selText()}" (${selRef()}, KJV)`;
     try { await navigator.clipboard.writeText(txt); toast('📋 Copied'); }
-    catch (e) { prompt('Copy this verse:', txt); }
+    catch (e) {
+      UI().openModal(`<div class="note-modal"><div class="eyebrow">Copy</div><h3>Select the text and copy it</h3><textarea class="notes" id="copyTxt" readonly>${esc(txt)}</textarea></div>`);
+      const t = $('#copyTxt'); t.focus(); t.select();
+    }
     clearSel();
   }
 
