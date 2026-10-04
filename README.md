@@ -71,6 +71,11 @@ You can also open `index.html` directly in a browser. Serving it over HTTP adds 
 
 To publish it, upload the folder to any static host, such as GitHub Pages, Netlify or Vercel.
 
+### 100% offline
+Open the app once while connected, from its own web address (for example GitHub Pages). It then saves everything on the device in the background: the app, its fonts, and **all 66 books of the Bible** (about 5 MB). A message says when it is ready, and **Profile → Offline** shows the status. After that, everything works with no internet: the game, the Bible, search, highlights, daily games, prayer list and reminders. Add it to your home screen to open it like a normal app.
+
+Fonts are bundled in `fonts/` (Cinzel, EB Garamond, Inter; SIL Open Font License), so nothing loads from other websites.
+
 ### Your data
 Everything (progress, highlights, notes, prayer list, reminders) is stored on your device. Use **Profile → 💾 Back up my data** to save a backup file, and **📂 Restore backup** to move it to another phone or browser.
 
@@ -97,7 +102,8 @@ js/praylist.js        "Who I'm praying for", prayer reminders, calendar export, 
 js/core.js            Saving, XP/levels, streaks, badges, sound, read-aloud, toasts
 js/game.js            Map rendering engine (terrain, sprites, lighting, particles, input)
 js/app.js             UI: reader, quizzes, daily games, study, prayer, profile
-sw.js                 Offline cache (service worker)
+sw.js                 Offline support: saves the app, fonts and the whole Bible on the device
+fonts/                Bundled fonts (no internet needed)
 manifest.webmanifest  PWA manifest
 ```
 

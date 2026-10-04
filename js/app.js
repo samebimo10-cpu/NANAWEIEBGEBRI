@@ -792,6 +792,8 @@
         </div>
         <h3 class="section-title">Badges</h3>
         <div class="badges">${window.Core.BADGES.map(b => `<div class="badge ${state.badges.includes(b.id) ? 'earned' : ''}" title="${esc(b.desc)}"><div class="b-icon">${b.icon}</div><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>`).join('')}</div>
+        <h3 class="section-title">Offline</h3>
+        <p class="offline-row" id="offlineRow">Checking…</p>
         <h3 class="section-title">Settings</h3>
         <div class="row gap wrap">
           <button class="btn ghost" id="sndBtn">${state.sound ? '🔔 Sound on' : '🔕 Sound off'}</button>
@@ -801,6 +803,7 @@
         </div>
         <p class="muted small credit">All scripture is from the King James Version, which is in the public domain. Context notes and quizzes are original to this app.</p>
       </div>`);
+    updateOfflineRow();
     $('#sndBtn').addEventListener('click', e => { state.sound = !state.sound; save(); e.target.textContent = state.sound ? '🔔 Sound on' : '🔕 Sound off'; Sound.play('tap'); });
     $('#exportBtn').addEventListener('click', () => {
       const a = document.createElement('a');
@@ -824,6 +827,30 @@
       localStorage.removeItem('lamp-and-path-v1');
       location.reload();
     });
+  }
+
+  /* Offline status, shown in the profile. */
+  async function offlineStatus() {
+    if (!('serviceWorker' in navigator) || !('caches' in window) || !location.protocol.startsWith('http')) {
+      return { ok: false, text: 'Offline saving is not available here. Open the app from its own web address (for example GitHub Pages) and add it to your home screen.' };
+    }
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) return { ok: false, text: 'Offline saving is not available in this viewer. Open the app from its own web address and add it to your home screen.' };
+      const keys = await caches.keys();
+      const bible = keys.includes('lamp-bible-v1') ? (await (await caches.open('lamp-bible-v1')).keys()).length : 0;
+      const shell = keys.some(k => k.startsWith('lamp-shell-'));
+      if (shell && bible >= 66) return { ok: true, text: '✓ Ready offline. The app, its fonts and all 66 books of the Bible are saved on this device.' };
+      return { ok: false, text: `Saving for offline use… ${bible}/66 Bible books so far. Keep the app open while connected.` };
+    } catch (e) { return { ok: false, text: 'Could not check offline status.' }; }
+  }
+  async function updateOfflineRow(text) {
+    const row = document.getElementById('offlineRow');
+    if (!row) return;
+    if (text) { row.textContent = text; row.className = 'offline-row'; return; }
+    const st = await offlineStatus();
+    row.textContent = st.text;
+    row.className = 'offline-row ' + (st.ok ? 'ok' : '');
   }
 
   /* In-page confirmation (browser confirm() dialogs are blocked in some viewers). */
@@ -899,7 +926,22 @@
     window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.addEventListener('message', e => {
+        const m = e.data || {};
+        if (m.type === 'offline-progress') updateOfflineRow(`Saving the Bible for offline use… ${m.done}/${m.total} books`);
+        if (m.type === 'offline-ready') {
+          updateOfflineRow();
+          if (m.bible === m.total && !state.offlineReady) {
+            state.offlineReady = true; save();
+            toast('✓ Ready to use offline: the app and all 66 books of the Bible are saved on this device', 'level');
+          }
+        }
+      });
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        // fill in anything missing (e.g. after an interrupted first download)
+        navigator.serviceWorker.ready.then(r => r.active && r.active.postMessage('offline-check'));
+        return reg;
+      }).catch(() => {});
     }
   }
 

@@ -1,32 +1,93 @@
-/* Offline support: cache the app shell so the app works without a connection. */
-const CACHE = 'lamp-and-path-v2';
-const ASSETS = [
-  './', './index.html', './css/styles.css', './manifest.webmanifest', './icons/icon.svg',
+/*
+ * Offline support. On install, everything the app needs is saved on the device:
+ * the app itself, its fonts, and all 66 books of the Bible (about 5 MB).
+ * After that the app opens and runs with no connection at all.
+ */
+const VERSION = 'v3';
+const SHELL = 'lamp-shell-' + VERSION;
+const BIBLE = 'lamp-bible-v1';   // the KJV text never changes, so it keeps its own long-lived cache
+
+const SHELL_FILES = [
+  './', './index.html', './css/styles.css', './manifest.webmanifest', './icons/icon.svg', './fonts/fonts.css',
+  './fonts/Cinzel-latin-63551c.woff2', './fonts/Cinzel-latin-ext-53a6c3.woff2',
+  './fonts/EBGaramond-latin-143e88.woff2', './fonts/EBGaramond-latin-75a73b.woff2',
+  './fonts/EBGaramond-latin-ext-1a53db.woff2', './fonts/EBGaramond-latin-ext-9cc06b.woff2',
+  './fonts/Inter-latin-567244.woff2', './fonts/Inter-latin-ext-395290.woff2',
   './js/data/journey.js', './js/data/library.js', './js/core.js', './js/bible.js', './js/game.js',
   './js/reader.js', './js/praylist.js', './js/app.js'
 ];
-// Bible books (js/kjv/NN.js) are cached the first time each one is opened.
+const BIBLE_FILES = Array.from({ length: 66 }, (_, i) => `./js/kjv/${String(i + 1).padStart(2, '0')}.js`);
+
+async function tell(msg) {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  clients.forEach(c => c.postMessage(msg));
+}
+
+async function cacheBible() {
+  const cache = await caches.open(BIBLE);
+  let done = 0;
+  for (const url of BIBLE_FILES) {
+    if (!(await cache.match(url))) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { const res = await fetch(url, { cache: 'reload' }); if (res.ok) { await cache.put(url, res); break; } } catch (e) { /* retry */ }
+      }
+    }
+    done++;
+    if (done % 6 === 0 || done === BIBLE_FILES.length) tell({ type: 'offline-progress', done, total: BIBLE_FILES.length });
+  }
+  const have = (await Promise.all(BIBLE_FILES.map(u => cache.match(u)))).filter(Boolean).length;
+  tell({ type: 'offline-ready', bible: have, total: BIBLE_FILES.length });
+  return have;
+}
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const shell = await caches.open(SHELL);
+    await shell.addAll(SHELL_FILES.map(u => new Request(u, { cache: 'reload' })));
+    await cacheBible();
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== SHELL && k !== BIBLE).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+// The page can ask for a status check or to finish downloading anything missing.
+self.addEventListener('message', e => {
+  if (e.data === 'offline-check') e.waitUntil(cacheBible());
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  // Network first for our own files (so updates arrive), falling back to cache when offline.
-  e.respondWith(
-    fetch(e.request).then(res => {
-      if (res.ok && (new URL(e.request.url).origin === location.origin || e.request.url.includes('fonts.g'))) {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-      }
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== location.origin) return;
+
+  // Bible text: from the device first; it never changes.
+  if (url.pathname.includes('/js/kjv/')) {
+    e.respondWith(caches.open(BIBLE).then(async c => {
+      const hit = await c.match(req, { ignoreSearch: true });
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok) c.put(req, res.clone());
       return res;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
-  );
+    }));
+    return;
+  }
+
+  // App files: open instantly from the device, then refresh the saved copy in the background.
+  e.respondWith(caches.open(SHELL).then(async c => {
+    const hit = await c.match(req, { ignoreSearch: true }) || (req.mode === 'navigate' ? await c.match('./index.html') : null);
+    const refresh = fetch(req).then(res => { if (res.ok) c.put(req, res.clone()); return res; }).catch(() => null);
+    if (hit) { e.waitUntil(refresh); return hit; }
+    const res = await refresh;
+    return res || c.match('./index.html');
+  }));
 });
 
 // Tapping a prayer reminder notification opens (or focuses) the app on the Prayer page.
