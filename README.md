@@ -78,6 +78,9 @@ You can also open `index.html` directly in a browser. Serving it over HTTP adds 
 
 To publish it, upload the folder to any static host, such as GitHub Pages, Netlify or Vercel.
 
+### One downloadable HTML file
+`python3 tools/build_single_html.py` builds `dist/lamp-and-path.html`: the whole app in **one file** (about 6 MB), with the styles, fonts, code and the complete KJV inside. Copy it to a phone or computer and open it in a browser. It needs no internet and no server. Your progress is saved in that browser. Use Profile → Back up to move it between devices.
+
 ### 100% offline
 Open the app once while connected, from its own web address (for example GitHub Pages). It then saves everything on the device in the background: the app, its fonts, and **all 66 books of the Bible** (about 5 MB). A message says when it is ready, and **Profile → Offline** shows the status. After that, everything works with no internet: the game, the Bible, search, highlights, daily games, prayer list and reminders. Add it to your home screen to open it like a normal app.
 
