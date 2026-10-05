@@ -230,7 +230,7 @@
     openModal(`
       <div class="result">
         <div class="big-emoji">👑</div>
-        <h2>Pilgrimage complete</h2>
+        <h2>Pilgrimage complete${window.Personal.name() ? ', ' + esc(window.Personal.name()) : ''}</h2>
         <p class="lead">You have walked from Eden to Patmos, from "In the beginning" to "all things new."</p>
         <p class="scripture center">"I have fought a good fight, I have finished my course, I have kept the faith."<br><span class="muted">2 Timothy 4:7</span></p>
         <p>Go back to any site to earn three stars, and keep up your daily games and prayer.</p>
@@ -268,7 +268,7 @@
       <section class="hero">
         <div>
           <div class="eyebrow">${esc(date)}</div>
-          <h1>${greet}, pilgrim</h1>
+          <h1>${greet}, ${esc(window.Personal.name() || 'pilgrim')}</h1>
           <p class="muted">Six small steps each day: read, play, pray.</p>
         </div>
         <div class="hero-stats">
@@ -737,7 +737,7 @@
       <div class="profile-view">
         <div class="pv-head">
           <div class="pv-level">${li.level}</div>
-          <div><div class="eyebrow">Level ${li.level}</div><h2>${li.title}</h2>
+          <div>${window.Personal.name() ? `<div class="pv-name">${esc(window.Personal.name())}</div>` : ''}<div class="eyebrow">Level ${li.level}</div><h2>${li.title}</h2>
           <div class="xpbar big"><i style="width:${Math.round(li.progress * 100)}%"></i></div>
           <div class="muted small">${state.xp} XP · ${li.toNext} XP to next level</div></div>
         </div>
@@ -756,6 +756,8 @@
         <h3 class="section-title">Settings</h3>
         <div class="row gap wrap">
           <button class="btn ghost" id="sndBtn">${state.sound ? '🔔 Sound on' : '🔕 Sound off'}</button>
+          <button class="btn ghost" id="persBtn">✨ Personalize</button>
+          <button class="btn ghost" id="instBtn">📲 Install app</button>
           <button class="btn ghost" id="exportBtn">💾 Back up my data</button>
           <label class="btn ghost" id="importLbl">📂 Restore backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
           <button class="btn ghost danger" id="resetBtn">Reset all progress</button>
@@ -764,6 +766,8 @@
       </div>`);
     updateOfflineRow();
     $('#sndBtn').addEventListener('click', e => { state.sound = !state.sound; save(); e.target.textContent = state.sound ? '🔔 Sound on' : '🔕 Sound off'; Sound.play('tap'); });
+    $('#persBtn').addEventListener('click', () => window.Personal.openSettings());
+    $('#instBtn').addEventListener('click', () => window.Personal.install());
     $('#exportBtn').addEventListener('click', () => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' }));
@@ -832,6 +836,7 @@
 
   window.UI = {
     openModal, closeModal, show, ask,
+    refresh: () => { updateHUD(); if (current && current !== 'journey') show(current); },
     onModalClose: fn => { modalOnClose = fn; },
     startGuidedPrayer: () => guidedPrayer(0)
   };
@@ -840,6 +845,8 @@
   function boot() {
     $$('.tab').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); show(b.dataset.view); }));
     $('#profileBtn').addEventListener('click', openProfile);
+    $('#settingsBtn').addEventListener('click', () => window.Personal.openSettings());
+    window.Personal.start();
     $('#zoomIn').addEventListener('click', () => window.Game.zoomIn());
     $('#zoomOut').addEventListener('click', () => window.Game.zoomOut());
     $('#guideBtn').addEventListener('click', () => {

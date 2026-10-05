@@ -1,14 +1,25 @@
 {
-  "name": "Lamp & Path: Bible Journey",
+  "id": "./",
+  "name": "Lamp & Path: Bible, Prayer & Journey",
   "short_name": "Lamp & Path",
-  "description": "Explore the lands of the Bible, read scripture (KJV), learn its context, play daily Bible games and grow in prayer.",
-  "start_url": "./index.html#journey",
+  "description": "The full King James Bible with highlights and notes, a Bible exploration game, daily Bible games, prayer requests, a prayer list and wake-up prayer alarms. Works offline.",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#17112b",
   "theme_color": "#1a1330",
+  "categories": ["books", "education", "lifestyle"],
   "icons": [
-    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Read the Bible", "short_name": "Bible", "url": "./index.html#bible", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Pray", "short_name": "Prayer", "url": "./index.html#prayer", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Today's verse and games", "short_name": "Daily", "url": "./index.html#daily", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

@@ -718,6 +718,75 @@ label.btn { cursor: pointer; }
 .ask-card.outcome.answered { border-color: rgba(79, 201, 143, 0.5); }
 .ask-card input[type="date"] { color-scheme: dark; }
 
+
+/* ---------- Welcome splash: the person's name in calligraphy ---------- */
+.splash, .onboard {
+  position: fixed; inset: 0; z-index: 600; display: grid; place-items: center; padding: 24px 16px;
+  background: radial-gradient(ellipse at 50% 35%, #3b2869 0%, #1a1233 55%, #0b0718 100%);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.splash.out, .onboard.out { opacity: 0; transform: scale(1.03); pointer-events: none; }
+.splash::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--gold) 28%, transparent), transparent 45%); animation: splash-breathe 4s ease-in-out infinite; }
+@keyframes splash-breathe { 50% { opacity: 0.55; } }
+.splash-inner { position: relative; width: min(640px, 100%); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+.splash-lamp { width: 74px; height: 74px; filter: drop-shadow(0 0 22px rgba(255, 190, 80, 0.85)); animation: float-in 0.8s ease both, flicker 3s ease-in-out 0.8s infinite; }
+.splash-greet { font: 500 clamp(1rem, 4.4vw, 1.35rem) var(--display); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); animation: float-in 0.7s ease 0.2s both; }
+.sig { width: 100%; max-width: 620px; height: auto; overflow: visible; margin: -6px 0 -4px; }
+.sig-text {
+  font-family: 'Great Vibes', 'Snell Roundhand', 'Brush Script MT', cursive; font-size: 200px;
+  fill: url(#sigFill); fill-opacity: 0; stroke: var(--gold2); stroke-width: 1.6; stroke-linejoin: round;
+  stroke-dasharray: 1400; stroke-dashoffset: 1400;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--gold) 55%, transparent));
+  animation: sig-write 2.3s cubic-bezier(.55, .1, .35, 1) 0.45s forwards, sig-fill 1.1s ease 1.9s forwards;
+}
+@keyframes sig-write { to { stroke-dashoffset: 0; } }
+@keyframes sig-fill { to { fill-opacity: 1; stroke-width: 0.6; } }
+.splash-verse { max-width: 520px; margin: 4px 0 0; font: italic clamp(1rem, 4vw, 1.18rem)/1.55 var(--serif); color: var(--parch); opacity: 0; animation: fade-up 0.9s ease 2.4s forwards; }
+.splash-verse span { display: block; margin-top: 6px; font: 600 0.8rem var(--sans); font-style: normal; color: var(--gold); letter-spacing: 0.04em; }
+.splash-tap { margin-top: 18px; color: var(--muted); opacity: 0; animation: fade-up 0.6s ease 3s forwards; }
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.onboard-card {
+  width: min(440px, 100%); max-height: 100%; overflow-y: auto; padding: 30px 24px; border-radius: 24px; text-align: center;
+  background: linear-gradient(180deg, rgba(44, 33, 80, 0.97), rgba(28, 20, 52, 0.97)); border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; align-items: center; gap: 6px; animation: float-in 0.7s ease;
+}
+.onboard-card h1 { margin: 4px 0 0; font: 400 3.2rem/1.1 'Great Vibes', cursive; color: var(--gold2); }
+.onboard-card p { margin: 0 0 6px; font-family: var(--serif); font-style: italic; }
+.onboard-card .flabel { align-self: stretch; text-align: left; }
+.ob-name { text-align: center; font-size: 1.25rem; }
+.onboard-card .btn.big { width: 100%; }
+.theme-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.settings .theme-row { justify-content: flex-start; }
+.theme-dot { width: 40px; height: 40px; border-radius: 50%; border: 3px solid transparent; background: linear-gradient(135deg, var(--c1), var(--c2)); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25); transition: transform 0.15s; }
+.theme-dot:hover { transform: scale(1.08); }
+.theme-dot.active { border-color: #fff; box-shadow: 0 0 16px var(--c1); }
+.check-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; font-weight: 500; cursor: pointer; }
+.check-row input { width: 20px; height: 20px; accent-color: var(--gold); }
+.settings-btn { width: 40px; height: 40px; box-shadow: none; flex: none; }
+.pv-name { font: 400 2.4rem/1 'Great Vibes', cursive; color: var(--gold2); margin-bottom: 2px; }
+.alarm-hello { font: 400 clamp(2rem, 9vw, 2.8rem)/1.1 'Great Vibes', cursive; color: var(--gold2); }
+
+/* ---------- Install ---------- */
+.install-banner {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 18px; z-index: 45; width: min(520px, calc(100% - 24px));
+  display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 16px;
+  background: rgba(34, 26, 61, 0.97); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); box-shadow: var(--shadow); animation: rise 0.35s ease;
+}
+.install-banner img { width: 42px; height: 42px; border-radius: 10px; flex: none; }
+.install-banner div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.install-banner small { color: var(--muted); font-size: 0.78rem; }
+.ib-close { border: 0; background: none; font-size: 1.4rem; color: var(--muted); padding: 4px 8px; }
+.install-help { text-align: left; }
+.install-help h2 { font-family: var(--display); margin: 4px 0 10px; }
+.install-icon { width: 72px; height: 72px; border-radius: 18px; display: block; margin-bottom: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+.install-icon[src=""] { display: none; }
+.steps { padding-left: 1.3em; line-height: 1.7; margin: 8px 0; }
+.steps li { margin-bottom: 4px; }
+.kbd-ic { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 5px; border-radius: 7px; background: rgba(255, 255, 255, 0.12); font-weight: 700; }
+.link-box { display: flex; gap: 8px; margin: 10px 0; }
+.link-box .search { flex: 1; min-width: 0; font-size: 0.9rem; }
+
 /* ---------- Offline status ---------- */
 .offline-row { margin: 0; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); line-height: 1.5; }
 .offline-row.ok { border-color: rgba(79, 201, 143, 0.45); background: rgba(79, 201, 143, 0.1); }
@@ -784,6 +853,9 @@ label.btn { cursor: pointer; }
   .pl-head { flex-direction: column; }
   .people { grid-template-columns: 1fr; }
   .tab { padding: 6px 4px; }
+  .install-banner { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .settings-btn { width: 36px; height: 36px; font-size: 1rem; margin-left: auto; }
+  .topbar .profile { margin-left: 0; }
   .bedside-card { flex-direction: column; align-items: flex-start; }
   .kind-pick, .lead-row { grid-template-columns: 1fr; }
   .intro-card { padding: 24px 18px; }

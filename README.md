@@ -6,6 +6,20 @@
 
 ## Features
 
+### ✨ Personal to each person
+- On first open the app asks the person's name and favourite colour.
+- Every time it opens, it greets them with their name **written in calligraphy**, as if by hand, with the verse of the day, for example "Grace and peace, Sarah".
+- Their name appears around the app: the daily greeting, the profile and the wake-up alarm ("Rise and pray, Sarah").
+- **⚙️ Personalize**: name, greeting style, six colour themes, a custom app title (e.g. "Sarah's Prayer Lamp"), and whether to show the welcome each time.
+
+### 📲 Install and share
+- Installable as an app (a PWA) with proper app icons and home-screen shortcuts (Bible, Prayer, Daily).
+- An **Install app** button uses the phone's own install prompt on Android and in desktop Chrome or Edge, and shows step-by-step help on iPhone (Safari → Share → Add to Home Screen).
+- It notices when it was opened inside WhatsApp, Instagram and similar apps, and explains how to open it in Chrome or Safari to install.
+- **Share with someone** sends the link. Each person who opens it gets their own copy, with their own name, notes and prayers.
+- To make the link work, host the app on GitHub Pages: **Settings → Pages → Deploy from a branch**. The link is `https://samebimo10-cpu.github.io/NANAWEIEBGEBRI/`.
+
+
 ### 📜 The full King James Bible
 - **All 66 books, 1,189 chapters, 31,102 verses**, readable offline at any time. Books load as you open them.
 - **Highlight** verses in five colours. Tap verses to select them, then pick a colour.

@@ -8,7 +8,11 @@
   <meta name="theme-color" content="#1a1330">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lamp &amp; Path">
   <link rel="stylesheet" href="fonts/fonts.css">
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -25,6 +29,7 @@
       <button class="tab" data-view="study"><span class="ti">📖</span><span>Study</span></button>
       <button class="tab" data-view="prayer"><span class="ti">🙏</span><span>Prayer</span></button>
     </nav>
+    <button class="icon-btn settings-btn" id="settingsBtn" title="Personalize, install and share" aria-label="Personalize, install and share">⚙️</button>
     <button class="profile" id="profileBtn" aria-label="Profile and progress">
       <span class="lvl" id="lvl">1</span>
       <span class="pinfo">
@@ -115,6 +120,7 @@
   <script src="js/alarm.js"></script>
   <script src="js/requests.js"></script>
   <script src="js/praylist.js"></script>
+  <script src="js/personal.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -136,6 +136,7 @@
     el.innerHTML = `
       <div class="alarm-inner">
         <div class="alarm-ring">⏰</div>
+        ${window.Personal && window.Personal.name() ? `<div class="alarm-hello">${(now.getHours() >= 22 || now.getHours() < 4) ? 'Arise' : 'Rise and pray'}, ${esc(window.Personal.name())}</div>` : ''}
         <div class="alarm-time" id="alarmClock">${now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</div>
         <h1 class="alarm-label">${esc(r.label || 'Time to pray')}</h1>
         ${person ? `<p class="alarm-for">Pray for ${esc(person.name)}</p>` : ''}
