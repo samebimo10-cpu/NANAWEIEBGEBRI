@@ -623,8 +623,9 @@
   function stopPrayerTimer() { if (prayerTimer) { clearInterval(prayerTimer); prayerTimer = null; } }
 
   let prayerTab = 'pray';
-  const PRAYER_TABS = [['pray', '🙏 Pray'], ['people', '🤲 Who I pray for'], ['reminders', '🔔 Reminders'], ['journal', '📖 Journal']];
+  const PRAYER_TABS = [['pray', '🙏 Pray'], ['requests', '📝 My requests'], ['led', '🕊️ Led to pray'], ['people', '🤲 Who I pray for'], ['reminders', '⏰ Alarms']];
   function renderPrayer() {
+    if (!PRAYER_TABS.some(t => t[0] === prayerTab)) prayerTab = 'pray';
     const t = window.Core.today();
     const head = `
       <section class="hero slim">
@@ -632,30 +633,12 @@
         <p class="muted">"Lord, teach us to pray." (Luke 11:1)</p></div>
         <div class="hero-stats"><div class="flame-big">🙏<span>${state.prayers}</span></div><div class="muted small">sessions prayed</div></div>
       </section>
-      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'reminders' && state.reminders.filter(r => r.enabled).length ? ` <span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}</button>`).join('')}</div>`;
+      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'requests' && state.requests.some(r => r.status === 'open') ? ` <span class="count">${state.requests.filter(r => r.status === 'open').length}</span>` : ''}${k === 'reminders' && state.reminders.filter(r => r.enabled).length ? ` <span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}</button>`).join('')}</div>`;
     const bindTabs = () => $$('.ptabs .seg-btn').forEach(b => b.addEventListener('click', () => { prayerTab = b.dataset.pt; Sound.play('tap'); renderPrayer(); }));
     if (prayerTab === 'people') { $('#prayerPage').innerHTML = head + '<div id="peopleHost"></div>'; bindTabs(); window.PrayList.renderPeople($('#peopleHost')); return; }
     if (prayerTab === 'reminders') { $('#prayerPage').innerHTML = head + '<div id="remindersHost"></div>'; bindTabs(); window.PrayList.renderReminders($('#remindersHost')); return; }
-    if (prayerTab === 'journal') {
-      $('#prayerPage').innerHTML = head + `
-        <div class="journal-add">
-          <textarea id="jText" placeholder="Write a prayer request or a note of thanks…" maxlength="600"></textarea>
-          <button class="btn primary" id="jAdd">Add to journal</button>
-        </div>
-        <div class="journal" id="journal"></div>`;
-      bindTabs();
-      $('#jAdd').addEventListener('click', () => {
-        const v = $('#jText').value.trim();
-        if (!v) return;
-        state.journal.unshift({ id: Date.now(), text: v, date: new Date().toISOString(), answered: false });
-        save(); window.Core.checkBadges();
-        Sound.play('tap');
-        $('#jText').value = '';
-        renderJournal();
-      });
-      renderJournal();
-      return;
-    }
+    if (prayerTab === 'requests') { $('#prayerPage').innerHTML = head + '<div id="requestsHost"></div>'; bindTabs(); window.Requests.renderRequests($('#requestsHost')); return; }
+    if (prayerTab === 'led') { $('#prayerPage').innerHTML = head + '<div id="leadingsHost"></div>'; bindTabs(); window.Requests.renderLeadings($('#leadingsHost')); return; }
     $('#prayerPage').innerHTML = head + `
       <section class="acts-card">
         <div class="acts-letters">${window.ACTS_STEPS.map(s => `<div class="acts-l" style="--c:${s.color}"><b>${s.key}</b><small>${s.name}</small></div>`).join('')}</div>
@@ -685,30 +668,6 @@
     $$('[data-listen]').forEach(b => { const p = window.SCRIPTURE_PRAYERS[+b.dataset.listen]; bindListen(b, p.text); });
     $$('[data-ctx]').forEach(b => b.addEventListener('click', () => window.Reader.openRef(b.dataset.ctx)));
     $('#goPeople').addEventListener('click', () => { prayerTab = 'people'; renderPrayer(); });
-  }
-
-  function renderJournal() {
-    const host = $('#journal');
-    if (!state.journal.length) { host.innerHTML = '<p class="muted center">Your journal is empty. Record your prayers and watch how God answers.</p>'; return; }
-    host.innerHTML = state.journal.map(j => `
-      <div class="jentry ${j.answered ? 'answered' : ''}">
-        <div class="jdate">${new Date(j.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}${j.answered ? ' · <span class="ans">Answered 🙌</span>' : ''}</div>
-        <p>${esc(j.text)}</p>
-        <div class="row gap">
-          <button class="btn ghost small" data-ans="${j.id}">${j.answered ? 'Mark unanswered' : '✓ Mark answered'}</button>
-          <button class="btn ghost small danger" data-del="${j.id}">Delete</button>
-        </div>
-      </div>`).join('');
-    $$('[data-ans]').forEach(b => b.addEventListener('click', () => {
-      const j = state.journal.find(x => x.id === +b.dataset.ans);
-      j.answered = !j.answered; save();
-      if (j.answered) { Sound.play('badge'); toast('Praise God for answered prayer! 🙌'); }
-      renderJournal();
-    }));
-    $$('[data-del]').forEach(b => b.addEventListener('click', async () => {
-      if (!(await window.UI.ask('Delete this journal entry?', 'Delete'))) return;
-      state.journal = state.journal.filter(x => x.id !== +b.dataset.del); save(); renderJournal();
-    }));
   }
 
   function guidedPrayer(stepIdx) {

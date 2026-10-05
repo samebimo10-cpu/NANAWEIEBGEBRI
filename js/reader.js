@@ -326,7 +326,7 @@
           <div class="results">${hl.length ? hl.map(([k, h]) => { const [b, c, v] = parseKey(k); return `<button class="result-item hlitem" data-k="${k}" style="--hc:${(COLORS.find(x => x[0] === h.color) || COLORS[0])[1]}"><b>${esc(B().NAMES[b])} ${c}:${v}</b><span>${lordHTML(h.text || '')}</span></button>`; }).join('') : '<p class="muted center">No highlights yet. In the Bible, tap a verse and choose a colour.</p>'}</div>`
         : `<div class="results">${notes.length ? notes.map(([k, n]) => `<button class="result-item" data-k="${k}"><b>${esc(n.ref)}</b><span class="note-txt">${esc(n.text)}</span><span class="muted small">${lordHTML((n.verseText || '').slice(0, 140))}${(n.verseText || '').length > 140 ? '…' : ''}</span></button>`).join('') : '<p class="muted center">No notes yet. Tap a verse, then 📝 Note.</p>'}</div>`}
       </div>`;
-    if (document.querySelector('.marks')) $('#modalBody').innerHTML = html; else UI().openModal(html);
+    if (document.querySelector('#modal.open .marks')) $('#modalBody').innerHTML = html; else UI().openModal(html);
     $$('.marks .seg-btn').forEach(b => b.addEventListener('click', () => { marksTab = b.dataset.t; openMarks(); }));
     $$('.marks [data-col]').forEach(b => b.addEventListener('click', () => { marksColor = b.dataset.col; openMarks(); }));
     $$('.marks .result-item').forEach(el => el.addEventListener('click', () => { const [b, c, v] = parseKey(el.dataset.k); UI().closeModal(); open(b, c, v); }));

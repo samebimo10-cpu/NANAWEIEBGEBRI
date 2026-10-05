@@ -3,7 +3,7 @@
  * the app itself, its fonts, and all 66 books of the Bible (about 5 MB).
  * After that the app opens and runs with no connection at all.
  */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL = 'lamp-shell-' + VERSION;
 const BIBLE = 'lamp-bible-v1';   // the KJV text never changes, so it keeps its own long-lived cache
 
@@ -14,7 +14,7 @@ const SHELL_FILES = [
   './fonts/EBGaramond-latin-ext-1a53db.woff2', './fonts/EBGaramond-latin-ext-9cc06b.woff2',
   './fonts/Inter-latin-567244.woff2', './fonts/Inter-latin-ext-395290.woff2',
   './js/data/journey.js', './js/data/library.js', './js/core.js', './js/bible.js', './js/game.js',
-  './js/reader.js', './js/praylist.js', './js/app.js'
+  './js/reader.js', './js/alarm.js', './js/requests.js', './js/praylist.js', './js/app.js'
 ];
 const BIBLE_FILES = Array.from({ length: 66 }, (_, i) => `./js/kjv/${String(i + 1).padStart(2, '0')}.js`);
 

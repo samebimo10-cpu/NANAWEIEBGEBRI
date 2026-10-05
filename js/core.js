@@ -21,7 +21,9 @@
     bibleLast: { b: 0, c: 1 },
     bibleFont: 1.2,
     people: [],        // prayer list: { id, name, category, reasons[], scriptures[], notes, prayedCount, lastPrayed }
-    reminders: []      // { id, time 'HH:MM', days [0-6], label, personId, enabled, lastFired }
+    reminders: [],     // { id, kind 'reminder'|'alarm', time 'HH:MM', days [0-6], label, personId, sound, snooze, enabled, lastFired, snoozeUntil }
+    requests: [],      // { id, title, details, scripture, created, status 'open'|'answered'|'passed', answeredAt, answeredHow, passedAt, passedNote, prayedCount, lastPrayed }
+    leadings: []       // { id, at, text, for, scripture, prayedAt, requestId }
   };
 
   function load() {
@@ -34,6 +36,15 @@
   }
 
   const state = load();
+  // Older versions kept a simple prayer journal; move those entries into My requests once.
+  if (!state.journalMigrated) {
+    (state.journal || []).forEach(j => {
+      const at = new Date(j.date).getTime() || Date.now();
+      state.requests.push({ id: 'j' + j.id, title: j.text, details: '', scripture: null, created: at,
+        status: j.answered ? 'answered' : 'open', answeredAt: j.answered ? at : 0, answeredHow: '', prayedCount: 0, lastPrayed: 0 });
+    });
+    state.journalMigrated = true;
+  }
   const listeners = [];
 
   function save() {
@@ -146,10 +157,12 @@
     { id: 'prayer5', icon: '🙏', name: 'Prayer Warrior', desc: 'Finish 5 guided prayer sessions', test: s => s.prayers >= 5 },
     { id: 'quiz10', icon: '🎯', name: 'Quiz Master', desc: 'Score 10 perfect quizzes', test: s => s.perfectQuizzes >= 10 },
     { id: 'memory', icon: '🧩', name: 'Hidden in My Heart', desc: 'Solve 5 verse scrambles', test: s => s.scrambles >= 5 },
-    { id: 'journal', icon: '📖', name: 'Remembrancer', desc: 'Write 5 prayer journal entries', test: s => s.journal.length >= 5 },
+    { id: 'journal', icon: '📖', name: 'Remembrancer', desc: 'Write 5 prayer requests or "Led to pray" entries', test: s => (s.requests || []).length + (s.leadings || []).length >= 5 },
+    { id: 'watchman', icon: '⏰', name: 'Watchman', desc: 'Set a wake-up prayer alarm', test: s => (s.reminders || []).some(r => r.kind === 'alarm') },
+    { id: 'testimony', icon: '📜', name: 'Testimony', desc: 'Record how God answered 3 prayers', test: s => (s.requests || []).filter(r => r.status === 'answered' && r.answeredHow).length >= 3 },
     { id: 'marker', icon: '🖍️', name: 'Treasure Marker', desc: 'Highlight 10 verses in the Bible', test: s => Object.keys(s.highlights || {}).length >= 10 },
     { id: 'intercessor', icon: '🤲', name: 'Intercessor', desc: 'Add 5 people to your prayer list', test: s => (s.people || []).length >= 5 },
-    { id: 'answered', icon: '🙌', name: 'He Answers', desc: 'Mark a prayer request as answered', test: s => (s.people || []).some(p => p.reasons.some(r => r.answered)) || s.journal.some(j => j.answered) }
+    { id: 'answered', icon: '🙌', name: 'He Answers', desc: 'Mark a prayer request as answered', test: s => (s.people || []).some(p => p.reasons.some(r => r.answered)) || (s.requests || []).some(r => r.status === 'answered') }
   ];
 
   function checkBadges() {

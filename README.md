@@ -38,6 +38,13 @@
 - **All 66 books of the Bible**, each with its section and a one-line summary, filterable by section (Law, History, Poetry, Prophets, Gospels, Epistles and so on).
 
 ### 🙏 Prayer
+- **⏰ Wake-up prayer alarms**: loud, repeating alarm sounds (church bells, gentle chimes, or a trumpet call) that get louder over 45 seconds, with vibration, snooze (5, 10 or 15 minutes), and a full-screen wake-up screen with a morning or midnight verse. "I'm awake" goes straight into guided prayer, or into prayer for the person linked to the alarm.
+  - **🌙 Bedside mode**: phones do not let a closed web app make sound, so before sleeping you start bedside mode and leave the phone on charge with the app open. It keeps the screen on (dimmed, with a clock) so the alarm can ring. **📅 Add to calendar** also creates a calendar event with a sound alert as a backup.
+- **📝 My requests**: your personal prayer requests, in three sections:
+  - **🙏 Praying**: how long you have been asking, and how many times you have prayed;
+  - **🙌 Answered**: the date it was answered and **how God answered**;
+  - **⌛ Past needs**: needs and wants that are no longer relevant, with what changed.
+- **🕊️ Led to pray**: a journal of what the Lord lays on your heart to pray about, with who it is for and any scripture that came to mind. Entries are grouped by day, can be marked as prayed, and can become a prayer request with one tap.
 - **Who I'm praying for**: a prayer list sorted into groups (Family, Friends, Church, Work & School, Sick & Healing, Salvation, Leaders & Nation, Missions, Myself). For each person you can keep:
   - **prayer requests** (the reasons you are praying), which you can mark as **answered 🙌**,
   - the **scriptures you are praying over them**, looked up from the KJV by reference,
@@ -98,7 +105,9 @@ js/data/library.js    Daily verses, quiz bank, 66 books, scripture prayers, ACTS
 js/kjv/01.js … 66.js  The full KJV text, one file per book
 js/bible.js           Bible loading, reference parsing ("Phil 4:6-7"), lookup and search
 js/reader.js          Bible reader UI: highlights, notes, search, listen
-js/praylist.js        "Who I'm praying for", prayer reminders, calendar export, reminder scheduler
+js/praylist.js        "Who I'm praying for", alarms & reminders, calendar export, scheduler
+js/alarm.js           Wake-up alarm sounds, ringing screen, snooze, bedside mode
+js/requests.js        My requests (praying / answered / past needs) and Led to pray
 js/core.js            Saving, XP/levels, streaks, badges, sound, read-aloud, toasts
 js/game.js            Map rendering engine (terrain, sprites, lighting, particles, input)
 js/app.js             UI: reader, quizzes, daily games, study, prayer, profile

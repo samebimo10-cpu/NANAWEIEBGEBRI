@@ -71,8 +71,8 @@
 
   function personCard(p) {
     const c = cat(p.category);
-    const open = p.reasons.filter(r => !r.answered).length;
-    const answered = p.reasons.length - open;
+    const open = p.reasons.filter(r => !r.answered && !r.passed).length;
+    const answered = p.reasons.filter(r => r.answered).length;
     return `<div class="person-card" data-id="${p.id}" role="button" tabindex="0">
       <span class="avatar" style="--ac:${c[3]}">${esc(initials(p.name))}</span>
       <div class="pc-main">
@@ -157,10 +157,15 @@
 
         <h3 class="section-title">Prayer requests</h3>
         <div class="reasons">${p.reasons.length ? p.reasons.map(r => `
-          <div class="reason ${r.answered ? 'answered' : ''}">
+          <div class="reason ${r.answered ? 'answered' : r.passed ? 'passed' : ''}">
             <p>${esc(r.text)}</p>
-            <div class="muted small">Added ${fmtDate(r.date)}${r.answered ? ` · <span class="ans">Answered ${fmtDate(r.answeredAt || r.date)} 🙌</span>` : ''}</div>
-            <div class="row gap"><button class="btn ghost small" data-ans="${r.id}">${r.answered ? 'Mark not answered' : '✓ Answered'}</button><button class="btn ghost small danger" data-rdel="${r.id}">Remove</button></div>
+            <div class="muted small">Added ${fmtDate(r.date)}${r.answered ? ` · <span class="ans">Answered ${fmtDate(r.answeredAt || r.date)} 🙌</span>` : ''}${r.passed ? ` · ⌛ No longer needed since ${fmtDate(r.passedAt || r.date)}` : ''}</div>
+            ${r.answered && r.answeredHow ? `<div class="how"><div class="how-label">How God answered</div><p>${esc(r.answeredHow)}</p></div>` : ''}
+            ${r.passed && r.passedNote ? `<div class="how"><div class="how-label">What changed</div><p>${esc(r.passedNote)}</p></div>` : ''}
+            <div class="row gap wrap">${r.answered || r.passed
+              ? `<button class="btn ghost small" data-reopen="${r.id}">↺ Still praying</button>`
+              : `<button class="btn ghost small" data-ans="${r.id}">✓ Answered</button><button class="btn ghost small" data-pass="${r.id}">⌛ No longer needed</button>`}
+              <button class="btn ghost small danger" data-rdel="${r.id}">Remove</button></div>
           </div>`).join('') : '<p class="muted small">No requests yet. What would you like to ask God for?</p>'}</div>
         <div class="add-row">
           <textarea class="notes small-ta" id="newReason" maxlength="400" placeholder="Add a request, e.g. peace in their marriage"></textarea>
@@ -182,7 +187,7 @@
         <textarea class="notes" id="pNotes" placeholder="Anything to remember: how they are doing, how God has answered…">${esc(p.notes || '')}</textarea>
         <div class="muted small" id="pSaved">Saved on this device.</div>
       </div>`;
-    if (document.querySelector('.pdetail') || document.querySelector('.pform') || document.querySelector('.praying') || document.querySelector('.picker-person')) {
+    if (document.querySelector('#modal.open') && (document.querySelector('.pdetail') || document.querySelector('.pform') || document.querySelector('.praying') || document.querySelector('.picker-person'))) {
       $('#modalBody').innerHTML = html;
       document.querySelector('.modal-card').scrollTop = 0;
     } else UI().openModal(html);
@@ -202,11 +207,24 @@
       p.reasons.unshift({ id: uid(), text: t, date: Date.now(), answered: false }); save();
       Sound.play('tap'); openPerson(p.id);
     });
-    $$('[data-ans]').forEach(b => b.addEventListener('click', () => {
+    $$('[data-ans]').forEach(b => b.addEventListener('click', async () => {
       const r = p.reasons.find(x => x.id === b.dataset.ans);
-      r.answered = !r.answered; r.answeredAt = r.answered ? Date.now() : null; save();
-      if (r.answered) { Sound.play('badge'); toast('Praise God for answered prayer! 🙌'); window.Core.checkBadges(); }
+      const res = await window.Requests.outcome('answered', r.text);
+      if (!res) return;
+      Object.assign(r, { answered: true, answeredAt: Math.max(res.at, r.date), answeredHow: res.text, passed: false }); save();
+      Sound.play('badge'); toast('Praise God for answered prayer! 🙌', 'level'); window.Core.checkBadges();
       openPerson(p.id);
+    }));
+    $$('[data-pass]').forEach(b => b.addEventListener('click', async () => {
+      const r = p.reasons.find(x => x.id === b.dataset.pass);
+      const res = await window.Requests.outcome('passed', r.text);
+      if (!res) return;
+      Object.assign(r, { passed: true, passedAt: Math.max(res.at, r.date), passedNote: res.text }); save();
+      openPerson(p.id);
+    }));
+    $$('[data-reopen]').forEach(b => b.addEventListener('click', () => {
+      const r = p.reasons.find(x => x.id === b.dataset.reopen);
+      Object.assign(r, { answered: false, passed: false }); save(); openPerson(p.id);
     }));
     $$('[data-rdel]').forEach(b => b.addEventListener('click', () => { p.reasons = p.reasons.filter(x => x.id !== b.dataset.rdel); save(); openPerson(p.id); }));
     $$('[data-sdel]').forEach(b => b.addEventListener('click', () => { p.scriptures = p.scriptures.filter(x => x.id !== b.dataset.sdel); save(); openPerson(p.id); }));
@@ -233,7 +251,7 @@
   function prayFor(id) {
     const p = person(id);
     if (!p) return;
-    const open = p.reasons.filter(r => !r.answered);
+    const open = p.reasons.filter(r => !r.answered && !r.passed);
     const html = `
       <div class="praying">
         <div class="eyebrow">Praying for</div>
@@ -294,8 +312,9 @@
     $('#newForScripture').addEventListener('click', () => editPerson(null, scripture));
   }
 
-  /* ================= Reminders ================= */
+  /* ================= Alarms & reminders ================= */
   const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const isAlarm = r => r.kind === 'alarm';
   function daysText(days) {
     const s = days.slice().sort();
     if (s.length === 7) return 'Every day';
@@ -310,52 +329,71 @@
 
   function notifStatus() {
     if (!('Notification' in window)) return { cls: 'warn', html: 'This browser cannot show notifications. Use <b>📅 Add to calendar</b> on a reminder, and your phone\'s calendar will alert you instead.' };
-    if (Notification.permission === 'granted') return { cls: 'ok', html: '✓ Notifications are on. Lamp & Path alerts you while it is open, including in a background tab. <b>For reminders even when the app is closed</b>, tap <b>📅 Add to calendar</b> on a reminder.' };
-    if (Notification.permission === 'denied') return { cls: 'warn', html: 'Notifications are blocked for this site in your browser settings. You can still use <b>📅 Add to calendar</b> for reliable reminders.' };
-    return { cls: 'ask', html: 'Turn on notifications so your reminders can alert you.', btn: true };
+    if (Notification.permission === 'granted') return { cls: 'ok', html: '✓ Notifications are on. Gentle reminders alert you while Lamp & Path is open, including in a background tab. For reminders when the app is closed, tap <b>📅 Add to calendar</b>.' };
+    if (Notification.permission === 'denied') return { cls: 'warn', html: 'Notifications are blocked for this site in your browser settings. Alarms still ring in the app, and <b>📅 Add to calendar</b> still works.' };
+    return { cls: 'ask', html: 'Turn on notifications so gentle reminders can alert you.', btn: true };
   }
 
   function renderReminders(host) {
     const st = notifStatus();
-    const list = state.reminders.slice().sort((a, b) => a.time.localeCompare(b.time));
+    const list = state.reminders.slice().sort((a, b) => (isAlarm(b) - isAlarm(a)) || a.time.localeCompare(b.time));
+    const next = window.Alarm.nextAlarm();
     host.innerHTML = `
       <div class="pl-head">
-        <div><h2 class="section-title flush">Prayer reminders</h2>
+        <div><h2 class="section-title flush">Alarms &amp; reminders</h2>
         <p class="muted small">"Evening, and morning, and at noon, will I pray" (Psalm 55:17)</p></div>
-        <button class="btn primary" id="addRem">＋ New reminder</button>
+        <button class="btn primary" id="addRem">＋ New alarm or reminder</button>
       </div>
+
+      <section class="bedside-card">
+        <div class="bc-moon">🌙</div>
+        <div class="bc-main">
+          <h3>Bedside mode: be woken to pray</h3>
+          <p>Phones do not let a web app ring while it is closed or the phone is locked. To be woken by a ⏰ prayer alarm, start bedside mode before you sleep and leave the phone on charge with Lamp &amp; Path open and the volume up. The screen stays on, dimmed, and the alarm rings until you get up.</p>
+          <div class="muted small">${next ? `Next alarm: <b>${esc(next.at.toLocaleDateString(undefined, { weekday: 'long' }))} ${esc(next.at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}</b> · ${esc(next.r.label)}` : 'You have no wake-up alarms yet. Add one below.'}</div>
+        </div>
+        <button class="btn primary" id="startBed">🌙 Start bedside mode</button>
+      </section>
+
       <div class="notif-banner ${st.cls}">${st.html}${st.btn ? ' <button class="btn primary small" id="enableNotif">Enable notifications</button>' : ''}</div>
       ${list.length ? `<div class="reminders">${list.map(r => {
         const p = r.personId ? person(r.personId) : null;
-        return `<div class="rem ${r.enabled ? '' : 'off'}">
+        const snoozed = r.snoozeUntil && r.snoozeUntil > Date.now();
+        return `<div class="rem ${r.enabled ? '' : 'off'} ${isAlarm(r) ? 'alarm' : ''}">
           <div class="rem-time">${esc(timeText(r.time))}</div>
-          <div class="rem-main"><b>${esc(r.label || 'Prayer time')}</b><div class="muted small">${esc(daysText(r.days))}${p ? ` · for ${esc(p.name)}` : ''}</div></div>
+          <div class="rem-main"><span class="pill ${isAlarm(r) ? 'alarm' : ''}">${isAlarm(r) ? '⏰ Wake-up alarm' : '🔔 Reminder'}</span> <b>${esc(r.label || 'Prayer time')}</b>
+            <div class="muted small">${esc(daysText(r.days))}${p ? ` · for ${esc(p.name)}` : ''}${isAlarm(r) ? ` · ${esc((window.Alarm.SOUNDS.find(s => s[0] === r.sound) || window.Alarm.SOUNDS[0])[1])} · snooze ${r.snooze || 5} min` : ''}${snoozed ? ` · 😴 snoozed until ${new Date(r.snoozeUntil).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : ''}</div></div>
           <label class="switch" title="On / off"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label>
           <div class="rem-actions">
+            ${isAlarm(r) ? `<button class="btn ghost small" data-ring="${r.id}">▶ Test ring</button>` : ''}
             <button class="btn ghost small" data-ics="${r.id}">📅 Add to calendar</button>
             <button class="btn ghost small" data-redit="${r.id}">Edit</button>
             <button class="btn ghost small danger" data-rmdel="${r.id}">Delete</button>
           </div>
         </div>`;
       }).join('')}</div>`
-      : `<div class="empty-state small-empty"><p class="muted">No reminders yet. Start with one of these:</p>
+      : `<div class="empty-state small-empty"><p class="muted">Nothing set yet. Start with one of these:</p>
           <div class="row center gap wrap">
-            <button class="btn ghost" data-preset="06:30|Morning prayer">🌅 Morning 6:30</button>
-            <button class="btn ghost" data-preset="12:00|Midday prayer">☀️ Noon 12:00</button>
-            <button class="btn ghost" data-preset="21:00|Evening prayer">🌙 Evening 9:00</button>
+            <button class="btn ghost" data-preset="alarm|05:00|Morning watch">⏰ Wake me at 5:00 to pray</button>
+            <button class="btn ghost" data-preset="alarm|00:00|Midnight prayer">⏰ Midnight prayer</button>
+            <button class="btn ghost" data-preset="reminder|12:00|Midday prayer">🔔 Noon reminder</button>
+            <button class="btn ghost" data-preset="reminder|21:00|Evening prayer">🔔 Evening reminder</button>
           </div></div>`}
       <div class="row center"><button class="btn ghost small" id="testRem">🔔 Send a test reminder</button></div>`;
     $('#addRem').addEventListener('click', () => editReminder());
+    $('#startBed').addEventListener('click', () => window.Alarm.startBedside());
     const en = $('#enableNotif'); en && en.addEventListener('click', async () => { await requestPermission(); renderReminders(host); });
     $$('[data-preset]').forEach(b => b.addEventListener('click', () => {
-      const [time, label] = b.dataset.preset.split('|');
-      state.reminders.push({ id: uid(), time, label, days: [0, 1, 2, 3, 4, 5, 6], personId: null, enabled: true, lastFired: null });
-      save(); Sound.play('correct'); toast(`🔔 ${label} set for ${timeText(time)}`);
-      maybeAskPermission(); renderReminders(host);
+      const [kind, time, label] = b.dataset.preset.split('|');
+      state.reminders.push({ id: uid(), kind, time, label, days: [0, 1, 2, 3, 4, 5, 6], personId: null, sound: 'bells', snooze: 5, enabled: true, lastFired: null });
+      save(); window.Core.checkBadges(); Sound.play('correct'); toast(`${kind === 'alarm' ? '⏰' : '🔔'} ${label} set for ${timeText(time)}`);
+      if (kind === 'reminder') maybeAskPermission();
+      renderReminders(host);
     }));
-    $$('[data-tog]').forEach(c => c.addEventListener('change', () => { const r = state.reminders.find(x => x.id === c.dataset.tog); r.enabled = c.checked; save(); renderReminders(host); }));
+    $$('[data-tog]').forEach(c => c.addEventListener('change', () => { const r = state.reminders.find(x => x.id === c.dataset.tog); r.enabled = c.checked; r.snoozeUntil = 0; save(); renderReminders(host); }));
     $$('[data-redit]').forEach(b => b.addEventListener('click', () => editReminder(b.dataset.redit)));
-    $$('[data-rmdel]').forEach(b => b.addEventListener('click', async () => { if (!(await UI().ask('Delete this reminder?', 'Delete'))) return; state.reminders = state.reminders.filter(x => x.id !== b.dataset.rmdel); save(); renderReminders(host); }));
+    $$('[data-ring]').forEach(b => b.addEventListener('click', () => window.Alarm.ring(Object.assign({}, state.reminders.find(x => x.id === b.dataset.ring), { id: 'test' }))));
+    $$('[data-rmdel]').forEach(b => b.addEventListener('click', async () => { if (!(await UI().ask('Delete this?', 'Delete'))) return; state.reminders = state.reminders.filter(x => x.id !== b.dataset.rmdel); save(); renderReminders(host); }));
     $$('[data-ics]').forEach(b => b.addEventListener('click', () => downloadICS(state.reminders.find(x => x.id === b.dataset.ics))));
     $('#testRem').addEventListener('click', () => fire({ id: 'test', label: 'Test reminder', time: '00:00', days: [], personId: state.people[0] ? state.people[0].id : null }, true));
   }
@@ -367,21 +405,39 @@
     const days = new Set(r ? r.days : [0, 1, 2, 3, 4, 5, 6]);
     const pid = r ? r.personId : personId || '';
     const p = pid ? person(pid) : null;
+    let kind = r ? (r.kind || 'reminder') : (personId ? 'reminder' : 'alarm');
     UI().openModal(`
       <div class="pform">
-        <div class="eyebrow">${r ? 'Edit reminder' : 'New prayer reminder'}</div>
+        <div class="eyebrow">${r ? 'Edit' : 'New'}</div>
         <h2>When would you like to pray?</h2>
-        <label class="flabel">Time</label>
-        <input type="time" class="search time-in" id="rTime" value="${r ? r.time : '07:00'}">
+        <div class="kind-pick">
+          <button class="kind-btn" data-k="alarm"><b>⏰ Wake-up alarm</b><span>Rings loudly and keeps ringing until you get up. Use bedside mode overnight.</span></button>
+          <button class="kind-btn" data-k="reminder"><b>🔔 Gentle reminder</b><span>A chime and a notification while the app is open.</span></button>
+        </div>
+        <label class="flabel" for="rTime">Time</label>
+        <input type="time" class="search time-in" id="rTime" value="${r ? r.time : (kind === 'alarm' ? '05:00' : '07:00')}">
         <label class="flabel">Days</label>
         <div class="days">${DAY.map((d, i) => `<button class="day ${days.has(i) ? 'on' : ''}" data-d="${i}">${d}</button>`).join('')}</div>
         <div class="row gap"><button class="link-btn" id="dAll">Every day</button> · <button class="link-btn" id="dWk">Weekdays</button></div>
-        <label class="flabel">Label</label>
-        <input class="search" id="rLabel" maxlength="60" placeholder="e.g. Morning prayer" value="${esc(r ? r.label : (p ? `Pray for ${p.name}` : 'Prayer time'))}">
-        <label class="flabel">Pray for <span class="muted">(optional)</span></label>
+        <label class="flabel" for="rLabel">Label</label>
+        <input class="search" id="rLabel" maxlength="60" placeholder="e.g. Morning watch" value="${esc(r ? r.label : (p ? `Pray for ${p.name}` : 'Prayer time'))}">
+        <div id="alarmOpts">
+          <label class="flabel" for="rSound">Alarm sound</label>
+          <div class="search-row"><select class="search" id="rSound">${window.Alarm.SOUNDS.map(([k, n]) => `<option value="${k}" ${(r ? r.sound : 'bells') === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select><button class="btn ghost" id="rPreview">▶ Listen</button></div>
+          <label class="flabel" for="rSnooze">Snooze length</label>
+          <select class="search" id="rSnooze">${[5, 10, 15].map(n => `<option value="${n}" ${(r ? r.snooze || 5 : 5) === n ? 'selected' : ''}>${n} minutes</option>`).join('')}</select>
+        </div>
+        <label class="flabel" for="rPerson">Pray for <span class="muted">(optional)</span></label>
         <select class="search" id="rPerson"><option value="">Nobody in particular (guided prayer)</option>${state.people.map(x => `<option value="${x.id}" ${x.id === pid ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-        <div class="row end gap"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="rSave">Save reminder</button></div>
+        <div class="row end gap"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="rSave">Save</button></div>
       </div>`);
+    const paintKind = () => {
+      $$('.kind-btn').forEach(b => b.classList.toggle('active', b.dataset.k === kind));
+      $('#alarmOpts').hidden = kind !== 'alarm';
+    };
+    paintKind();
+    $$('.kind-btn').forEach(b => b.addEventListener('click', () => { kind = b.dataset.k; paintKind(); }));
+    $('#rPreview').addEventListener('click', () => window.Alarm.preview($('#rSound').value));
     $('#rPerson').addEventListener('change', e => {
       const lab = $('#rLabel'), np = person(e.target.value);
       if (!lab.value.trim() || lab.value === 'Prayer time' || /^Pray for /.test(lab.value)) lab.value = np ? `Pray for ${np.name}` : 'Prayer time';
@@ -393,13 +449,13 @@
     $('#rSave').addEventListener('click', () => {
       const time = $('#rTime').value;
       if (!time || !days.size) { toast('Choose a time and at least one day'); return; }
-      const data = { time, days: [...days].sort(), label: $('#rLabel').value.trim() || 'Prayer time', personId: $('#rPerson').value || null };
-      if (r) { Object.assign(r, data); if (r.lastFired && r.lastFired.endsWith(time) === false) r.lastFired = null; }
+      const data = { kind, time, days: [...days].sort(), label: $('#rLabel').value.trim() || 'Prayer time', personId: $('#rPerson').value || null, sound: $('#rSound').value, snooze: +$('#rSnooze').value, snoozeUntil: 0 };
+      if (r) { if (r.time !== time) r.lastFired = null; Object.assign(r, data); }
       else state.reminders.push(Object.assign({ id: uid(), enabled: true, lastFired: null }, data));
-      save(); Sound.play('correct');
-      toast(`🔔 Reminder set: ${timeText(time)}, ${daysText(data.days)}`);
+      save(); window.Core.checkBadges(); Sound.play('correct');
+      toast(`${kind === 'alarm' ? '⏰ Alarm' : '🔔 Reminder'} set: ${timeText(time)}, ${daysText(data.days)}`);
       UI().closeModal();
-      maybeAskPermission();
+      if (kind === 'reminder') maybeAskPermission();
       refreshReminders();
     });
   }
@@ -426,15 +482,18 @@
     let desc = 'Time to pray. Open Lamp & Path for guided prayer.';
     if (p) {
       desc = `Pray for ${p.name}.`;
-      const open = p.reasons.filter(x => !x.answered).map(x => '• ' + x.text);
+      const open = p.reasons.filter(x => !x.answered && !x.passed).map(x => '• ' + x.text);
       if (open.length) desc += '\n\nRequests:\n' + open.join('\n');
       if (p.scriptures.length) desc += '\n\nScriptures:\n' + p.scriptures.map(s => `${s.ref}: ${s.text}`).join('\n');
     }
+    const alarm = isAlarm(r)
+      ? ['BEGIN:VALARM', 'ACTION:AUDIO', 'TRIGGER:PT0M', 'END:VALARM', 'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${escI('⏰ ' + (r.label || 'Wake up and pray'))}`, 'END:VALARM']
+      : ['BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${escI(r.label || 'Time to pray')}`, 'END:VALARM'];
     const ics = [
       'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Lamp and Path//Prayer Reminder//EN', 'CALSCALE:GREGORIAN',
       'BEGIN:VEVENT', `UID:${r.id}@lamp-and-path`, `DTSTAMP:${stamp}`, `DTSTART:${start}`, 'DURATION:PT10M', `RRULE:${rule}`,
-      `SUMMARY:${escI('🙏 ' + (r.label || 'Prayer time'))}`, `DESCRIPTION:${escI(desc)}`,
-      'BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:PT0M', `DESCRIPTION:${escI(r.label || 'Time to pray')}`, 'END:VALARM',
+      `SUMMARY:${escI((isAlarm(r) ? '⏰ ' : '🙏 ') + (r.label || 'Prayer time'))}`, `DESCRIPTION:${escI(desc)}`,
+      ...alarm,
       'END:VEVENT', 'END:VCALENDAR'
     ].join('\r\n');
     const a = document.createElement('a');
@@ -442,7 +501,7 @@
     a.download = (r.label || 'prayer-reminder').replace(/[^\w]+/g, '-').toLowerCase() + '.ics';
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-    toast('📅 Calendar file downloaded. Open it to add the repeating reminder.');
+    toast('📅 Calendar file downloaded. Open it to add the repeating event.');
   }
 
   /* ================= Scheduler ================= */
@@ -451,12 +510,27 @@
     const key = window.Core.dateKey(now);
     const nowMin = now.getHours() * 60 + now.getMinutes();
     state.reminders.forEach(r => {
-      if (!r.enabled || !r.days.includes(now.getDay())) return;
+      if (!r.enabled) return;
+      // snoozed alarm due again
+      if (r.snoozeUntil && Date.now() >= r.snoozeUntil) {
+        const late = Date.now() - r.snoozeUntil;
+        r.snoozeUntil = 0; save();
+        if (late < 15 * 60000) window.Alarm.ring(r);
+        return;
+      }
+      if (!r.days.includes(now.getDay())) return;
       const [h, m] = r.time.split(':').map(Number);
       const rMin = h * 60 + m;
       const stamp = key + ' ' + r.time;
-      // fire on time, or catch up if the app was opened up to an hour late
-      if (nowMin >= rMin && nowMin - rMin <= 60 && r.lastFired !== stamp) {
+      if (r.lastFired === stamp || nowMin < rMin) return;
+      const late = nowMin - rMin;
+      if (isAlarm(r)) {
+        // ring if on time (or up to 10 minutes late); otherwise tell the person they missed it
+        r.lastFired = stamp; save();
+        if (late <= 10) window.Alarm.ring(r);
+        else if (late <= 180) toast(`⏰ You missed your ${timeText(r.time)} alarm: ${r.label || 'Prayer time'}`, 'level');
+      } else if (late <= 60) {
+        // gentle reminders catch up if the app was opened up to an hour late
         r.lastFired = stamp; save();
         fire(r, false);
       }
@@ -495,7 +569,7 @@
 
   function startScheduler() {
     check();
-    setInterval(check, 15000);
+    setInterval(check, 5000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   }
 
