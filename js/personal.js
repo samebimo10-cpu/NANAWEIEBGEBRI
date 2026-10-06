@@ -222,7 +222,8 @@
         <li>Tap the <b>Share</b> button <span class="kbd-ic">⬆︎</span> at the bottom (or top) of the screen.</li>
         <li>Scroll and tap <b>Add to Home Screen</b> <span class="kbd-ic">＋</span>.</li>
         <li>Tap <b>Add</b>. The lamp icon appears on your home screen.</li>
-      </ol>`;
+      </ol>
+      <p class="muted small">Open it from the home-screen icon from now on. Your name, notes and prayers are kept safely there. On iOS 16.4 or newer, Chrome and Edge on iPhone can do this too, from their Share menu.</p>`;
     else if (isAndroid()) body = `
       <ol class="steps">
         <li>In <b>Chrome</b>, tap the <b>⋮</b> menu at the top right.</li>

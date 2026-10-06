@@ -32,7 +32,10 @@
 
   /* ---------------- Audio engine ---------------- */
   let ac = null, master = null;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   function audio() {
+    // iPhone: play like a media app so the alarm still sounds when the ring/silent switch is on silent (iOS 17+)
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* not supported */ }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     if (!ac) {
@@ -217,7 +220,9 @@
         <div class="bed-next">${n
           ? `⏰ ${esc(n.at.toLocaleDateString(undefined, { weekday: 'long' }))} at ${esc(n.at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))} · ${esc(n.r.label || 'Prayer alarm')}<br><small>in ${Math.floor((n.at - Date.now()) / 3600000)} h ${Math.floor(((n.at - Date.now()) % 3600000) / 60000)} min</small>`
           : 'No wake-up alarm is set. Exit and add one under ⏰ Alarms.'}</div>
-        <p class="bed-tips">Leave the phone on charge with this screen open and the volume up. ${'wakeLock' in navigator ? 'The screen stays on, dimmed.' : 'This browser cannot keep the screen on by itself, so set your screen timeout to "Never" while charging.'}</p>
+        <p class="bed-tips">${isIOS
+          ? 'iPhone: leave it on charge with this screen open and the volume turned up. To be safe, set Settings → Display &amp; Brightness → Auto-Lock to <b>Never</b> overnight, and use the ring/silent switch on ring. iPhones cannot vibrate for web apps.'
+          : `Leave the phone on charge with this screen open and the volume up. ${'wakeLock' in navigator ? 'The screen stays on, dimmed.' : 'This browser cannot keep the screen on by itself, so set your screen timeout to "Never" while charging.'}`}</p>
         <div class="bed-actions">
           <button class="btn ghost small" id="bedTest">🔊 Test the alarm sound</button>
           <button class="btn ghost small" id="bedExit">Exit bedside mode</button>

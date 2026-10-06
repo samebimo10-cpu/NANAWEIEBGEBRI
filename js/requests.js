@@ -252,7 +252,7 @@
       if (!l) return;
       if (b.dataset.lact === 'prayed') { l.prayedAt = Date.now(); save(); window.Core.markDaily('prayer'); Sound.play('correct'); toast('🙏 Amen'); }
       if (b.dataset.lact === 'toreq') {
-        const title = (l.for ? `For ${l.for}: ` : '') + l.text.split(/(?<=[.!?])\s/)[0].slice(0, 120);
+        const title = (l.for ? `For ${l.for}: ` : '') + l.text.match(/^[^.!?]*[.!?]?/)[0].slice(0, 120);
         const rq = { id: uid(), title, details: l.text, scripture: l.scripture, created: l.at, status: 'open', prayedCount: l.prayedAt ? 1 : 0, lastPrayed: l.prayedAt || 0, fromLeading: l.id };
         state.requests.push(rq); l.requestId = rq.id; save();
         Sound.play('correct'); toast('📝 Added to My requests');
