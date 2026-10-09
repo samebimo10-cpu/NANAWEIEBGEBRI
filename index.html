@@ -23,11 +23,11 @@
       <span>Lamp <em>&amp;</em> Path</span>
     </div>
     <nav class="tabs" aria-label="Main">
-      <button class="tab" data-view="journey"><span class="ti">🗺️</span><span>Journey</span></button>
-      <button class="tab" data-view="bible"><span class="ti">📜</span><span>Bible</span></button>
       <button class="tab" data-view="daily"><span class="ti">☀️</span><span>Daily</span></button>
-      <button class="tab" data-view="study"><span class="ti">📖</span><span>Study</span></button>
+      <button class="tab" data-view="bible"><span class="ti">📜</span><span>Bible</span></button>
       <button class="tab" data-view="prayer"><span class="ti">🙏</span><span>Prayer</span></button>
+      <button class="tab" data-view="study"><span class="ti">📖</span><span>Study</span></button>
+      <button class="tab" data-view="journey"><span class="ti">🎮</span><span>Stories</span></button>
     </nav>
     <button class="icon-btn settings-btn" id="settingsBtn" title="Personalize, install and share" aria-label="Personalize, install and share">⚙️</button>
     <button class="profile" id="profileBtn" aria-label="Profile and progress">
@@ -41,44 +41,21 @@
   </header>
 
   <main>
-    <section id="view-journey" class="view">
-      <canvas id="world" aria-label="Map of Bible lands"></canvas>
-      <div class="vignette"></div>
-
-      <div class="hud hud-tl">
-        <div class="hud-title">The Pilgrim's Journey</div>
-        <div class="hud-row"><span class="lamp-ic">🪔</span> Lamps lit <b id="lampCount">0/23</b></div>
-        <div class="hud-row small">Next: <b id="nextSite">—</b></div>
-        <div class="hud-row small muted" id="tod">☀️ Day</div>
+    <section id="view-journey" class="view story-view">
+      <canvas id="world" aria-label="Bible Story Quest game"></canvas>
+      <div class="sq-menu" id="sqMenu"></div>
+      <div class="sq-hud hidden" id="sqHud">
+        <button class="icon-btn" id="sqBack" title="Back to stories" aria-label="Back to stories">◀</button>
+        <div class="sq-title"><b id="sqTitle"></b><small id="sqRef"></small></div>
+        <div class="sq-stats"><span title="Fact scrolls">📜 <b id="sqScrolls">0/3</b></span><span title="Lamps of light">✨ <b id="sqCoins">0</b></span></div>
+        <div class="sq-progress"><i id="sqProg"></i></div>
       </div>
-
-      <div class="hud hud-tr">
-        <canvas id="minimap" title="Tap a lit site to travel there"></canvas>
-        <div class="hud-buttons">
-          <button class="icon-btn" id="guideBtn" title="Guide me to the next site">🧭</button>
-          <button class="icon-btn" id="zoomIn" title="Zoom in">＋</button>
-          <button class="icon-btn" id="zoomOut" title="Zoom out">－</button>
-        </div>
+      <div class="sq-touch hidden" id="sqTouch">
+        <button data-k="left" aria-label="Walk left">◀</button>
+        <button data-k="right" aria-label="Walk right">▶</button>
+        <button data-k="jump" class="jump" aria-label="Jump">⤒</button>
       </div>
-
-      <button id="prompt" class="prompt hidden"></button>
-
-      <div class="intro" id="intro">
-        <div class="intro-card">
-          <svg class="intro-lamp" viewBox="0 0 64 64" aria-hidden="true"><use href="#lamp"/></svg>
-          <h1>Lamp <em>&amp;</em> Path</h1>
-          <p class="intro-verse">"Thy word is a lamp unto my feet, and a light unto my path."<br><span>Psalm 119:105</span></p>
-          <ul class="how">
-            <li><b>Explore</b> the lands of the Bible, from Eden to Patmos.</li>
-            <li><b>Read</b> the scripture at each glowing site, with its setting and background.</li>
-            <li><b>Answer</b> the quiz to light a lamp and open the road ahead.</li>
-            <li><b>Return daily</b> for the verse of the day, games and guided prayer.</li>
-          </ul>
-          <p class="controls">Move with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the arrow keys, or tap and hold the map. Press <kbd>E</kbd> or tap a site to read.</p>
-          <div id="loading" class="loading"><div class="load-track"><i id="loadBar"></i></div><small>Preparing the land…</small></div>
-          <button class="btn primary big hidden" id="introStart">Begin the pilgrimage</button>
-        </div>
-      </div>
+      <div class="sq-card hidden" id="sqCard" role="dialog" aria-live="polite"></div>
     </section>
 
     <section id="view-bible" class="view"><div class="bible-page" id="biblePage"></div></section>
@@ -113,9 +90,10 @@
 
   <script src="js/data/journey.js"></script>
   <script src="js/data/library.js"></script>
+  <script src="js/data/stories.js"></script>
   <script src="js/core.js"></script>
   <script src="js/bible.js"></script>
-  <script src="js/game.js"></script>
+  <script src="js/story.js"></script>
   <script src="js/reader.js"></script>
   <script src="js/alarm.js"></script>
   <script src="js/requests.js"></script>

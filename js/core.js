@@ -140,17 +140,16 @@
   }
 
   /* ---------- Badges ---------- */
-  const OT = () => window.JOURNEY.filter(l => l.testament === 'OT').map(l => l.id);
-  const NT = () => window.JOURNEY.filter(l => l.testament === 'NT').map(l => l.id);
+  const STORY = t => window.STORIES.filter(st => (window.JOURNEY.find(l => l.id === st.id) || {}).testament === t).map(st => st.id);
   const BADGES = [
-    { id: 'firstlight', icon: '🌅', name: 'First Light', desc: 'Complete the Garden of Eden', test: s => !!s.completed.eden },
-    { id: 'covenant', icon: '🌈', name: 'Covenant Keeper', desc: 'Visit the Mountains of Ararat', test: s => !!s.completed.ararat },
-    { id: 'law', icon: '📜', name: 'Tablets of Stone', desc: 'Complete Mount Sinai', test: s => !!s.completed.sinai },
-    { id: 'psalmist', icon: '🐑', name: 'Psalmist', desc: 'Complete Psalm 23 in the hills of Judah', test: s => !!s.completed.judah },
-    { id: 'ot', icon: '🏺', name: 'Old Testament Pilgrim', desc: 'Complete every Old Testament site', test: s => OT().every(id => s.completed[id]) },
-    { id: 'gospel', icon: '✝️', name: 'Gospel Walker', desc: 'Complete the empty tomb', test: s => !!s.completed.tomb },
-    { id: 'apostle', icon: '⛵', name: 'Apostle\'s Road', desc: 'Complete every New Testament site', test: s => NT().every(id => s.completed[id]) },
-    { id: 'pilgrim', icon: '👑', name: 'Faithful Pilgrim', desc: 'Earn 3 stars at every site', test: s => window.JOURNEY.every(l => s.completed[l.id] === 3) },
+    { id: 'firstlight', icon: '🌅', name: 'First Light', desc: 'Finish the story "Let There Be Light"', test: s => !!s.completed.eden },
+    { id: 'covenant', icon: '🌈', name: 'Covenant Keeper', desc: "Finish Noah's Ark", test: s => !!s.completed.ararat },
+    { id: 'law', icon: '🌊', name: 'Dry Ground', desc: 'Cross the Red Sea', test: s => !!s.completed.redsea },
+    { id: 'psalmist', icon: '🪨', name: 'Giant Slayer', desc: 'Finish David and Goliath', test: s => !!s.completed.elah },
+    { id: 'ot', icon: '🏺', name: 'Old Testament Explorer', desc: 'Finish every Old Testament story', test: s => STORY('OT').every(id => s.completed[id]) },
+    { id: 'gospel', icon: '✝️', name: 'He Is Risen', desc: 'Finish the empty tomb story', test: s => !!s.completed.tomb },
+    { id: 'apostle', icon: '🔥', name: 'Spirit-Filled', desc: 'Finish every New Testament story', test: s => STORY('NT').every(id => s.completed[id]) },
+    { id: 'pilgrim', icon: '👑', name: 'Faithful Pilgrim', desc: 'Earn 3 stars in all 12 stories', test: s => window.STORIES.every(st => s.completed[st.id] === 3) },
     { id: 'streak3', icon: '🔥', name: 'Kindled', desc: 'Reach a 3-day streak', test: s => (s.streak.best || 0) >= 3 },
     { id: 'streak7', icon: '🕯️', name: 'Burning Lamp', desc: 'Reach a 7-day streak', test: s => (s.streak.best || 0) >= 7 },
     { id: 'streak30', icon: '🌟', name: 'Unquenchable', desc: 'Reach a 30-day streak', test: s => (s.streak.best || 0) >= 30 },
@@ -221,6 +220,8 @@
       level: [[392, 0, .4], [523, .1, .4], [659, .2, .4], [784, .3, .4], [1046, .4, 1]],
       badge: [[880, 0, .3], [1175, .1, .5], [1568, .2, .7]],
       tap: [[740, 0, .08, 'triangle', .05]],
+      jump: [[392, 0, .1, 'triangle', .05], [587, .04, .1, 'triangle', .04]],
+      coin: [[988, 0, .09, 'sine', .07], [1319, .06, .14, 'sine', .07]],
       bell: [[528, 0, 2.5, 'sine', .1], [1056, 0, 1.5, 'sine', .03]]
     };
     return {

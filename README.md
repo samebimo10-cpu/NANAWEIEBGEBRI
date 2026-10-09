@@ -30,13 +30,13 @@
 - Copy verses, adjust the text size, and the app remembers where you were reading.
 - A **My highlights & notes** list, filterable by colour.
 
-### 🗺️ The Pilgrim's Journey (exploration game)
-- A hand-drawn map of the Bible lands: the Mediterranean, Egypt and the Nile, Sinai, Canaan, Galilee, Mesopotamia, Greece and the Aegean islands.
-- Everything is drawn in code: shaded terrain, animated water, swaying palms, cedars and olive groves, drifting clouds and their shadows, fireflies, and a full **day and night cycle** with lit lamps and lantern light.
-- **23 sacred sites** in biblical order, from the **Garden of Eden** to the **Isle of Patmos**. Each site has its own animated landmark: Noah's ark and a rainbow on Ararat, the walls of Jericho (which fall once you complete the site), the star over Bethlehem, a boat on the Sea of Galilee, the empty tomb, tongues of fire at Pentecost, and more.
-- Walk to a glowing site and a **scripture passage pops up**. You can read it or listen to it aloud. It comes with its setting, historical background, key themes, further reading and a reflection question.
-- Pass the **quiz** (2 of 3 correct) to light a lamp at the site and unlock the road to the next one. Earn up to 3 stars per site.
-- A guide arrow, a compass auto-walk button, a minimap with fast travel to unlocked sites, and zoom.
+### 🎮 Bible Story Quest (2D story game, the last tab)
+- **12 short side-scrolling stories**, from Creation to Pentecost: Let There Be Light, Noah's Ark, Through the Red Sea, The Walls of Jericho, David and Goliath, Jonah, Daniel in the Lions' Den, the birth of Jesus, Peace Be Still, the Cross, the Empty Tomb and Pentecost.
+- **Movement**: run with momentum, jump higher by holding the jump button, and leap between boats that bob on the waves. Falling into the water gently returns you to solid ground. Keyboard (← → / A D, Space or ↑) or big on-screen buttons on phones.
+- **Visuals for each story**: layered scrolling landscapes, skies, weather and light. Darkness turns to light in Eden, rain falls until the rainbow appears, you walk between walls of water at the Red Sea, the storm calms on Galilee, the sun rises at the tomb, and tongues of fire appear at Pentecost.
+- **Finales**: the walls of Jericho fall, Goliath topples, the stone is rolled away, and more.
+- **3 fact scrolls per story**: short facts, each with its Bible reference and checked against the KJV text. Any you miss are shown at the end.
+- At the end of each story you **read the KJV passage** (with context and background) and answer a **3-question quiz** to earn up to 3 stars and unlock the next story.
 
 ### ☀️ Daily
 - **Verse of the Day**, with read-aloud.
@@ -126,7 +126,8 @@ js/praylist.js        "Who I'm praying for", alarms & reminders, calendar export
 js/alarm.js           Wake-up alarm sounds, ringing screen, snooze, bedside mode
 js/requests.js        My requests (praying / answered / past needs) and Led to pray
 js/core.js            Saving, XP/levels, streaks, badges, sound, read-aloud, toasts
-js/game.js            Map rendering engine (terrain, sprites, lighting, particles, input)
+js/story.js           Bible Story Quest: 2D side-scrolling story game (levels, physics, drawing, finales)
+js/data/stories.js    The 12 stories: themes, goals and fact scrolls with references
 js/app.js             UI: reader, quizzes, daily games, study, prayer, profile
 sw.js                 Offline support: saves the app, fonts and the whole Bible on the device
 fonts/                Bundled fonts (no internet needed)

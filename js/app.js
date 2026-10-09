@@ -7,11 +7,11 @@
   const J = window.JOURNEY;
 
   /* ================= Navigation ================= */
-  const VIEWS = ['journey', 'bible', 'daily', 'study', 'prayer'];
+  const VIEWS = ['daily', 'bible', 'prayer', 'study', 'journey'];
   let current = null;
 
   function show(view) {
-    if (!VIEWS.includes(view)) view = 'journey';
+    if (!VIEWS.includes(view)) view = 'daily';
     current = view;
     VIEWS.forEach(v => $('#view-' + v).classList.toggle('active', v === view));
     $$('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
@@ -31,10 +31,6 @@
     $('#lvlTitle').textContent = li.title;
     $('#xpfill').style.width = Math.round(li.progress * 100) + '%';
     $('#streak').textContent = window.Core.currentStreak();
-    const doneCount = J.filter(l => state.completed[l.id]).length;
-    $('#lampCount').textContent = `${doneCount}/${J.length}`;
-    const next = J.find(l => !state.completed[l.id]);
-    $('#nextSite').textContent = next ? next.name : 'Journey complete!';
   }
   window.Core.onChange(updateHUD);
 
@@ -105,7 +101,7 @@
     openModal(`
       <div class="reader">
         <div class="reader-head">
-          <div class="eyebrow">${loc.testament === 'OT' ? 'Old Testament' : 'New Testament'} · ${esc(loc.region)} · Site ${idx + 1} of ${J.length}</div>
+          <div class="eyebrow">${loc.testament === 'OT' ? 'Old Testament' : 'New Testament'} · ${esc(loc.region)}${window.STORIES.some(x => x.id === loc.id) ? ` · Story ${window.STORIES.findIndex(x => x.id === loc.id) + 1} of ${window.STORIES.length}` : ''}</div>
           <h2>${esc(loc.name)}</h2>
           ${stars ? `<div class="stars-row">${starIcons(stars)}</div>` : ''}
         </div>
@@ -197,8 +193,9 @@
     }
     window.Core.markDaily('journey');
     if (gained) window.Core.addXP(gained, firstTime ? 'Site completed' : 'Better score');
-    const idx = J.indexOf(loc);
-    const nextLoc = J.slice(idx + 1).find(l => !state.completed[l.id]) || J.find(l => !state.completed[l.id]);
+    const STORIES = window.STORIES;
+    const isStory = STORIES.some(x => x.id === loc.id);
+    const nextStory = STORIES.find(x => !state.completed[x.id]);
     if (passed) Sound.play('complete'); else Sound.play('wrong');
     $('#modalBody').innerHTML = `
       <div class="result">
@@ -206,18 +203,18 @@
         <h2>${passed ? (score === total ? 'Perfect!' : 'Well done!') : 'Keep seeking'}</h2>
         <p class="lead">You answered ${score} of ${total} correctly.</p>
         ${passed
-          ? `<p>${firstTime ? `A lamp has been lit at <strong>${esc(loc.name)}</strong>.` : 'Your progress has been saved.'} ${nextLoc && firstTime ? `Your path now leads to <strong>${esc(nextLoc.name)}</strong>.` : ''}</p>`
+          ? `<p>${firstTime ? `You completed <strong>${esc(loc.name)}</strong>.` : 'Your progress has been saved.'} ${isStory && nextStory && firstTime ? `Next story: <strong>${esc(nextStory.title)}</strong>.` : ''}</p>`
           : `<p>Read the passage once more. "Thy word is a lamp unto my feet." Then try again.</p>`}
         <div class="row center gap">
           ${passed
-            ? `<button class="btn primary" id="contBtn">Continue the journey →</button>`
+            ? `<button class="btn primary" id="contBtn">${isStory ? 'Back to the stories →' : 'Continue →'}</button>`
             : `<button class="btn ghost" id="rereadBtn">📖 Read again</button><button class="btn primary" id="retryBtn">Retry quiz</button>`}
         </div>
       </div>`;
     if (passed) {
       $('#contBtn').addEventListener('click', () => {
         closeModal();
-        if (firstTime) { window.Game.celebrate(loc.id); if (J.every(l => state.completed[l.id])) setTimeout(journeyComplete, 1600); }
+        if (firstTime && isStory) { window.Game.celebrate(loc.id); if (STORIES.every(x => state.completed[x.id])) setTimeout(journeyComplete, 1600); }
       });
     } else {
       $('#rereadBtn').addEventListener('click', () => openLocation(loc));
@@ -230,10 +227,10 @@
     openModal(`
       <div class="result">
         <div class="big-emoji">👑</div>
-        <h2>Pilgrimage complete${window.Personal.name() ? ', ' + esc(window.Personal.name()) : ''}</h2>
-        <p class="lead">You have walked from Eden to Patmos, from "In the beginning" to "all things new."</p>
+        <h2>Story Quest complete${window.Personal.name() ? ', ' + esc(window.Personal.name()) : ''}</h2>
+        <p class="lead">You have journeyed from Creation to Pentecost, through twelve stories of God's faithfulness.</p>
         <p class="scripture center">"I have fought a good fight, I have finished my course, I have kept the faith."<br><span class="muted">2 Timothy 4:7</span></p>
-        <p>Go back to any site to earn three stars, and keep up your daily games and prayer.</p>
+        <p>Replay any story to earn three stars, and keep up your daily reading and prayer.</p>
         <div class="row center"><button class="btn primary" data-close>Amen</button></div>
       </div>`, { cls: 'parchment' });
   }
@@ -300,10 +297,10 @@
 
       <section class="cta-card">
         <div>
-          <div class="eyebrow">Continue your pilgrimage</div>
-          <h3>${esc((J.find(l => !state.completed[l.id]) || { name: 'Revisit any site to earn 3 stars' }).name)}</h3>
+          <div class="eyebrow">🎮 Bible Story Quest</div>
+          <h3>${esc((window.STORIES.find(x => !state.completed[x.id]) || { title: 'Replay any story to earn 3 stars' }).title)}</h3>
         </div>
-        <button class="btn primary" id="goJourney">Open the map →</button>
+        <button class="btn primary" id="goJourney">Play →</button>
       </section>
       <section class="cta-card alt">
         <div>
@@ -558,7 +555,7 @@
         if (!items.length) return '';
         return `<h2 class="section-title">${label}</h2><div class="plist">${items.map(l => {
           const st = state.completed[l.id] || 0;
-          const unlocked = window.Game.ready ? window.Game.isUnlocked(l) : true;
+          const unlocked = window.Game.isUnlocked(l);
           return `<button class="pcard" data-id="${l.id}">
             <div class="pc-top"><span class="pc-region">${esc(l.region)}</span>${st ? `<span class="pc-stars">${'★'.repeat(st)}</span>` : unlocked ? '' : '<span class="pc-lock">🔒 on map</span>'}</div>
             <h3>${esc(l.name)}</h3>
@@ -593,7 +590,7 @@
         <div class="muted small" id="saved">Notes are saved on this device.</div>
         <div class="row end gap">
           <button class="btn ghost" id="fullCh">📜 Read the whole chapter</button>
-          ${unlocked ? '<button class="btn primary" id="goMap">🗺️ Visit on the map</button>' : '<span class="muted small">🔒 Unlocks as you travel the journey</span>'}
+          ${window.Game.hasStory(loc.id) ? (unlocked ? '<button class="btn primary" id="goMap">🎮 Play this story</button>' : '<span class="muted small">🔒 Unlocks in Bible Story Quest</span>') : ''}
         </div>
       </div>`, { cls: 'parchment' });
     bindListen($('#listenBtn'), passageText(loc.passages));
@@ -603,7 +600,7 @@
       tmr = setTimeout(() => { state.notes[loc.id] = e.target.value; save(); $('#saved').textContent = '✓ Saved'; }, 400);
     });
     $('#fullCh').addEventListener('click', () => { closeModal(); window.Reader.openRef(loc.passages[0].ref.replace(/\s*–.*$/, '')); });
-    if (unlocked) $('#goMap').addEventListener('click', () => { closeModal(); show('journey'); window.Game.travelTo(loc.id); });
+    if (unlocked && window.Game.hasStory(loc.id)) $('#goMap').addEventListener('click', () => { closeModal(); show('journey'); window.Game.playStory(loc.id); });
   }
 
   function renderBooks() {
@@ -847,47 +844,10 @@
     $('#profileBtn').addEventListener('click', openProfile);
     $('#settingsBtn').addEventListener('click', () => window.Personal.openSettings());
     window.Personal.start();
-    $('#zoomIn').addEventListener('click', () => window.Game.zoomIn());
-    $('#zoomOut').addEventListener('click', () => window.Game.zoomOut());
-    $('#guideBtn').addEventListener('click', () => {
-      const l = window.Game.walkToNext();
-      if (l) toast(`🧭 Walking to ${l.name}…`);
-    });
-    $('#prompt').addEventListener('click', () => {
-      const id = $('#prompt').dataset.id;
-      const loc = J.find(l => l.id === id);
-      if (loc && window.Game.isUnlocked(loc)) openLocation(loc);
-    });
     updateHUD();
-    setInterval(() => { if (window.Game.ready) $('#tod').textContent = window.Game.timeOfDay(); }, 1000);
+    window.Game.init($('#world'), { onFinish: loc => { window.Core.Sound.play('open'); openLocation(loc); } });
 
-    const bar = $('#loadBar');
-    window.Game.init($('#world'), $('#minimap'), {
-      onOpen: openLocation,
-      onNear(loc, locked) {
-        const p = $('#prompt');
-        if (!loc) { p.classList.add('hidden'); return; }
-        p.dataset.id = loc.id;
-        p.innerHTML = locked
-          ? `🔒 <span>${esc(loc.name)}</span> <small>Complete earlier sites first</small>`
-          : `📜 <span>Read at ${esc(loc.name)}</span> <kbd>E</kbd>`;
-        p.classList.toggle('locked', locked);
-        p.classList.remove('hidden');
-      }
-    }, pct => { bar.style.width = Math.round(pct * 100) + '%'; }).then(() => {
-      $('#loading').classList.add('hidden');
-      $('#introStart').classList.remove('hidden');
-      if (state.introSeen) $('#intro').classList.add('hidden');
-      if (current === 'journey' && !modalOpen) window.Game.setActive(true);
-    });
-    $('#introStart').addEventListener('click', () => {
-      state.introSeen = true; save();
-      Sound.play('open');
-      $('#intro').classList.add('hidden');
-      if (current === 'journey') window.Game.setActive(true);
-    });
-
-    show(location.hash.slice(1) || 'journey');
+    show(location.hash.slice(1) || 'daily');
     window.PrayList.startScheduler();
     window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 
