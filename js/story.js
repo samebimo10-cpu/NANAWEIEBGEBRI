@@ -19,6 +19,8 @@
   let lv = null;                       // current level
   const keys = { left: false, right: false, jump: false };
   let jumpBuffer = 0;
+  // One-hand mode (default): the pilgrim walks forward by himself; tap anywhere to jump, hold to jump higher.
+  const oneHand = () => window.Core.state.storyOneHand !== false;
 
   /* ================= Progress ================= */
   const done = () => window.Core.state.completed;
@@ -35,9 +37,12 @@
     if (kind === 'sea') {
       segs.push({ x: -40, w: 420, y: GROUND, dock: true });
       x = 380;
+      let prevY = GROUND;
       while (x < L - 900) {
-        x += 80 + R() * 45;
-        const w = 150 + R() * 80, y = GROUND - 8 - R() * 46;
+        // neighbouring boats stay close in height, and gaps are narrower when climbing up
+        const w = 150 + R() * 80, y = clamp(prevY + (R() - 0.5) * 50, GROUND - 48, GROUND - 6);
+        x += y < prevY - 12 ? 72 + R() * 18 : 78 + R() * 32;
+        prevY = y;
         plats.push({ x, w, y, base: y, boat: true, phase: R() * 6, amp: 5 + R() * 6, dy: 0 });
         coins.push({ x: x + w / 2, y: y - 70 });
         x += w;
@@ -114,14 +119,14 @@
 
   /* ================= Input ================= */
   function bindInput() {
-    const map = { arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right', arrowup: 'jump', w: 'jump', ' ': 'jump' };
+    const map = { arrowleft: 'left', a: 'left', arrowright: 'right', d: 'right', arrowup: 'jump', w: 'jump', ' ': 'jump', enter: 'jump' };
     window.addEventListener('keydown', e => {
       if (!running || mode !== 'play' || !inputEnabled) return;
       if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
       const k = map[e.key.toLowerCase()];
       if (!k) return;
       e.preventDefault();
-      if (k === 'jump' && !keys.jump) jumpBuffer = 0.14;
+      if (k === 'jump' && !keys.jump) { jumpBuffer = 0.14; hideHint(); }
       keys[k] = true;
     });
     window.addEventListener('keyup', e => { const k = map[e.key.toLowerCase()]; if (k) keys[k] = false; });
@@ -135,6 +140,16 @@
       b.addEventListener('contextmenu', e => e.preventDefault());
     });
     $('#sqBack').addEventListener('click', () => { window.Core.Sound.play('tap'); showMenu(); });
+    const tapDown = e => {
+      if (mode !== 'play' || !oneHand() || !inputEnabled) return;
+      e.preventDefault();
+      if (!keys.jump) jumpBuffer = 0.14;
+      keys.jump = true; hideHint();
+    };
+    const tapUp = () => { if (oneHand()) keys.jump = false; };
+    canvas.addEventListener('pointerdown', tapDown);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => canvas.addEventListener(ev, tapUp));
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
   }
   function resetKeys() { keys.left = keys.right = keys.jump = false; jumpBuffer = 0; document.querySelectorAll('#sqTouch .down').forEach(b => b.classList.remove('down')); }
 
@@ -182,10 +197,11 @@
     if (!inputEnabled) resetKeys();
     // ride a moving boat
     if (P.onGround && P.ground && P.ground.boat) P.y += P.ground.dy;
-    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    const dir = oneHand() ? (keys.left ? -1 : 1) : (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     if (dir) { P.vx += dir * (P.onGround ? 2300 : 1500) * dt; P.facing = dir; }
     else { const fr = (P.onGround ? 2600 : 420) * dt; P.vx = Math.abs(P.vx) <= fr ? 0 : P.vx - Math.sign(P.vx) * fr; }
-    P.vx = clamp(P.vx, -285, 285);
+    const top = oneHand() && !keys.right ? 262 : 285;   // a steady, easy walking pace in one-hand mode
+    P.vx = clamp(P.vx, -top, top);
     P.coyote = P.onGround ? 0.1 : Math.max(0, P.coyote - dt);
     if (jumpBuffer > 0 && P.coyote > 0) {
       P.vy = -690; P.onGround = false; P.coyote = 0; jumpBuffer = 0;
@@ -257,7 +273,7 @@
   /* ================= Finish & set pieces ================= */
   function startFinish() {
     if (mode !== 'play') return;
-    mode = 'finishing'; lv.finishT = 0; lv.finished = true; resetKeys();
+    mode = 'finishing'; lv.finishT = 0; lv.finished = true; resetKeys(); hideHint();
     P.vx = 0;
     const id = lv.st.id;
     window.Core.Sound.play(id === 'jericho' ? 'level' : 'complete');
@@ -870,7 +886,11 @@
     c.innerHTML = `<div class="sq-card-inner">${html}<button class="btn primary" id="sqGo">${btnLabel}</button></div>`;
     c.classList.remove('hidden');
     resetKeys();
-    $('#sqGo').addEventListener('click', () => { hideCard(); onGo && onGo(); });
+    // tap anywhere on the card (or around it) to continue: easy with one thumb
+    let done = false;
+    const go = e => { if (done) return; if (e) e.stopPropagation(); done = true; hideCard(); onGo && onGo(); };
+    $('#sqGo').addEventListener('click', go);
+    c.onclick = go;
     setTimeout(() => { const b = $('#sqGo'); if (b) b.focus(); }, 50);
   }
   function hideCard() { $('#sqCard').classList.add('hidden'); }
@@ -895,15 +915,25 @@
     hud();
     const st = lv.st;
     showCard(`<div class="sq-eyebrow">Story ${i + 1} of ${S().length} · ${esc(st.ref)}</div><h2 class="sq-h">${st.icon} ${esc(st.title)}</h2><p>${esc(st.goal)}</p>
-      <p class="sq-howto">${touch() ? 'Use ◀ ▶ to walk and ⤒ to jump. Hold ⤒ to jump higher.' : 'Use ← → or A D to walk, and Space or ↑ to jump. Hold to jump higher.'} Collect the 3 📜 fact scrolls and the ✨ lamps.</p>`, 'Begin ▶', () => {
+      <p class="sq-howto">${oneHand()
+        ? (touch() ? '✋ One-hand play: you walk by yourself. <b>Tap anywhere to jump</b>, and hold to jump higher.' : '✋ One-hand play: you walk by yourself. Press <b>Space</b> or click to jump, and hold to jump higher.')
+        : (touch() ? 'Use ◀ ▶ to walk and ⤒ to jump. Hold ⤒ to jump higher.' : 'Use ← → or A D to walk, and Space or ↑ to jump. Hold to jump higher.')} Collect the 3 📜 fact scrolls and the ✨ lamps.</p>`, 'Begin ▶', () => {
       mode = 'play';
-      if (touch()) $('#sqTouch').classList.remove('hidden');
+      if (touch() && !oneHand()) $('#sqTouch').classList.remove('hidden');
+      if (oneHand()) showHint();
     });
   }
   const touch = () => matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  let hintT = null;
+  function showHint() {
+    const h = $('#sqHint'); if (!h) return;
+    h.textContent = touch() ? '👆 Tap anywhere to jump' : 'Space or click to jump';
+    h.classList.remove('hidden'); clearTimeout(hintT); hintT = setTimeout(hideHint, 4000);
+  }
+  function hideHint() { const h = $('#sqHint'); if (h) h.classList.add('hidden'); }
 
   function showMenu() {
-    mode = 'menu'; resetKeys(); hideCard();
+    mode = 'menu'; resetKeys(); hideCard(); hideHint();
     $('#sqHud').classList.add('hidden'); $('#sqTouch').classList.add('hidden');
     const pr = progress();
     const stars = S().reduce((a, s) => a + (done()[s.id] || 0), 0);
@@ -916,7 +946,10 @@
         <div class="sq-head">
           <div><div class="sq-eyebrow">Bible Story Quest</div><h1>${name ? `${esc(name)}'s` : 'Your'} journey through Scripture</h1>
           <p>Twelve short stories from Creation to Pentecost. Run, jump and collect facts, then read the passage and answer three questions.</p></div>
+          <div class="sq-side">
+          <button class="sq-hand ${oneHand() ? 'on' : ''}" id="sqHand" aria-pressed="${oneHand()}"><span>✋</span><span><b>One-hand play</b><small>${oneHand() ? 'On: walks by itself, tap to jump' : 'Off: ◀ ▶ and jump buttons'}</small></span><i class="sq-switch"></i></button>
           <div class="sq-score"><b>${Object.keys(done()).filter(id => S().some(s => s.id === id)).length}/${S().length}</b><span>stories</span><b>★ ${stars}/${S().length * 3}</b><span>stars</span></div>
+          </div>
         </div>
         <div class="sq-grid">${S().map((s, i) => {
           const st = done()[s.id] || 0, un = unlockedIdx(i), nx = i === pr.next;
@@ -931,6 +964,11 @@
         }).join('')}</div>
       </div>`;
     m.classList.remove('hidden');
+    $('#sqHand').addEventListener('click', () => {
+      window.Core.state.storyOneHand = !oneHand(); window.Core.save(); window.Core.Sound.play('tap');
+      window.Core.toast(oneHand() ? '✋ One-hand play on: tap anywhere to jump' : 'One-hand play off: use ◀ ▶ and the jump button');
+      showMenu();
+    });
     m.querySelectorAll('.sq-story').forEach(b => b.addEventListener('click', () => {
       const i = +b.dataset.i;
       if (!unlockedIdx(i)) { window.Core.toast(`🔒 Finish "${S()[i - 1].title}" first`); window.Core.Sound.play('wrong'); return; }

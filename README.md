@@ -32,7 +32,8 @@
 
 ### 🎮 Bible Story Quest (2D story game, the last tab)
 - **12 short side-scrolling stories**, from Creation to Pentecost: Let There Be Light, Noah's Ark, Through the Red Sea, The Walls of Jericho, David and Goliath, Jonah, Daniel in the Lions' Den, the birth of Jesus, Peace Be Still, the Cross, the Empty Tomb and Pentecost.
-- **Movement**: run with momentum, jump higher by holding the jump button, and leap between boats that bob on the waves. Falling into the water gently returns you to solid ground. Keyboard (← → / A D, Space or ↑) or big on-screen buttons on phones.
+- **One-hand play** (on by default): the pilgrim walks forward by himself. **Tap anywhere to jump**, and hold to jump higher. Cards and story intros also close with a tap anywhere. You can turn it off on the story menu to use ◀ ▶ and jump buttons, or the keyboard (← → / A D, Space or ↑).
+- **Movement**: jump higher by holding, and leap between boats that bob on the waves. Falling into the water gently returns you to solid ground with room for a run-up.
 - **Visuals for each story**: layered scrolling landscapes, skies, weather and light. Darkness turns to light in Eden, rain falls until the rainbow appears, you walk between walls of water at the Red Sea, the storm calms on Galilee, the sun rises at the tomb, and tongues of fire appear at Pentecost.
 - **Finales**: the walls of Jericho fall, Goliath topples, the stone is rolled away, and more.
 - **3 fact scrolls per story**: short facts, each with its Bible reference and checked against the KJV text. Any you miss are shown at the end.
