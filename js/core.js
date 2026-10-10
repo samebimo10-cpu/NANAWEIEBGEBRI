@@ -23,7 +23,19 @@
     people: [],        // prayer list: { id, name, category, reasons[], scriptures[], notes, prayedCount, lastPrayed }
     reminders: [],     // { id, kind 'reminder'|'alarm', time 'HH:MM', days [0-6], label, personId, sound, snooze, enabled, lastFired, snoozeUntil }
     requests: [],      // { id, title, details, scripture, created, status 'open'|'answered'|'passed', answeredAt, answeredHow, passedAt, passedNote, prayedCount, lastPrayed }
-    leadings: []       // { id, at, text, for, scripture, prayedAt, requestId }
+    leadings: [],      // { id, at, text, for, scripture, prayedAt, requestId }
+    readLog: {},       // 'book.chapter' -> last time it was read (ms)
+    readHist: {},      // 'YYYY-MM-DD' -> chapters read that day
+    plan: null,        // { id, start 'YYYY-MM-DD', read: { 'book.chapter': true } }
+    plansDone: [],     // { id, at }
+    memory: [],        // { id, ref, added, level 0-6, due 'YYYY-MM-DD', reviews, lastReview }
+    soap: [],          // { id, at, ref, observation, application, prayer }
+    reflections: {},   // 'YYYY-MM-DD' -> { grateful [3], saw, sorry, tomorrow, at }
+    sermons: [],       // { id, at, title, preacher, notes }
+    milestones: [],    // { id, date 'YYYY-MM-DD', title, story, ref, kind 'milestone'|'fast'|'plan' }
+    fasts: [],         // { id, start ms, days, type, focus, notes { dayIndex: text }, status 'active'|'done'|'ended', endedAt }
+    topics: {},        // topicId -> { step, done, answer, at }
+    cardsShared: 0
   };
 
   function load() {
@@ -140,16 +152,23 @@
   }
 
   /* ---------- Badges ---------- */
-  const STORY = t => window.STORIES.filter(st => (window.JOURNEY.find(l => l.id === st.id) || {}).testament === t).map(st => st.id);
+  const J = () => window.JOURNEY || [];
+  const PASS = t => J().filter(l => l.testament === t).map(l => l.id);
   const BADGES = [
-    { id: 'firstlight', icon: '🌅', name: 'First Light', desc: 'Finish the story "Let There Be Light"', test: s => !!s.completed.eden },
-    { id: 'covenant', icon: '🌈', name: 'Covenant Keeper', desc: "Finish Noah's Ark", test: s => !!s.completed.ararat },
-    { id: 'law', icon: '🌊', name: 'Dry Ground', desc: 'Cross the Red Sea', test: s => !!s.completed.redsea },
-    { id: 'psalmist', icon: '🪨', name: 'Giant Slayer', desc: 'Finish David and Goliath', test: s => !!s.completed.elah },
-    { id: 'ot', icon: '🏺', name: 'Old Testament Explorer', desc: 'Finish every Old Testament story', test: s => STORY('OT').every(id => s.completed[id]) },
-    { id: 'gospel', icon: '✝️', name: 'He Is Risen', desc: 'Finish the empty tomb story', test: s => !!s.completed.tomb },
-    { id: 'apostle', icon: '🔥', name: 'Spirit-Filled', desc: 'Finish every New Testament story', test: s => STORY('NT').every(id => s.completed[id]) },
-    { id: 'pilgrim', icon: '👑', name: 'Faithful Pilgrim', desc: 'Earn 3 stars in all 12 stories', test: s => window.STORIES.every(st => s.completed[st.id] === 3) },
+    { id: 'firstlight', icon: '🌅', name: 'First Light', desc: 'Complete your first study passage and quiz', test: s => Object.keys(s.completed).length >= 1 },
+    { id: 'reader', icon: '📖', name: 'Daily Bread', desc: 'Read 10 chapters of the Bible', test: s => Object.keys(s.readLog || {}).length >= 10 },
+    { id: 'reader100', icon: '🏛️', name: 'Bereans', desc: 'Read 100 chapters of the Bible', test: s => Object.keys(s.readLog || {}).length >= 100 },
+    { id: 'plan', icon: '🗓️', name: 'Finisher', desc: 'Complete a reading plan', test: s => (s.plansDone || []).length >= 1 },
+    { id: 'heart', icon: '💗', name: 'Written on My Heart', desc: 'Learn 3 memory verses well (reviewed 3 times)', test: s => (s.memory || []).filter(m => m.level >= 3).length >= 3 },
+    { id: 'soap', icon: '✍️', name: 'Devoted', desc: 'Write 5 S.O.A.P. journal entries', test: s => (s.soap || []).length >= 5 },
+    { id: 'evening', icon: '🌙', name: 'Evening Sacrifice', desc: 'Write 7 evening reflections', test: s => Object.keys(s.reflections || {}).length >= 7 },
+    { id: 'topic', icon: '🧭', name: 'Rightly Dividing', desc: 'Finish a topical study', test: s => Object.values(s.topics || {}).some(t => t.done) },
+    { id: 'ebenezer', icon: '🪨', name: 'Ebenezer', desc: 'Record 3 milestones of God\'s faithfulness', test: s => (s.milestones || []).length >= 3 },
+    { id: 'fast', icon: '🍞', name: 'Not by Bread Alone', desc: 'Complete a fast', test: s => (s.fasts || []).some(f => f.status === 'done') },
+    { id: 'sharer', icon: '🖼️', name: 'Light on a Hill', desc: 'Share a verse or testimony card', test: s => (s.cardsShared || 0) >= 1 },
+    { id: 'ot', icon: '🏺', name: 'Old Testament Explorer', desc: 'Complete every Old Testament study passage', test: s => PASS('OT').length > 0 && PASS('OT').every(id => s.completed[id]) },
+    { id: 'apostle', icon: '🔥', name: 'New Testament Explorer', desc: 'Complete every New Testament study passage', test: s => PASS('NT').length > 0 && PASS('NT').every(id => s.completed[id]) },
+    { id: 'pilgrim', icon: '👑', name: 'Faithful Pilgrim', desc: 'Earn 3 stars on all 23 study passages', test: s => J().length > 0 && J().every(l => s.completed[l.id] === 3) },
     { id: 'streak3', icon: '🔥', name: 'Kindled', desc: 'Reach a 3-day streak', test: s => (s.streak.best || 0) >= 3 },
     { id: 'streak7', icon: '🕯️', name: 'Burning Lamp', desc: 'Reach a 7-day streak', test: s => (s.streak.best || 0) >= 7 },
     { id: 'streak30', icon: '🌟', name: 'Unquenchable', desc: 'Reach a 30-day streak', test: s => (s.streak.best || 0) >= 30 },
@@ -220,8 +239,6 @@
       level: [[392, 0, .4], [523, .1, .4], [659, .2, .4], [784, .3, .4], [1046, .4, 1]],
       badge: [[880, 0, .3], [1175, .1, .5], [1568, .2, .7]],
       tap: [[740, 0, .08, 'triangle', .05]],
-      jump: [[392, 0, .1, 'triangle', .05], [587, .04, .1, 'triangle', .04]],
-      coin: [[988, 0, .09, 'sine', .07], [1319, .06, .14, 'sine', .07]],
       bell: [[528, 0, 2.5, 'sine', .1], [1056, 0, 1.5, 'sine', .03]]
     };
     return {

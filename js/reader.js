@@ -17,6 +17,25 @@
   let pendingFlash = null;  // verses to flash on the next render
 
   const lordHTML = t => esc(t).replace(/LORD/g, '<span class="sc">Lord</span>');
+  const OPT_DEFAULTS = { web: false, gloss: true, cont: true, sleep: 0 };
+  const opts = () => {
+    const o = state.readerOpts || (state.readerOpts = {});
+    Object.keys(OPT_DEFAULTS).forEach(k => { if (!(k in o)) o[k] = OPT_DEFAULTS[k]; });
+    return o;
+  };
+  // very common words that need no underline every time they appear
+  const GLOSS_SKIP = new Set(['hath', 'doth', 'saith', 'lest', 'verily', 'spake', 'thereof', 'therein', 'wherefore', 'abide']);
+  function kjvHTML(t) {
+    let h = esc(t);
+    if (opts().gloss && window.GLOSSARY) {
+      h = h.replace(/\b([A-Za-z]+)\b/g, w => {
+        const k = w.toLowerCase();
+        return window.GLOSSARY[k] && !GLOSS_SKIP.has(k) ? `<span class="gw" data-w="${k}">${w}</span>` : w;
+      });
+    }
+    return h.replace(/LORD/g, '<span class="sc">Lord</span>');
+  }
+  let continueListening = false, sleepUntil = 0, wakeLock = null;
 
   /* ---------------- Main view ---------------- */
   function render() {
@@ -29,8 +48,7 @@
           <button class="icon-btn sm" id="bSearch" title="Search the Bible">🔍</button>
           <button class="icon-btn sm" id="bMarks" title="My highlights &amp; notes">🖍️</button>
           <button class="icon-btn sm" id="bListen" title="Listen to this chapter">🔊</button>
-          <button class="icon-btn sm" id="bSmaller" title="Smaller text">A−</button>
-          <button class="icon-btn sm" id="bBigger" title="Larger text">A+</button>
+          <button class="icon-btn sm" id="bOpts" title="Text size, modern English, sleep timer">Aa</button>
         </div>
       </div>
       <div class="bible-scroll" id="bibleScroll">
@@ -39,15 +57,14 @@
           <button class="btn ghost" id="prevCh">← Previous</button>
           <button class="btn ghost" id="nextCh">Next →</button>
         </div>
-        <p class="muted small center kjv-note">King James Version · public domain</p>
+        <p class="muted small center kjv-note" id="kjvNote">King James Version · public domain</p>
       </div>
       <div class="sel-bar hidden" id="selBar"></div>`;
     $('#bkPick').addEventListener('click', openPicker);
     $('#bSearch').addEventListener('click', () => openSearch());
     $('#bMarks').addEventListener('click', () => openMarks());
     $('#bListen').addEventListener('click', toggleListen);
-    $('#bSmaller').addEventListener('click', () => setFont(-0.1));
-    $('#bBigger').addEventListener('click', () => setFont(0.1));
+    $('#bOpts').addEventListener('click', openOptions);
     $('#prevCh').addEventListener('click', () => step(-1));
     $('#nextCh').addEventListener('click', () => step(1));
     const f = pendingFlash || [];
@@ -79,20 +96,21 @@
     $('#prevCh').disabled = b === 0 && c === 1;
     $('#nextCh').disabled = b === 65 && c === B().CHAPTERS[65];
     let book;
-    try { book = await B().load(b); } catch (e) { art.innerHTML = `<p class="muted">${esc(e.message)}</p><button class="btn ghost" id="retryLoad">Try again</button>`; $('#retryLoad').onclick = () => drawChapter(); return; }
+    try {
+      book = await B().load(b);
+      if (opts().web) await B().loadWeb(b).catch(() => null);
+    } catch (e) { art.innerHTML = `<p class="muted">${esc(e.message)}</p><button class="btn ghost" id="retryLoad">Try again</button>`; $('#retryLoad').onclick = () => drawChapter(); return; }
     if (cur.b !== b || cur.c !== c) return; // navigated away while loading
     const verses = book[c - 1];
+    const par = opts().web && B().webText(b, c, 1) !== undefined;
     art.innerHTML = `
       <h1 class="ch-title"><span class="ch-book">${esc(B().NAMES[b])}</span><span class="ch-num">${c}</span></h1>
-      <p class="verses">${verses.map((t, i) => verseSpan(b, c, i + 1, t)).join(' ')}</p>`;
-    art.querySelectorAll('.v').forEach(el => el.addEventListener('click', e => {
-      if (e.target.classList.contains('note-ic')) { openNote(+el.dataset.v); return; }
-      const v = +el.dataset.v;
-      sel.has(v) ? sel.delete(v) : sel.add(v);
-      el.classList.toggle('selected', sel.has(v));
-      Sound.play('tap');
-      updateSelBar();
-    }));
+      ${par ? '<div class="par-key"><span>KJV</span><span class="w">Modern English (WEB)</span></div>' : ''}
+      <p class="verses${par ? ' parallel' : ''}">${verses.map((t, i) => verseSpan(b, c, i + 1, t)).join(' ')}</p>
+      <div class="read-done-row" id="readRow"></div>`;
+    if ($('#kjvNote')) $('#kjvNote').textContent = par ? 'King James Version, with the World English Bible (modern English). Both are in the public domain.' : 'King James Version · public domain';
+    drawReadRow();
+    art.querySelectorAll('.v').forEach(el => el.addEventListener('click', e => verseClick(e, el)));
     const scroller = $('#bibleScroll');
     if (flashFrom) {
       const el = art.querySelector(`.v[data-v="${flashFrom}"]`);
@@ -104,13 +122,64 @@
         }
       }
     } else scroller.scrollTop = 0;
+    if (continueListening) { continueListening = false; startListen(true); }
+  }
+
+  function verseClick(e, el) {
+    if (e.target.classList.contains('note-ic')) { openNote(+el.dataset.v); return; }
+    const g = e.target.closest('.gw');
+    if (g) { glossPop(g); return; }
+    const v = +el.dataset.v;
+    sel.has(v) ? sel.delete(v) : sel.add(v);
+    el.classList.toggle('selected', sel.has(v));
+    Sound.play('tap');
+    updateSelBar();
+  }
+
+  /* The meaning of an old word, in a small bubble. */
+  function glossPop(el) {
+    const old = document.querySelector('.gloss-pop'); if (old) old.remove();
+    const pop = document.createElement('div');
+    pop.className = 'gloss-pop';
+    pop.innerHTML = `<b>${esc(el.textContent)}</b> means <span>${esc(window.GLOSSARY[el.dataset.w])}</span>`;
+    document.body.appendChild(pop);
+    const r = el.getBoundingClientRect();
+    const w = Math.min(300, window.innerWidth - 24);
+    pop.style.width = w + 'px';
+    pop.style.left = Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + 'px';
+    const above = r.top > 120;
+    pop.style.top = (above ? r.top - 10 : r.bottom + 10) + 'px';
+    pop.classList.add(above ? 'above' : 'below');
+    Sound.play('tap');
+    const close = ev => { if (ev && ev.target === el) return; pop.remove(); document.removeEventListener('click', close, true); };
+    setTimeout(() => document.addEventListener('click', close, true), 0);
+    setTimeout(() => { if (pop.isConnected) close(); }, 6000);
+  }
+
+  /* "I've read this chapter", and what to read next. */
+  function drawReadRow() {
+    const row = $('#readRow');
+    if (!row || !window.Grow) return;
+    const { b, c } = cur;
+    const last = state.readLog && state.readLog[`${b}.${c}`];
+    const today = last && window.Core.dateKey(new Date(last)) === window.Core.dateKey();
+    const nxt = window.Grow.nextInPlan(b, c);
+    const inPlanToday = (() => { const st = window.Grow.planStatus(); return st && st.days[st.next].some(([pb, pc]) => pb === b && pc === c); })();
+    row.innerHTML = today
+      ? `<div class="read-done">✓ Read today</div>${nxt ? `<button class="btn primary" id="readNext">Next in your plan: ${esc(B().NAMES[nxt[0]])} ${nxt[1]} →</button>` : ''}`
+      : `<button class="btn primary big" id="readDone">✓ I've read this chapter</button>${last ? `<small class="muted">Last read ${new Date(last).toLocaleDateString()}</small>` : ''}${inPlanToday ? '<small class="muted">Part of today\'s reading plan</small>' : ''}`;
+    const d = $('#readDone');
+    if (d) d.addEventListener('click', () => { window.Grow.markRead(b, c); drawReadRow(); });
+    const n = $('#readNext');
+    if (n) n.addEventListener('click', () => open(nxt[0], nxt[1]));
   }
 
   function verseSpan(b, c, v, t) {
     const k = B().key(b, c, v);
     const h = state.highlights[k];
     const n = state.verseNotes[k];
-    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${lordHTML(t)}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}</span>`;
+    const web = opts().web ? B().webText(b, c, v) : undefined;
+    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${kjvHTML(t)}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${web ? `<span class="v-web">${esc(web)}</span>` : ''}</span>`;
   }
 
   function refreshVerse(v) {
@@ -121,13 +190,7 @@
     const nu = tmp.firstChild;
     if (sel.has(v)) nu.classList.add('selected');
     el.replaceWith(nu);
-    nu.addEventListener('click', e => {
-      if (e.target.classList.contains('note-ic')) { openNote(v); return; }
-      sel.has(v) ? sel.delete(v) : sel.add(v);
-      nu.classList.toggle('selected', sel.has(v));
-      Sound.play('tap');
-      updateSelBar();
-    });
+    nu.addEventListener('click', e => verseClick(e, nu));
   }
 
   /* ---------------- Selection actions ---------------- */
@@ -157,6 +220,9 @@
       <div class="sel-actions">
         <button class="btn ghost small" id="sNote">📝 Note</button>
         <button class="btn ghost small" id="sPray">🙏 Pray this</button>
+        <button class="btn ghost small" id="sCard">🖼️ Card</button>
+        <button class="btn ghost small" id="sMem">🧠 Memorize</button>
+        <button class="btn ghost small" id="sSoap">✍️ Journal</button>
         <button class="btn ghost small" id="sCopy">📋 Copy</button>
         <button class="btn ghost small" id="sListen">🔊</button>
         <button class="btn ghost small" id="sClose">✕</button>
@@ -164,6 +230,14 @@
     bar.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => highlight(s.dataset.c)));
     $('#sNote').addEventListener('click', () => openNote(Math.min(...sel)));
     $('#sCopy').addEventListener('click', copySel);
+    const contiguous = () => { const vs = [...sel].sort((a, b) => a - b); return vs[vs.length - 1] - vs[0] === vs.length - 1; };
+    const rangeRef = () => { const vs = [...sel].sort((a, b) => a - b); return B().refString(cur.b, cur.c, vs[0], vs[vs.length - 1]); };
+    $('#sCard').addEventListener('click', () => { const r = selRef(), t = selText(); clearSel(); window.Cards.verse(r, t); });
+    $('#sMem').addEventListener('click', async () => {
+      if (!contiguous()) { toast('Select verses that are next to each other'); return; }
+      if (await window.Grow.addMemory(rangeRef())) clearSel();
+    });
+    $('#sSoap').addEventListener('click', () => { const r = contiguous() ? rangeRef() : selRef(); clearSel(); window.Grow.soapEditor(null, r); });
     $('#sPray').addEventListener('click', () => window.PrayList.pickPersonFor({ ref: selRef(), text: selText() }));
     $('#sListen').addEventListener('click', () => window.Core.Speech.speak(selRef() + '. ' + selText()));
     $('#sClose').addEventListener('click', clearSel);
@@ -334,20 +408,34 @@
 
   /* ---------------- Listen (verse by verse, following along) ---------------- */
   function toggleListen() { reading ? stopListen() : startListen(); }
-  function startListen() {
+  function startListen(continuing) {
     if (!('speechSynthesis' in window)) { toast('Read-aloud is not supported on this device'); return; }
     const { b, c } = cur;
     if (!B().isLoaded(b)) return;
     reading = { v: 1, b, c };
     $('#bListen').textContent = '⏹';
+    if (!continuing) sleepUntil = opts().sleep ? Date.now() + opts().sleep * 60000 : 0;
+    if (!wakeLock && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
     speechSynthesis.cancel();
     const voices = speechSynthesis.getVoices();
     const voice = voices.find(v => /en-GB/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
     const next = () => {
       if (!reading || reading.b !== cur.b || reading.c !== cur.c) return stopListen();
+      if (sleepUntil && Date.now() >= sleepUntil) { stopListen(); toast('🌙 Sleep timer: reading stopped. Good night.'); return; }
       const t = B().text(b, c, reading.v);
       $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
-      if (t === undefined) return stopListen();
+      if (t === undefined) {
+        const last = b === 65 && c === B().CHAPTERS[65];
+        if (opts().cont && !last) {
+          const keep = sleepUntil;
+          stopListen();
+          sleepUntil = keep;
+          continueListening = true;
+          step(1);
+          return;
+        }
+        return stopListen();
+      }
       const el = document.querySelector(`#chapter .v[data-v="${reading.v}"]`);
       if (el) { el.classList.add('reading'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
       const u = new SpeechSynthesisUtterance((reading.v === 1 ? `${B().NAMES[b]} chapter ${c}. ` : '') + t.replace(/LORD/g, 'Lord'));
@@ -361,15 +449,52 @@
   function stopListen() {
     if (!reading) return;
     reading = null;
+    sleepUntil = 0;
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
     const b = $('#bListen'); if (b) b.textContent = '🔊';
+  }
+
+  /* ---------------- Reading options ---------------- */
+  function openOptions() {
+    const o = opts();
+    const sw = (id, on, label, sub) => `<label class="opt-row"><span><b>${label}</b><small>${sub}</small></span><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><i class="switch"></i></label>`;
+    UI().openModal(`
+      <div class="pform reader-opts">
+        <div class="eyebrow">Reading</div>
+        <h2>Aa · Reading options</h2>
+        <div class="opt-row"><span><b>Text size</b><small id="fontVal">${Math.round(state.bibleFont * 100)}%</small></span>
+          <span class="row gap"><button class="icon-btn sm" id="bSmaller" title="Smaller text">A−</button><button class="icon-btn sm" id="bBigger" title="Larger text">A+</button></span></div>
+        <h3 class="section-title">Understanding the KJV</h3>
+        ${sw('oWeb', o.web, 'Modern English side by side', 'Shows the World English Bible (public domain) under each verse')}
+        ${sw('oGloss', o.gloss, 'Explain old words', 'Old words like "shew" and "charity" are underlined. Tap one to see its meaning')}
+        <h3 class="section-title">Listening</h3>
+        ${sw('oCont', o.cont, 'Keep reading into the next chapter', 'Listen through a whole book')}
+        <div class="opt-row"><span><b>🌙 Sleep timer</b><small>Stop reading aloud after a while</small></span></div>
+        <div class="seg small" id="oSleep">${[0, 10, 20, 30, 60].map(m => `<button class="seg-btn ${o.sleep === m ? 'active' : ''}" data-m="${m}">${m ? m + ' min' : 'Off'}</button>`).join('')}</div>
+        <div class="row end gap wrap">${reading ? '' : '<button class="btn ghost" id="oListen">🔊 Start listening</button>'}<button class="btn primary" data-close>Done</button></div>
+      </div>`);
+    $('#bSmaller').addEventListener('click', () => { setFont(-0.1); $('#fontVal').textContent = Math.round(state.bibleFont * 100) + '%'; });
+    $('#bBigger').addEventListener('click', () => { setFont(0.1); $('#fontVal').textContent = Math.round(state.bibleFont * 100) + '%'; });
+    const redraw = () => { save(); const y = $('#bibleScroll') ? $('#bibleScroll').scrollTop : 0; drawChapter().then(() => { if ($('#bibleScroll')) $('#bibleScroll').scrollTop = y; }); };
+    $('#oWeb').addEventListener('change', e => { o.web = e.target.checked; redraw(); });
+    $('#oGloss').addEventListener('change', e => { o.gloss = e.target.checked; redraw(); });
+    $('#oCont').addEventListener('change', e => { o.cont = e.target.checked; save(); });
+    document.querySelectorAll('#oSleep .seg-btn').forEach(btn => btn.addEventListener('click', () => {
+      o.sleep = +btn.dataset.m; save();
+      document.querySelectorAll('#oSleep .seg-btn').forEach(x => x.classList.toggle('active', x === btn));
+      if (reading) sleepUntil = o.sleep ? Date.now() + o.sleep * 60000 : 0;
+      toast(o.sleep ? `🌙 Reading aloud will stop after ${o.sleep} minutes` : 'Sleep timer off');
+    }));
+    const l = $('#oListen'); if (l) l.addEventListener('click', () => { UI().closeModal(); startListen(); });
   }
 
   /* ---------------- Public ---------------- */
   function open(b, c, v1, v2) {
     cur = { b, c };
     state.bibleLast = { b, c }; save();
+    if (UI().current() !== 'bible') { pendingFlash = [v1, v2]; UI().show('bible'); return; }
     if (!$('#chapter')) { pendingFlash = [v1, v2]; render(); }
     else drawChapter(v1, v2);
   }

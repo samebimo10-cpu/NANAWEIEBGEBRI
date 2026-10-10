@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build one self-contained HTML file of the whole app (styles, fonts, code and the full KJV).
+"""Build one self-contained HTML file of the whole app (styles, fonts, code, the full KJV and the WEB).
 
 Usage:  python3 tools/build_single_html.py [output.html]
 The result opens straight from a phone or computer with no internet and no server.
@@ -35,6 +35,8 @@ def inline(m):
     if path == 'js/bible.js':
         books = ''.join(safe_js(read(f'js/kjv/{i:02d}.js')) for i in range(1, 67))
         out += f'\n<script>\n{books}\n</script>'
+        # the modern-English text (WEB) is stored as text and only run when someone turns it on
+        out += ''.join(f'\n<script type="text/plain" id="web-src-{i:02d}">{safe_js(read(f"js/web/{i:02d}.js"))}</script>' for i in range(1, 67))
     return out
 html = re.sub(r'<script src="([^"]+)"></script>', inline, html)
 html = html.replace("icon: 'icons/icon.svg', badge: 'icons/icon.svg'", f"icon: '{icon}'")

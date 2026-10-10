@@ -1,8 +1,8 @@
-# 🪔 Lamp & Path: Bible Journey
+# 🪔 Lamp & Path: Bible & Prayer
 
 > "Thy word is a lamp unto my feet, and a light unto my path." (Psalm 119:105)
 
-**Lamp & Path** is a Bible study and game app. It trains people to read scripture and to pray, through an explorable world, daily games and guided prayer.
+**Lamp & Path** is a Bible study and prayer app. It helps people read the whole Bible, understand it, hide it in their hearts and pray, through reading plans, Scripture memory, a devotional journal, daily Bible games and guided prayer. Everything works offline and stays on the device.
 
 ## Features
 
@@ -11,6 +11,10 @@
 - Every time it opens, it greets them with their name **written in calligraphy**, as if by hand, with the verse of the day, for example "Grace and peace, Sarah".
 - Their name appears around the app: the daily greeting, the profile and the wake-up alarm ("Rise and pray, Sarah").
 - **⚙️ Personalize**: name, greeting style, six colour themes, a custom app title (e.g. "Sarah's Prayer Lamp"), and whether to show the welcome each time.
+- **My life verse**: shown under their name each time the app opens.
+- **🎂 Birthday blessing**: on their birthday the welcome says "Happy birthday" with the priestly blessing (Numbers 6:24-26), and the Daily page has a birthday card.
+- **🌅 Gentle welcome back**: after missed days there is no guilt, just "His mercies are new every morning" (Lamentations 3:22-23).
+- **Easier to read**: text size for the whole app (Normal, Large, Extra large) and a high-contrast mode.
 
 ### 📲 Install and share
 - Installable as an app (a PWA) with proper app icons and home-screen shortcuts (Bible, Prayer, Daily).
@@ -28,29 +32,40 @@
 - **Search the whole Bible** for words or an `"exact phrase"`, or type a reference such as `Phil 4:6-7`, `Ps 23` or `1 John 1:9` to jump straight to it.
 - **Listen**: the chapter is read aloud verse by verse, with the current verse lit up.
 - Copy verses, adjust the text size, and the app remembers where you were reading.
+- **✓ I've read this chapter** at the end of every chapter. It counts toward your reading plan, your daily steps and your week with God.
+- **Understanding the KJV** (the **Aa** button):
+  - **Modern English side by side**: the World English Bible (public domain) under each KJV verse.
+  - **Explain old words**: words like *shew*, *charity*, *conversation* and *prevent* are underlined. Tap one to see what it means.
+- **Listening**: keep reading aloud into the next chapter, with a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
+- Tap verses for more: **🖼️ Card** (a shareable image), **🧠 Memorize**, and **✍️ Journal** (a S.O.A.P. entry).
 - A **My highlights & notes** list, filterable by colour.
 
-### 🎮 Bible Story Quest (2D story game, the last tab)
-- **12 short side-scrolling stories**, from Creation to Pentecost: Let There Be Light, Noah's Ark, Through the Red Sea, The Walls of Jericho, David and Goliath, Jonah, Daniel in the Lions' Den, the birth of Jesus, Peace Be Still, the Cross, the Empty Tomb and Pentecost.
-- **One-hand play** (on by default): the pilgrim walks forward by himself. **Tap anywhere to jump**, and hold to jump higher. Cards and story intros also close with a tap anywhere. You can turn it off on the story menu to use ◀ ▶ and jump buttons, or the keyboard (← → / A D, Space or ↑).
-- **Movement**: jump higher by holding, and leap between boats that bob on the waves. Falling into the water gently returns you to solid ground with room for a run-up.
-- **Visuals for each story**: layered scrolling landscapes, skies, weather and light. Darkness turns to light in Eden, rain falls until the rainbow appears, you walk between walls of water at the Red Sea, the storm calms on Galilee, the sun rises at the tomb, and tongues of fire appear at Pentecost.
-- **Finales**: the walls of Jericho fall, Goliath topples, the stone is rolled away, and more.
-- **3 fact scrolls per story**: short facts, each with its Bible reference and checked against the KJV text. Any you miss are shown at the end.
-- At the end of each story you **read the KJV passage** (with context and background) and answer a **3-question quiz** to earn up to 3 stars and unlock the next story.
+### 🌱 Grow
+- **🗓️ Reading plans**: First Steps (21 days), the Gospels in 30 days, Psalms and Proverbs in a month, the New Testament in 90 days, and the Bible in a Year. If you fall behind, the app says so gently and can move the plan so today is a fresh start.
+- **💛 A word for how I feel**: anxious, afraid, grieving, lonely, tempted, discouraged, weary, waiting, unwell, guilty, angry, needing guidance, thankful or joyful. Each has six KJV passages and a prayer.
+- **🧠 Memory verses** with spaced repetition. Reviews come back after 1, 3, 7, 14, 30, 60 and 120 days. A "first letters" hint helps you along.
+- **🧭 Topical studies**: Faith, Forgiveness, Prayer, Fear and Trust, Who I Am in Christ, the Holy Spirit, Money and Stewardship, Marriage and Family, and God's Love. Each is six steps with a short note on each passage, and ends with a question to answer.
+- **✍️ S.O.A.P. journal**: Scripture, Observation, Application, Prayer.
+- **🌙 Evening reflection**: three things you are thankful for, where you saw God today, anything to let go of, and tomorrow's step. After 5 pm it appears on the Daily page.
+- **🎤 Sermon notes**: Bible references you type (like *Romans 8:28* or *Ps 23*) become links you can tap.
+- **🪨 My faith story (Ebenezer)**: a timeline of what God has done, such as coming to faith, baptism, healing and provision. Answered prayers, finished plans and completed fasts are added automatically. On the anniversary of each one, the Daily page reminds you: "1 year ago today…"
+- **📊 My week with God**: chapters read, days of prayer, verses reviewed, journal entries, reflections and answered prayers, with an encouraging word. It appears on Sundays.
+- **📖 Study passages and quizzes**: 23 key passages with setting, background, themes, a reflection, your notes and a 3-question quiz for up to 3 stars.
+- **📚 Books of the Bible**: all 66 books with summaries. Tap a book to start reading it.
+
+### 🖼️ Share cards
+- **Verse cards**: turn any verse into a beautiful image in five styles and share it to WhatsApp, your status, or anywhere, or save it to your photos.
+- **Testimony cards**: share how God answered a prayer, with Psalm 66:20.
 
 ### ☀️ Daily
-- **Verse of the Day**, with read-aloud.
+- **Verse of the Day**, with read-aloud and a share card.
+- Today's **reading plan** chapters, **memory verses** due for review, "How is your heart today?" feelings, and the evening reflection.
 - **Four daily Bible games**, which change every day:
   - ❓ **Daily Quiz**: five questions from a bank of 50.
   - 🧩 **Verse Scramble**: rebuild a verse from its pieces. Helps memorisation.
   - ✍️ **Fill the Blank**: choose the missing words of a verse.
   - 📚 **Books in Order**: tap five books in their Bible order.
-- **Streaks** with a six-step daily checklist: verse, quiz, scramble, fill-in, books and prayer.
-
-### 📖 Study
-- Every journey passage can be browsed and searched, with its full context and a **personal notes** box that is saved on the device.
-- **All 66 books of the Bible**, each with its section and a one-line summary, filterable by section (Law, History, Poetry, Prophets, Gospels, Epistles and so on).
+- **Streaks** with a seven-step daily checklist: verse, quiz, scramble, fill-in, books, a chapter and prayer.
 
 ### 🙏 Prayer
 - **⏰ Wake-up prayer alarms**: loud, repeating alarm sounds (church bells, gentle chimes, or a trumpet call) that get louder over 45 seconds, with vibration, snooze (5, 10 or 15 minutes), and a full-screen wake-up screen with a morning or midnight verse. "I'm awake" goes straight into guided prayer, or into prayer for the person linked to the alarm.
@@ -70,14 +85,14 @@
   - **📅 Add to calendar** downloads a repeating calendar event with an alert, so your phone reminds you **even when the app is closed**. A browser web app cannot schedule notifications by itself once it is closed.
 - **Guided A.C.T.S. prayer** (Adoration, Confession, Thanksgiving, Supplication), with a scripture for each step, a timer ring and a breathing cue.
 - **Prayers from Scripture**: the Lord's Prayer, Psalm 23, the Priestly Blessing and more, with "pray along" read-aloud.
-- A **prayer journal** where you can mark prayers as answered.
+- **🍞 Fasting companion**: choose the length (1 to 40 days) and the kind of fast (partial, Daniel, sunrise to sunset, water only, media), and what you are seeking God about. Each day has its own scripture and a place to write what God shows you. Health guidance is included, and a completed fast is added to your faith story.
 
 ### 🏆 Progress
-- XP, 12 levels (Seeker → Apostle), 15 badges, stats, and sound effects (generated in the browser, so no audio files are needed).
+- XP, 12 levels (Seeker → Apostle), 27 badges, stats, and sound effects (generated in the browser, so no audio files are needed).
 
 ## Scripture & copyright
 
-All scripture text in the app is from the **King James Version (KJV)**. The full text in `js/kjv/` was built from two public KJV datasets ([thiagobodruk/bible](https://github.com/thiagobodruk/bible) and [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)), cross-checked word by word against each other. 41 verses where translators' margin notes had leaked into the verse text were cleaned, and the spacing before punctuation was fixed. All scripture is, which is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes and prayer guides were written for this app.
+Scripture in the app is from the **King James Version (KJV)**. The optional modern-English text shown side by side is the **World English Bible (WEB)**, which is in the public domain. It is in `js/web/`, built from [TehShrike/world-english-bible](https://github.com/TehShrike/world-english-bible) and lined up with KJV verse numbers. The full text in `js/kjv/` was built from two public KJV datasets ([thiagobodruk/bible](https://github.com/thiagobodruk/bible) and [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)), cross-checked word by word against each other. 41 verses where translators' margin notes had leaked into the verse text were cleaned, and the spacing before punctuation was fixed. The KJV is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes, prayer guides, topical notes and the old-word meanings were written for this app. New features store only Bible references and show the text from the bundled KJV, so the wording is always exact.
 
 ## Running it
 
@@ -94,42 +109,36 @@ You can also open `index.html` directly in a browser. Serving it over HTTP adds 
 To publish it, upload the folder to any static host, such as GitHub Pages, Netlify or Vercel.
 
 ### One downloadable HTML file
-`python3 tools/build_single_html.py` builds `dist/lamp-and-path.html`: the whole app in **one file** (about 6 MB), with the styles, fonts, code and the complete KJV inside. Copy it to a phone or computer and open it in a browser. It needs no internet and no server. Your progress is saved in that browser. Use Profile → Back up to move it between devices.
+`python3 tools/build_single_html.py` builds `dist/lamp-and-path.html`: the whole app in **one file** (about 10 MB), with the styles, fonts, code, the complete KJV and the modern-English text inside. Copy it to a phone or computer and open it in a browser. It needs no internet and no server. Your progress is saved in that browser. Use Profile → Back up to move it between devices.
 
 ### 100% offline
-Open the app once while connected, from its own web address (for example GitHub Pages). It then saves everything on the device in the background: the app, its fonts, and **all 66 books of the Bible** (about 5 MB). A message says when it is ready, and **Profile → Offline** shows the status. After that, everything works with no internet: the game, the Bible, search, highlights, daily games, prayer list and reminders. Add it to your home screen to open it like a normal app.
+Open the app once while connected, from its own web address (for example GitHub Pages). It then saves everything on the device in the background: the app, its fonts, and **all 66 books of the Bible**, in the KJV and in modern English (about 9 MB). A message says when it is ready, and **Profile → Offline** shows the status. After that, everything works with no internet: the Bible, search, highlights, reading plans, memory verses, journals, daily games, prayer list and reminders. Add it to your home screen to open it like a normal app.
 
 Fonts are bundled in `fonts/` (Cinzel, EB Garamond, Inter; SIL Open Font License), so nothing loads from other websites.
 
 ### Your data
-Everything (progress, highlights, notes, prayer list, reminders) is stored on your device. Use **Profile → 💾 Back up my data** to save a backup file, and **📂 Restore backup** to move it to another phone or browser.
-
-### Controls (Journey)
-| Action | Keyboard | Touch / mouse |
-|---|---|---|
-| Move | `W A S D` / arrow keys | Tap a spot, or hold and drag |
-| Read at a site | `E`, `Enter` or `Space` | Tap the site, or the gold prompt |
-| Zoom | `+` / `-` / mouse wheel | ＋ / － buttons |
-| Walk to next site | — | 🧭 button |
-| Fast travel | — | Tap an unlocked site on the minimap |
+Everything (progress, highlights, notes, journals, plans, memory verses, prayer list and reminders) is stored on your device. Use **Profile → 💾 Back up my data** to save a backup file, and **📂 Restore backup** to move it to another phone or browser.
 
 ## Project structure
 
 ```
 index.html            App shell
 css/styles.css        All styling (desktop + mobile)
-js/data/journey.js    23 sites: KJV passages, context, reflections, quizzes, map positions
+js/data/journey.js    23 study passages: KJV text, context, reflections, quizzes
+js/data/grow.js       Feelings, topical studies, reading plans, fasting scriptures, old-word meanings
 js/data/library.js    Daily verses, quiz bank, 66 books, scripture prayers, ACTS guide
 js/kjv/01.js … 66.js  The full KJV text, one file per book
+js/web/01.js … 66.js  The World English Bible (modern English), lined up with KJV verse numbers
 js/bible.js           Bible loading, reference parsing ("Phil 4:6-7"), lookup and search
-js/reader.js          Bible reader UI: highlights, notes, search, listen
+js/reader.js          Bible reader: highlights, notes, search, listen, sleep timer, modern English, old words
 js/praylist.js        "Who I'm praying for", alarms & reminders, calendar export, scheduler
 js/alarm.js           Wake-up alarm sounds, ringing screen, snooze, bedside mode
 js/requests.js        My requests (praying / answered / past needs) and Led to pray
 js/core.js            Saving, XP/levels, streaks, badges, sound, read-aloud, toasts
-js/story.js           Bible Story Quest: 2D side-scrolling story game (levels, physics, drawing, finales)
-js/data/stories.js    The 12 stories: themes, goals and fact scrolls with references
-js/app.js             UI: reader, quizzes, daily games, study, prayer, profile
+js/grow.js            Grow: plans, feelings, memory, topics, journal, evening, sermons, faith story, week
+js/cards.js           Shareable verse and testimony images
+js/fast.js            Fasting companion
+js/app.js             UI: navigation, quizzes, daily games, study passages, prayer, profile
 sw.js                 Offline support: saves the app, fonts and the whole Bible on the device
 fonts/                Bundled fonts (no internet needed)
 manifest.webmanifest  PWA manifest
@@ -139,5 +148,6 @@ Progress is stored in the browser's `localStorage`. There are no accounts and no
 
 ## Adding content
 
-- **New journey site:** add an entry to `js/data/journey.js` with `x`/`y` map coordinates (the world is 4800 × 3200), an `icon`, KJV `passages`, `context`, `reflect` and a 3-question `quiz`.
+- **New study passage:** add an entry to `js/data/journey.js` with KJV `passages`, `context`, `reflect` and a 3-question `quiz`.
+- **Feelings, topics and plans:** edit `js/data/grow.js`. Use references only (e.g. `'Psalm 23:1'`); the text comes from the bundled KJV.
 - **More daily verses or quiz questions:** append them to `DAILY_VERSES` or `QUIZ_BANK` in `js/data/library.js`. Please use KJV text so the content stays public domain.

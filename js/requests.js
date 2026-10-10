@@ -95,7 +95,7 @@
         <div class="req-meta">Asked ${fmt(r.created)} · <b class="ans">Answered ${fmt(r.answeredAt)}</b> · after ${span(days(r.created, r.answeredAt))}</div>
         <div class="how"><div class="how-label">How God answered</div><p>${r.answeredHow ? esc(r.answeredHow) : '<span class="muted">No details written.</span>'}</p></div>
         ${scripture}
-        <div class="row gap wrap"><button class="btn ghost small" data-act="edit-answer" data-id="${r.id}">✏️ Edit answer</button><button class="btn ghost small" data-act="reopen" data-id="${r.id}">↺ Still praying</button><button class="btn ghost small danger" data-act="delete" data-id="${r.id}">Delete</button></div>
+        <div class="row gap wrap"><button class="btn primary small" data-act="card" data-id="${r.id}">🖼️ Testimony card</button><button class="btn ghost small" data-act="edit-answer" data-id="${r.id}">✏️ Edit answer</button><button class="btn ghost small" data-act="reopen" data-id="${r.id}">↺ Still praying</button><button class="btn ghost small danger" data-act="delete" data-id="${r.id}">Delete</button></div>
       </article>`;
     if (r.status === 'passed') return `
       <article class="req passed">
@@ -146,6 +146,7 @@
       toast('Moved to past needs');
     }
     if (kind === 'reopen') { r.status = 'open'; save(); reqTab = 'open'; toast('Back on your praying list'); }
+    if (kind === 'card') return window.Cards.testimony(r);
     if (kind === 'edit') return editRequest(r.id);
     if (kind === 'delete') {
       if (!(await UI().ask(`Delete "${r.title.slice(0, 60)}"?`, 'Delete'))) return;

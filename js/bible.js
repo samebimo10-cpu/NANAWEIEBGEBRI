@@ -9,32 +9,43 @@
   const CHAPTERS = [50, 40, 27, 36, 34, 24, 21, 4, 31, 24, 22, 25, 29, 36, 10, 13, 10, 42, 150, 31, 12, 8, 66, 52, 5, 48, 12, 14, 3, 9, 1, 4, 7, 3, 3, 3, 2, 14, 4, 28, 16, 24, 21, 28, 16, 16, 13, 6, 6, 4, 4, 5, 3, 6, 4, 3, 1, 13, 5, 5, 3, 5, 1, 1, 1, 22];
   const SHORT = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1 Sam', '2 Sam', '1 Kgs', '2 Kgs', '1 Chr', '2 Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal', 'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1 Cor', '2 Cor', 'Gal', 'Eph', 'Phil', 'Col', '1 Thess', '2 Thess', '1 Tim', '2 Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1 Pet', '2 Pet', '1 John', '2 John', '3 John', 'Jude', 'Rev'];
 
-  const cache = {};
-  const waiting = {};
+  // two texts: the King James Version, and the World English Bible (modern English) for side-by-side reading
+  const caches = { kjv: {}, web: {} };
+  const cache = caches.kjv;
+  const waiting = { kjv: {}, web: {} };
 
-  function _add(i, data) {
-    cache[i] = data;
-    (waiting[i] || []).forEach(w => w.res(data));
-    delete waiting[i];
+  function addTo(kind, i, data) {
+    caches[kind][i] = data;
+    (waiting[kind][i] || []).forEach(w => w.res(data));
+    delete waiting[kind][i];
   }
+  const _add = (i, data) => addTo('kjv', i, data);
+  const _addWeb = (i, data) => addTo('web', i, data);
 
-  function load(i) {
-    if (cache[i]) return Promise.resolve(cache[i]);
+  function loadKind(kind, i) {
+    if (caches[kind][i]) return Promise.resolve(caches[kind][i]);
     return new Promise((res, rej) => {
-      if (waiting[i]) { waiting[i].push({ res, rej }); return; }
-      waiting[i] = [{ res, rej }];
+      const W = waiting[kind];
+      if (W[i]) { W[i].push({ res, rej }); return; }
+      W[i] = [{ res, rej }];
       const s = document.createElement('script');
-      s.src = `js/kjv/${String(i + 1).padStart(2, '0')}.js`;
+      const nn = String(i + 1).padStart(2, '0');
+      // the single-file build keeps books as text inside the page, to be run only when needed
+      const inline = document.getElementById(`${kind}-src-${nn}`);
+      if (inline) { s.textContent = inline.textContent; document.head.appendChild(s); return; }
+      s.src = `js/${kind}/${nn}.js`;
       s.async = true;
       s.onerror = () => {
-        const w = waiting[i] || [];
-        delete waiting[i];
+        const w = W[i] || [];
+        delete W[i];
         s.remove();
         w.forEach(x => x.rej(new Error(`Could not load ${NAMES[i]}. Check your connection.`)));
       };
       document.head.appendChild(s);
     });
   }
+  const load = i => loadKind('kjv', i);
+  const loadWeb = i => loadKind('web', i);
 
   async function loadAll(onProgress) {
     let done = 0;
@@ -143,5 +154,6 @@
     return { results, total, words: phrase ? [phrase] : words };
   }
 
-  window.Bible = { NAMES, SHORT, CHAPTERS, _add, load, loadAll, parse, lookup, refString, text, search, isLoaded: i => !!cache[i], key: (b, c, v) => `${b}.${c}.${v}` };
+  const webText = (b, c, v) => caches.web[b] && caches.web[b][c - 1] ? caches.web[b][c - 1][v - 1] : undefined;
+  window.Bible = { NAMES, SHORT, CHAPTERS, _add, _addWeb, load, loadWeb, webText, loadAll, parse, lookup, refString, text, search, isLoaded: i => !!cache[i], key: (b, c, v) => `${b}.${c}.${v}` };
 })();

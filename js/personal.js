@@ -31,7 +31,8 @@
   ];
 
   if (!state.profile) state.profile = {};
-  const P = () => Object.assign({ name: '', title: '', theme: 'gold', greeting: 'time', splash: true, asked: false }, state.profile);
+  const P = () => Object.assign({ name: '', title: '', theme: 'gold', greeting: 'time', splash: true, asked: false, birthday: '', lifeVerse: '', textSize: 'normal', contrast: false }, state.profile);
+  const SIZES = [['normal', 'Normal'], ['large', 'Large'], ['xl', 'Extra large']];
 
   function name() { return (P().name || '').trim(); }
   function appTitle() { return (P().title || '').trim() || 'Lamp & Path'; }
@@ -56,6 +57,9 @@
       const title = appTitle();
       brand.innerHTML = title === 'Lamp & Path' ? 'Lamp <em>&amp;</em> Path' : esc(title);
     }
+    const root = document.documentElement;
+    SIZES.forEach(([k]) => root.classList.toggle('text-' + k, P().textSize === k && k !== 'normal'));
+    root.classList.toggle('hc', !!P().contrast);
     document.title = name() ? `${appTitle()} · ${name()}` : `${appTitle()}: Bible Journey`;
   }
 
@@ -70,14 +74,22 @@
     const n = name();
     if (!n || (!P().splash && !force)) return;
     try { await Promise.race([document.fonts.load('120px "Great Vibes"'), new Promise(r => setTimeout(r, 900))]); } catch (e) { /* use fallback */ }
-    const v = verseOfDay();
+    const bday = window.Grow && window.Grow.birthdayToday();
+    let v = verseOfDay();
+    const special = bday ? 'Numbers 6:24-26' : P().lifeVerse;
+    if (special) {
+      try {
+        const r = await Promise.race([window.Bible.lookup(special), new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 1500))]);
+        v = { ref: r.ref + (bday ? '' : ' · my life verse'), text: r.verses.map(x => x[1]).join(' ') };
+      } catch (e) { /* keep the verse of the day */ }
+    }
     const long = n.length > 11;
     const el = document.createElement('div');
     el.className = 'splash';
     el.innerHTML = `
       <div class="splash-inner">
         <svg class="splash-lamp" viewBox="0 0 64 64" aria-hidden="true"><use href="#lamp"/></svg>
-        <div class="splash-greet">${esc(greeting())},</div>
+        <div class="splash-greet">${bday ? '🎂 Happy birthday' : esc(greeting())},</div>
         <svg class="sig" viewBox="0 0 1000 300" role="img" aria-label="${esc(n)}">
           <defs><linearGradient id="sigFill" x1="0" x2="1"><stop offset="0" style="stop-color:var(--gold2)"/><stop offset=".5" style="stop-color:#fff8e6"/><stop offset="1" style="stop-color:var(--gold)"/></linearGradient></defs>
           <text x="500" y="200" text-anchor="middle" class="sig-text" ${long ? 'textLength="940" lengthAdjust="spacingAndGlyphs"' : ''}>${esc(n)}</text>
@@ -155,6 +167,18 @@
         <label class="flabel" for="sTitle">App title <span class="muted">(optional)</span></label>
         <input class="search" id="sTitle" maxlength="30" placeholder="Lamp & Path" value="${esc(p.title)}">
         <label class="check-row"><input type="checkbox" id="sSplash" ${p.splash ? 'checked' : ''}> Show my name each time the app opens</label>
+        <label class="flabel" for="sLife">My life verse <span class="muted">(shown when the app opens)</span></label>
+        <input class="search" id="sLife" maxlength="40" placeholder="e.g. Jeremiah 29:11" value="${esc(p.lifeVerse)}">
+        <div id="sLifePrev" class="muted small"></div>
+        <label class="flabel" for="sBday">My birthday <span class="muted">(for a birthday blessing)</span></label>
+        <div class="row gap">
+          <select class="search" id="sBdayM"><option value="">Month</option>${Array.from({ length: 12 }, (_, i) => `<option value="${String(i + 1).padStart(2, '0')}" ${p.birthday.slice(0, 2) === String(i + 1).padStart(2, '0') ? 'selected' : ''}>${new Date(2000, i, 1).toLocaleDateString(undefined, { month: 'long' })}</option>`).join('')}</select>
+          <select class="search" id="sBdayD"><option value="">Day</option>${Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, '0')}" ${p.birthday.slice(3) === String(i + 1).padStart(2, '0') ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>
+        </div>
+        <h3 class="section-title">Easier to read</h3>
+        <label class="flabel">Text size (the whole app)</label>
+        <div class="seg small" id="sSize">${SIZES.map(([k, l]) => `<button type="button" class="seg-btn ${p.textSize === k ? 'active' : ''}" data-z="${k}">${l}</button>`).join('')}</div>
+        <label class="check-row"><input type="checkbox" id="sHC" ${p.contrast ? 'checked' : ''}> High contrast (stronger colours and brighter text)</label>
         <div class="row gap wrap">
           <button class="btn ghost" id="sPreview">▶ Preview welcome</button>
           <button class="btn primary" id="sSave">Save</button>
@@ -170,10 +194,30 @@
       theme = b.dataset.t; $$('.settings .theme-dot').forEach(x => x.classList.toggle('active', x === b));
       state.profile.theme = theme; apply();
     }));
-    const collect = () => Object.assign(state.profile, {
-      name: $('#sName').value.trim(), title: $('#sTitle').value.trim(), greeting: $('#sGreet').value,
-      theme, splash: $('#sSplash').checked, asked: true
-    });
+    let textSize = p.textSize;
+    $$('#sSize .seg-btn').forEach(b => b.addEventListener('click', () => {
+      textSize = b.dataset.z; $$('#sSize .seg-btn').forEach(x => x.classList.toggle('active', x === b));
+      state.profile.textSize = textSize; apply();
+    }));
+    $('#sHC').addEventListener('change', e => { state.profile.contrast = e.target.checked; apply(); });
+    const lifePrev = async () => {
+      const v = $('#sLife').value.trim(), el = $('#sLifePrev');
+      if (!v) { el.textContent = ''; return; }
+      try { const r = await window.Bible.lookup(v); el.innerHTML = `✓ <b>${esc(r.ref)}</b>: "${esc(r.verses.map(x => x[1]).join(' ').slice(0, 160))}${r.verses.map(x => x[1]).join(' ').length > 160 ? '…' : ''}"`; }
+      catch (e) { el.textContent = e.message; }
+    };
+    let lt; $('#sLife').addEventListener('input', () => { clearTimeout(lt); lt = setTimeout(lifePrev, 500); });
+    lifePrev();
+    const collect = () => {
+      const m = $('#sBdayM').value, d = $('#sBdayD').value;
+      const life = $('#sLife').value.trim();
+      const r = life ? window.Bible.parse(life) : null;
+      return Object.assign(state.profile, {
+        name: $('#sName').value.trim(), title: $('#sTitle').value.trim(), greeting: $('#sGreet').value,
+        theme, splash: $('#sSplash').checked, asked: true, birthday: m && d ? `${m}-${d}` : '',
+        lifeVerse: r ? window.Bible.refString(r.b, r.c, r.v1, r.v2) : '', textSize, contrast: $('#sHC').checked
+      });
+    };
     $('#sSave').addEventListener('click', () => { collect(); save(); apply(); Sound.play('correct'); toast(name() ? `✓ Saved. Welcome, ${name()}!` : '✓ Saved'); window.UI.closeModal(); window.UI.refresh(); });
     $('#sPreview').addEventListener('click', () => { collect(); save(); apply(); splash(true); });
     $('#sInstall').addEventListener('click', install);
@@ -264,7 +308,7 @@
 
   async function share() {
     const url = shareUrl();
-    const text = `${name() ? name() + ' shared ' : ''}${appTitle()}: the King James Bible, a Bible journey game, daily Bible games and a prayer journal with wake-up prayer alarms. Free, and works offline.`;
+    const text = `${name() ? name() + ' shared ' : ''}${appTitle()}: the King James Bible with reading plans, Scripture memory, a devotional journal, daily Bible games and a prayer journal with wake-up prayer alarms. Free, and works offline.`;
     if (navigator.share) {
       try { await navigator.share({ title: appTitle(), text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }

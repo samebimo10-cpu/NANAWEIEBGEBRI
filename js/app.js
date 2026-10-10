@@ -7,17 +7,18 @@
   const J = window.JOURNEY;
 
   /* ================= Navigation ================= */
-  const VIEWS = ['daily', 'bible', 'prayer', 'study', 'journey'];
+  const VIEWS = ['daily', 'bible', 'prayer', 'grow'];
+  const ALIASES = { study: 'grow', journey: 'grow' };
   let current = null;
 
   function show(view) {
+    view = ALIASES[view] || view;
     if (!VIEWS.includes(view)) view = 'daily';
     current = view;
     VIEWS.forEach(v => $('#view-' + v).classList.toggle('active', v === view));
     $$('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-    if (window.Game.ready) window.Game.setActive(view === 'journey' && !modalOpen);
     if (view === 'daily') renderDaily();
-    if (view === 'study') renderStudy();
+    if (view === 'grow') window.Grow.render();
     if (view === 'prayer') renderPrayer();
     if (view === 'bible') window.Reader.render(); else window.Reader.stop();
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
@@ -44,7 +45,6 @@
     requestAnimationFrame(() => m.classList.add('open'));
     modalOpen = true;
     modalOnClose = opts.onClose || null;
-    if (window.Game.ready) window.Game.setActive(false);
     $('#modalBody').scrollTop = 0;
     m.querySelector('.modal-card').scrollTop = 0;
   }
@@ -56,7 +56,6 @@
     stopPrayerTimer();
     setTimeout(() => { if (!modalOpen) m.classList.add('hidden'); }, 250);
     const cb = modalOnClose; modalOnClose = null;
-    if (window.Game.ready && current === 'journey') { window.Game.setActive(true); window.Game.setInputEnabled(true); }
     cb && cb();
   }
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.closest('[data-close]')) closeModal(); });
@@ -94,14 +93,13 @@
 
   /* ================= Journey: reader + quiz ================= */
   function openLocation(loc) {
-    window.Game.setInputEnabled(false);
     Sound.play('open');
     const idx = J.indexOf(loc);
     const stars = state.completed[loc.id] || 0;
     openModal(`
       <div class="reader">
         <div class="reader-head">
-          <div class="eyebrow">${loc.testament === 'OT' ? 'Old Testament' : 'New Testament'} · ${esc(loc.region)}${window.STORIES.some(x => x.id === loc.id) ? ` · Story ${window.STORIES.findIndex(x => x.id === loc.id) + 1} of ${window.STORIES.length}` : ''}</div>
+          <div class="eyebrow">${loc.testament === 'OT' ? 'Old Testament' : 'New Testament'} · ${esc(loc.region)} · Passage ${idx + 1} of ${J.length}</div>
           <h2>${esc(loc.name)}</h2>
           ${stars ? `<div class="stars-row">${starIcons(stars)}</div>` : ''}
         </div>
@@ -191,11 +189,8 @@
       if (score === total) state.perfectQuizzes++;
       save();
     }
-    window.Core.markDaily('journey');
-    if (gained) window.Core.addXP(gained, firstTime ? 'Site completed' : 'Better score');
-    const STORIES = window.STORIES;
-    const isStory = STORIES.some(x => x.id === loc.id);
-    const nextStory = STORIES.find(x => !state.completed[x.id]);
+    if (gained) window.Core.addXP(gained, firstTime ? 'Passage completed' : 'Better score');
+    window.Core.checkBadges();
     if (passed) Sound.play('complete'); else Sound.play('wrong');
     $('#modalBody').innerHTML = `
       <div class="result">
@@ -203,36 +198,20 @@
         <h2>${passed ? (score === total ? 'Perfect!' : 'Well done!') : 'Keep seeking'}</h2>
         <p class="lead">You answered ${score} of ${total} correctly.</p>
         ${passed
-          ? `<p>${firstTime ? `You completed <strong>${esc(loc.name)}</strong>.` : 'Your progress has been saved.'} ${isStory && nextStory && firstTime ? `Next story: <strong>${esc(nextStory.title)}</strong>.` : ''}</p>`
+          ? `<p>${firstTime ? `You completed <strong>${esc(loc.name)}</strong>.` : 'Your progress has been saved.'}</p>`
           : `<p>Read the passage once more. "Thy word is a lamp unto my feet." Then try again.</p>`}
         <div class="row center gap">
           ${passed
-            ? `<button class="btn primary" id="contBtn">${isStory ? 'Back to the stories →' : 'Continue →'}</button>`
+            ? '<button class="btn primary" data-close>Continue →</button>'
             : `<button class="btn ghost" id="rereadBtn">📖 Read again</button><button class="btn primary" id="retryBtn">Retry quiz</button>`}
         </div>
       </div>`;
-    if (passed) {
-      $('#contBtn').addEventListener('click', () => {
-        closeModal();
-        if (firstTime && isStory) { window.Game.celebrate(loc.id); if (STORIES.every(x => state.completed[x.id])) setTimeout(journeyComplete, 1600); }
-      });
-    } else {
+    if (!passed) {
       $('#rereadBtn').addEventListener('click', () => openLocation(loc));
       $('#retryBtn').addEventListener('click', () => runQuiz($('#modalBody'), loc.quiz, { title: loc.name, onDone: s => finishLocation(loc, s) }));
     }
+    modalOnClose = () => { if (current === 'grow') window.Grow.render(); };
     updateHUD();
-  }
-
-  function journeyComplete() {
-    openModal(`
-      <div class="result">
-        <div class="big-emoji">👑</div>
-        <h2>Story Quest complete${window.Personal.name() ? ', ' + esc(window.Personal.name()) : ''}</h2>
-        <p class="lead">You have journeyed from Creation to Pentecost, through twelve stories of God's faithfulness.</p>
-        <p class="scripture center">"I have fought a good fight, I have finished my course, I have kept the faith."<br><span class="muted">2 Timothy 4:7</span></p>
-        <p>Replay any story to earn three stars, and keep up your daily reading and prayer.</p>
-        <div class="row center"><button class="btn primary" data-close>Amen</button></div>
-      </div>`, { cls: 'parchment' });
   }
 
   /* ================= Daily ================= */
@@ -251,7 +230,7 @@
 
   const DAILY_ACTS = [
     ['verse', '📜', 'Verse'], ['quiz', '❓', 'Quiz'], ['scramble', '🧩', 'Scramble'],
-    ['blank', '✍️', 'Fill-in'], ['books', '📚', 'Books'], ['prayer', '🙏', 'Prayer']
+    ['blank', '✍️', 'Fill-in'], ['books', '📚', 'Books'], ['read', '📖', 'Chapter'], ['prayer', '🙏', 'Prayer']
   ];
 
   function renderDaily() {
@@ -266,7 +245,7 @@
         <div>
           <div class="eyebrow">${esc(date)}</div>
           <h1>${greet}, ${esc(window.Personal.name() || 'pilgrim')}</h1>
-          <p class="muted">Six small steps each day: read, play, pray.</p>
+          <p class="muted">Seven small steps each day: read, play, pray.</p>
         </div>
         <div class="hero-stats">
           <div class="flame-big">🔥<span>${window.Core.currentStreak()}</span></div>
@@ -275,6 +254,7 @@
       </section>
       <div class="daily-track">${DAILY_ACTS.map(([k, ic, name]) => `<div class="dot ${t[k] ? 'done' : ''}" title="${name}"><span>${t[k] ? '✓' : ic}</span><small>${name}</small></div>`).join('')}</div>
       <div class="track-bar"><i style="width:${doneCount / DAILY_ACTS.length * 100}%"></i></div>
+      <div id="dailyTop"></div>
 
       <section class="verse-card">
         <div class="eyebrow">Verse of the day</div>
@@ -283,9 +263,11 @@
         <div class="row gap center">
           <button class="btn ghost" id="vListen">🔊 Listen</button>
           <button class="btn ghost" id="vContext">📜 Read in context</button>
+          <button class="btn ghost" id="vCard">🖼️ Share</button>
           <button class="btn primary" id="vRead" ${t.verse ? 'disabled' : ''}>${t.verse ? '✓ Read today' : 'Amen, I have read it (+5 XP)'}</button>
         </div>
       </section>
+      <div id="dailyGrow"></div>
 
       <h2 class="section-title">Daily Bible games</h2>
       <div class="game-grid">
@@ -295,13 +277,6 @@
         ${gameCard('books', '📚', 'Books in Order', 'Tap five books in their Bible order.', t.books)}
       </div>
 
-      <section class="cta-card">
-        <div>
-          <div class="eyebrow">🎮 Bible Story Quest</div>
-          <h3>${esc((window.STORIES.find(x => !state.completed[x.id]) || { title: 'Replay any story to earn 3 stars' }).title)}</h3>
-        </div>
-        <button class="btn primary" id="goJourney">Play →</button>
-      </section>
       <section class="cta-card alt">
         <div>
           <div class="eyebrow">Daily prayer</div>
@@ -323,7 +298,8 @@
       if (g === 'blank') playBlank(d.blank, d.seed);
       if (g === 'books') playBooks(d.books);
     }));
-    $('#goJourney').addEventListener('click', () => show('journey'));
+    $('#vCard').addEventListener('click', () => window.Cards.verse(d.verse.ref, d.verse.text));
+    window.Grow.renderDaily($('#dailyTop'), $('#dailyGrow'));
     $('#goPrayer').addEventListener('click', () => show('prayer'));
   }
 
@@ -525,26 +501,9 @@
     }
   }
 
-  /* ================= Study ================= */
-  let studyTab = 'passages', studyFilter = '', bookFilter = 'All';
-  function renderStudy() {
-    const page = $('#studyPage');
-    page.innerHTML = `
-      <section class="hero slim">
-        <div><div class="eyebrow">Study &amp; understanding</div><h1>Open the Word</h1>
-        <p class="muted">Every passage comes with its setting, background and key themes. Write your own notes as you go.</p></div>
-      </section>
-      <div class="seg">
-        <button class="seg-btn ${studyTab === 'passages' ? 'active' : ''}" data-t="passages">Passages</button>
-        <button class="seg-btn ${studyTab === 'books' ? 'active' : ''}" data-t="books">Books of the Bible</button>
-      </div>
-      <div id="studyBody"></div>`;
-    $$('.seg-btn').forEach(b => b.addEventListener('click', () => { studyTab = b.dataset.t; renderStudy(); }));
-    if (studyTab === 'passages') renderPassageList(); else renderBooks();
-  }
-
-  function renderPassageList() {
-    const body = $('#studyBody');
+  /* ================= Study passages & books (shown inside Grow) ================= */
+  let studyFilter = '', bookFilter = 'All';
+  function renderPassages(body) {
     body.innerHTML = `<input class="search" id="sSearch" placeholder="Search passages, places, themes…" value="${esc(studyFilter)}">
       <div id="pList"></div>`;
     const draw = () => {
@@ -555,9 +514,8 @@
         if (!items.length) return '';
         return `<h2 class="section-title">${label}</h2><div class="plist">${items.map(l => {
           const st = state.completed[l.id] || 0;
-          const unlocked = window.Game.isUnlocked(l);
           return `<button class="pcard" data-id="${l.id}">
-            <div class="pc-top"><span class="pc-region">${esc(l.region)}</span>${st ? `<span class="pc-stars">${'★'.repeat(st)}</span>` : unlocked ? '' : '<span class="pc-lock">🔒 on map</span>'}</div>
+            <div class="pc-top"><span class="pc-region">${esc(l.region)}</span>${st ? `<span class="pc-stars">${'★'.repeat(st)}</span>` : '<span class="pc-lock">Quiz ✦</span>'}</div>
             <h3>${esc(l.name)}</h3>
             <div class="pc-refs">${l.passages.map(p => esc(p.ref)).join(' · ')}</div>
             <p>${esc(l.passages[0].verses[0][1].slice(0, 110))}${l.passages[0].verses[0][1].length > 110 ? '…' : ''}</p>
@@ -566,20 +524,20 @@
         }).join('')}</div>`;
       };
       const html = group('OT', 'Old Testament') + group('NT', 'New Testament');
-      $('#pList').innerHTML = html || '<p class="muted center">No passages match your search.</p>';
-      $$('.pcard').forEach(c => c.addEventListener('click', () => openStudy(J.find(l => l.id === c.dataset.id))));
+      body.querySelector('#pList').innerHTML = html || '<p class="muted center">No passages match your search.</p>';
+      body.querySelectorAll('.pcard').forEach(c => c.addEventListener('click', () => openStudy(J.find(l => l.id === c.dataset.id))));
     };
-    $('#sSearch').addEventListener('input', e => { studyFilter = e.target.value; draw(); });
+    body.querySelector('#sSearch').addEventListener('input', e => { studyFilter = e.target.value; draw(); });
     draw();
   }
 
   function openStudy(loc) {
-    const unlocked = window.Game.isUnlocked(loc);
     openModal(`
       <div class="reader">
         <div class="reader-head">
           <div class="eyebrow">Study · ${esc(loc.region)}</div>
           <h2>${esc(loc.name)}</h2>
+          ${state.completed[loc.id] ? `<div class="stars-row">${starIcons(state.completed[loc.id])}</div>` : ''}
         </div>
         ${passageHTML(loc.passages)}
         <div class="row gap"><button class="btn ghost" id="listenBtn">🔊 Listen</button></div>
@@ -588,9 +546,9 @@
         <label class="notes-label" for="notes">📝 My notes</label>
         <textarea id="notes" class="notes" placeholder="What is God showing you in this passage?">${esc(state.notes[loc.id] || '')}</textarea>
         <div class="muted small" id="saved">Notes are saved on this device.</div>
-        <div class="row end gap">
+        <div class="row end gap wrap">
           <button class="btn ghost" id="fullCh">📜 Read the whole chapter</button>
-          ${window.Game.hasStory(loc.id) ? (unlocked ? '<button class="btn primary" id="goMap">🎮 Play this story</button>' : '<span class="muted small">🔒 Unlocks in Bible Story Quest</span>') : ''}
+          <button class="btn primary" id="quizBtn">Take the quiz ✦</button>
         </div>
       </div>`, { cls: 'parchment' });
     bindListen($('#listenBtn'), passageText(loc.passages));
@@ -600,19 +558,25 @@
       tmr = setTimeout(() => { state.notes[loc.id] = e.target.value; save(); $('#saved').textContent = '✓ Saved'; }, 400);
     });
     $('#fullCh').addEventListener('click', () => { closeModal(); window.Reader.openRef(loc.passages[0].ref.replace(/\s*–.*$/, '')); });
-    if (unlocked && window.Game.hasStory(loc.id)) $('#goMap').addEventListener('click', () => { closeModal(); show('journey'); window.Game.playStory(loc.id); });
+    $('#quizBtn').addEventListener('click', () => {
+      Speech.stop();
+      state.readLocs = state.readLocs || {};
+      if (!state.readLocs[loc.id]) { state.readLocs[loc.id] = true; state.readCount++; window.Core.addXP(10, 'Scripture read'); }
+      runQuiz($('#modalBody'), loc.quiz, { title: loc.name, onDone: score => finishLocation(loc, score) });
+    });
   }
 
-  function renderBooks() {
+  function renderBooks(body) {
     const sections = ['All', ...Array.from(new Set(window.BOOKS.map(b => b[1])))];
-    $('#studyBody').innerHTML = `
+    body.innerHTML = `
       <div class="chips filter">${sections.map(s => `<button class="chip ${s === bookFilter ? 'active' : ''}" data-s="${esc(s)}">${esc(s)}</button>`).join('')}</div>
       <div class="books">${window.BOOKS.map((b, i) => (bookFilter === 'All' || b[1] === bookFilter) ? `
-        <div class="book ${i < 39 ? 'ot' : 'nt'}">
+        <button class="book ${i < 39 ? 'ot' : 'nt'}" data-b="${i}">
           <div class="book-num">${i + 1}</div>
           <div><h3>${esc(b[0])}</h3><div class="book-sec">${esc(b[1])} · ${i < 39 ? 'Old' : 'New'} Testament</div><p>${esc(b[2])}</p></div>
-        </div>` : '').join('')}</div>`;
-    $$('.chips.filter .chip').forEach(c => c.addEventListener('click', () => { bookFilter = c.dataset.s; renderBooks(); }));
+        </button>` : '').join('')}</div>`;
+    body.querySelectorAll('.chips.filter .chip').forEach(c => c.addEventListener('click', () => { bookFilter = c.dataset.s; renderBooks(body); }));
+    body.querySelectorAll('.book').forEach(c => c.addEventListener('click', () => window.Reader.open(+c.dataset.b, 1)));
   }
 
   /* ================= Prayer ================= */
@@ -620,7 +584,7 @@
   function stopPrayerTimer() { if (prayerTimer) { clearInterval(prayerTimer); prayerTimer = null; } }
 
   let prayerTab = 'pray';
-  const PRAYER_TABS = [['pray', '🙏 Pray'], ['requests', '📝 My requests'], ['led', '🕊️ Led to pray'], ['people', '🤲 Who I pray for'], ['reminders', '⏰ Alarms']];
+  const PRAYER_TABS = [['pray', '🙏 Pray'], ['requests', '📝 My requests'], ['led', '🕊️ Led to pray'], ['people', '🤲 Who I pray for'], ['reminders', '⏰ Alarms'], ['fast', '🍞 Fasting']];
   function renderPrayer() {
     if (!PRAYER_TABS.some(t => t[0] === prayerTab)) prayerTab = 'pray';
     const t = window.Core.today();
@@ -630,11 +594,12 @@
         <p class="muted">"Lord, teach us to pray." (Luke 11:1)</p></div>
         <div class="hero-stats"><div class="flame-big">🙏<span>${state.prayers}</span></div><div class="muted small">sessions prayed</div></div>
       </section>
-      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'requests' && state.requests.some(r => r.status === 'open') ? ` <span class="count">${state.requests.filter(r => r.status === 'open').length}</span>` : ''}${k === 'reminders' && state.reminders.filter(r => r.enabled).length ? ` <span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}</button>`).join('')}</div>`;
+      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'requests' && state.requests.some(r => r.status === 'open') ? ` <span class="count">${state.requests.filter(r => r.status === 'open').length}</span>` : ''}${k === 'reminders' && state.reminders.filter(r => r.enabled).length ? ` <span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}${k === 'fast' && window.Fast.active() ? ' <span class="count">●</span>' : ''}</button>`).join('')}</div>`;
     const bindTabs = () => $$('.ptabs .seg-btn').forEach(b => b.addEventListener('click', () => { prayerTab = b.dataset.pt; Sound.play('tap'); renderPrayer(); }));
     if (prayerTab === 'people') { $('#prayerPage').innerHTML = head + '<div id="peopleHost"></div>'; bindTabs(); window.PrayList.renderPeople($('#peopleHost')); return; }
     if (prayerTab === 'reminders') { $('#prayerPage').innerHTML = head + '<div id="remindersHost"></div>'; bindTabs(); window.PrayList.renderReminders($('#remindersHost')); return; }
     if (prayerTab === 'requests') { $('#prayerPage').innerHTML = head + '<div id="requestsHost"></div>'; bindTabs(); window.Requests.renderRequests($('#requestsHost')); return; }
+    if (prayerTab === 'fast') { $('#prayerPage').innerHTML = head + '<div id="fastHost"></div>'; bindTabs(); window.Fast.render($('#fastHost')); return; }
     if (prayerTab === 'led') { $('#prayerPage').innerHTML = head + '<div id="leadingsHost"></div>'; bindTabs(); window.Requests.renderLeadings($('#leadingsHost')); return; }
     $('#prayerPage').innerHTML = head + `
       <section class="acts-card">
@@ -739,12 +704,15 @@
           <div class="muted small">${state.xp} XP · ${li.toNext} XP to next level</div></div>
         </div>
         <div class="stats">
-          <div><b>${done}/${J.length}</b><span>Sites</span></div>
+          <div><b>${Object.keys(state.readLog || {}).length}</b><span>Chapters read</span></div>
+          <div><b>${(state.memory || []).length}</b><span>Verses memorizing</span></div>
+          <div><b>${done}/${J.length}</b><span>Passages</span></div>
           <div><b>${stars}/${J.length * 3}</b><span>Stars</span></div>
           <div><b>${window.Core.currentStreak()}</b><span>Streak</span></div>
           <div><b>${state.streak.best || 0}</b><span>Best streak</span></div>
           <div><b>${state.prayers}</b><span>Prayers</span></div>
           <div><b>${state.perfectQuizzes}</b><span>Perfect quizzes</span></div>
+          <div><b>${Object.keys(state.reflections || {}).length}</b><span>Evening reflections</span></div>
         </div>
         <h3 class="section-title">Badges</h3>
         <div class="badges">${window.Core.BADGES.map(b => `<div class="badge ${state.badges.includes(b.id) ? 'earned' : ''}" title="${esc(b.desc)}"><div class="b-icon">${b.icon}</div><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>`).join('')}</div>
@@ -783,7 +751,7 @@
       } catch (err) { toast('That file is not a Lamp & Path backup'); }
     });
     $('#resetBtn').addEventListener('click', async () => {
-      if (!(await window.UI.ask('This erases your journey, streaks, highlights, notes, prayer list and journal on this device.', 'Erase everything'))) return;
+      if (!(await window.UI.ask('This erases your progress, streaks, highlights, notes, prayer list and journal on this device.', 'Erase everything'))) return;
       localStorage.removeItem('lamp-and-path-v1');
       location.reload();
     });
@@ -798,9 +766,11 @@
       const reg = await navigator.serviceWorker.getRegistration();
       if (!reg) return { ok: false, text: 'Offline saving is not available in this viewer. Open the app from its own web address and add it to your home screen.' };
       const keys = await caches.keys();
-      const bible = keys.includes('lamp-bible-v1') ? (await (await caches.open('lamp-bible-v1')).keys()).length : 0;
+      const saved = keys.includes('lamp-bible-v1') ? (await (await caches.open('lamp-bible-v1')).keys()).map(r => r.url) : [];
+      const bible = saved.filter(u => u.includes('/js/kjv/')).length, web = saved.filter(u => u.includes('/js/web/')).length;
       const shell = keys.some(k => k.startsWith('lamp-shell-'));
-      if (shell && bible >= 66) return { ok: true, text: '✓ Ready offline. The app, its fonts and all 66 books of the Bible are saved on this device.' };
+      if (shell && bible >= 66 && web >= 66) return { ok: true, text: '✓ Ready offline. The app, its fonts and all 66 books of the Bible (KJV and modern English) are saved on this device.' };
+      if (shell && bible >= 66) return { ok: true, text: `✓ Ready offline. All 66 books of the KJV are saved. Modern English: ${web}/66 books so far.` };
       return { ok: false, text: `Saving for offline use… ${bible}/66 Bible books so far. Keep the app open while connected.` };
     } catch (e) { return { ok: false, text: 'Could not check offline status.' }; }
   }
@@ -833,19 +803,19 @@
 
   window.UI = {
     openModal, closeModal, show, ask,
-    refresh: () => { updateHUD(); if (current && current !== 'journey') show(current); },
+    refresh: () => { updateHUD(); if (current) show(current); },
+    current: () => current, bindListen, verseHTML, starIcons, renderPassages, renderBooks, openStudy, openPrayerTab: t => { prayerTab = t; show('prayer'); renderPrayer(); },
     onModalClose: fn => { modalOnClose = fn; },
     startGuidedPrayer: () => guidedPrayer(0)
   };
 
   /* ================= Boot ================= */
   function boot() {
-    $$('.tab').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); show(b.dataset.view); }));
+    $$('.tab').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); if (b.dataset.view === 'grow') window.Grow.home(); show(b.dataset.view); }));
     $('#profileBtn').addEventListener('click', openProfile);
     $('#settingsBtn').addEventListener('click', () => window.Personal.openSettings());
     window.Personal.start();
     updateHUD();
-    window.Game.init($('#world'), { onFinish: loc => { window.Core.Sound.play('open'); openLocation(loc); } });
 
     show(location.hash.slice(1) || 'daily');
     window.PrayList.startScheduler();
@@ -854,7 +824,7 @@
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       navigator.serviceWorker.addEventListener('message', e => {
         const m = e.data || {};
-        if (m.type === 'offline-progress') updateOfflineRow(`Saving the Bible for offline use… ${m.done}/${m.total} books`);
+        if (m.type === 'offline-progress') updateOfflineRow(m.web ? `Saving modern English for offline use… ${m.web}/66 books` : `Saving the Bible for offline use… ${m.done}/${m.total} books`);
         if (m.type === 'offline-ready') {
           updateOfflineRow();
           if (m.bible === m.total && !state.offlineReady) {

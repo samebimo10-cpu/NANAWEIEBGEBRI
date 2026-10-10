@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Lamp & Path: Bible, Prayer & Journey",
+  "name": "Lamp & Path: Bible & Prayer",
   "short_name": "Lamp & Path",
-  "description": "The full King James Bible with highlights and notes, a Bible exploration game, daily Bible games, prayer requests, a prayer list and wake-up prayer alarms. Works offline.",
+  "description": "The full King James Bible with modern English side by side, reading plans, Scripture memory, a devotional journal, daily Bible games, prayer requests, fasting and wake-up prayer alarms. Works offline.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -20,6 +20,7 @@
   "shortcuts": [
     { "name": "Read the Bible", "short_name": "Bible", "url": "./index.html#bible", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Pray", "short_name": "Prayer", "url": "./index.html#prayer", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Grow: plans, memory, journal", "short_name": "Grow", "url": "./index.html#grow", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Today's verse and games", "short_name": "Daily", "url": "./index.html#daily", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

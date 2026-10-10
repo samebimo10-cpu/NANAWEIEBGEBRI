@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Lamp &amp; Path: Bible Journey</title>
-  <meta name="description" content="The full King James Bible with highlights and notes, a Bible exploration game, learn its context, play daily Bible games and grow in prayer.">
+  <title>Lamp &amp; Path: Bible &amp; Prayer</title>
+  <meta name="description" content="The full King James Bible with highlights and notes, reading plans, Scripture memory, a devotional journal, daily Bible games and a prayer journal.">
   <meta name="theme-color" content="#1a1330">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -26,8 +26,7 @@
       <button class="tab" data-view="daily"><span class="ti">☀️</span><span>Daily</span></button>
       <button class="tab" data-view="bible"><span class="ti">📜</span><span>Bible</span></button>
       <button class="tab" data-view="prayer"><span class="ti">🙏</span><span>Prayer</span></button>
-      <button class="tab" data-view="study"><span class="ti">📖</span><span>Study</span></button>
-      <button class="tab" data-view="journey"><span class="ti">🎮</span><span>Stories</span></button>
+      <button class="tab" data-view="grow"><span class="ti">🌱</span><span>Grow</span></button>
     </nav>
     <button class="icon-btn settings-btn" id="settingsBtn" title="Personalize, install and share" aria-label="Personalize, install and share">⚙️</button>
     <button class="profile" id="profileBtn" aria-label="Profile and progress">
@@ -41,27 +40,10 @@
   </header>
 
   <main>
-    <section id="view-journey" class="view story-view">
-      <canvas id="world" aria-label="Bible Story Quest game"></canvas>
-      <div class="sq-menu" id="sqMenu"></div>
-      <div class="sq-hud hidden" id="sqHud">
-        <button class="icon-btn" id="sqBack" title="Back to stories" aria-label="Back to stories">◀</button>
-        <div class="sq-title"><b id="sqTitle"></b><small id="sqRef"></small></div>
-        <div class="sq-stats"><span title="Fact scrolls">📜 <b id="sqScrolls">0/3</b></span><span title="Lamps of light">✨ <b id="sqCoins">0</b></span></div>
-        <div class="sq-progress"><i id="sqProg"></i></div>
-      </div>
-      <div class="sq-touch hidden" id="sqTouch">
-        <button data-k="left" aria-label="Walk left">◀</button>
-        <button data-k="right" aria-label="Walk right">▶</button>
-        <button data-k="jump" class="jump" aria-label="Jump">⤒</button>
-      </div>
-      <div class="sq-hint hidden" id="sqHint" aria-live="polite"></div>
-      <div class="sq-card hidden" id="sqCard" role="dialog" aria-live="polite"></div>
-    </section>
 
     <section id="view-bible" class="view"><div class="bible-page" id="biblePage"></div></section>
     <section id="view-daily" class="view scroll"><div class="page" id="dailyPage"></div></section>
-    <section id="view-study" class="view scroll"><div class="page" id="studyPage"></div></section>
+    <section id="view-grow" class="view scroll"><div class="page" id="growPage"></div></section>
     <section id="view-prayer" class="view scroll"><div class="page" id="prayerPage"></div></section>
   </main>
 
@@ -91,15 +73,17 @@
 
   <script src="js/data/journey.js"></script>
   <script src="js/data/library.js"></script>
-  <script src="js/data/stories.js"></script>
+  <script src="js/data/grow.js"></script>
   <script src="js/core.js"></script>
   <script src="js/bible.js"></script>
-  <script src="js/story.js"></script>
   <script src="js/reader.js"></script>
   <script src="js/alarm.js"></script>
   <script src="js/requests.js"></script>
   <script src="js/praylist.js"></script>
   <script src="js/personal.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/fast.js"></script>
+  <script src="js/grow.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
