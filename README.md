@@ -24,8 +24,11 @@
 - To make the link work, host the app on GitHub Pages: **Settings → Pages → Deploy from a branch**. The link is `https://samebimo10-cpu.github.io/NANAWEIEBGEBRI/`.
 
 
-### 📜 The full King James Bible
+### 📜 The full Bible, in eight public-domain versions
 - **All 66 books, 1,189 chapters, 31,102 verses**, readable offline at any time. Books load as you open them.
+- **Versions** (tap the version button, e.g. **KJV ▾**): King James Version, Berean Standard Bible, World English Bible, American Standard Version (1901), Young's Literal Translation, Darby (1889), Webster (1833) and the Bible in Basic English. All are in the public domain and lined up to KJV verse numbers.
+- **Side by side**: read any version with a second one under each verse (**Aa → Side by side**).
+- **📚 Compare**: tap verses to see them in every version at once.
 - **Highlight** verses in five colours. Tap verses to select them, then pick a colour.
 - **Verse notes**: attach your own notes to any verse.
 - **"Pray this"**: send any verse to someone on your prayer list.
@@ -33,9 +36,13 @@
 - **Listen**: the chapter is read aloud verse by verse, with the current verse lit up.
 - Copy verses, adjust the text size, and the app remembers where you were reading.
 - **✓ I've read this chapter** at the end of every chapter. It counts toward your reading plan, your daily steps and your week with God.
-- **Understanding the KJV** (the **Aa** button):
-  - **Modern English side by side**: the World English Bible (public domain) under each KJV verse.
-  - **Explain old words**: words like *shew*, *charity*, *conversation* and *prevent* are underlined. Tap one to see what it means.
+- **Explain old words** (the **Aa** button): words like *shew*, *charity*, *conversation* and *prevent* are underlined in the KJV. Tap one to see what it means.
+
+### 🔤 Hebrew and Greek, the languages of the Bible
+- **The original text under each verse** (**Aa → Hebrew and Greek under each verse**): the Old Testament in Hebrew and Aramaic from the **Westminster Leningrad Codex** (the oldest complete Hebrew Bible manuscript, c. 1008 AD), and the New Testament in Greek from the **Robinson-Pierpont Byzantine text** (2018). Hebrew is shown with its vowel points and reads right to left.
+- **Tap any Hebrew or Greek word** for a word study: the dictionary form, how to say it, its Strong's number, its grammar in plain English (for example "verb: Qal perfect, 3rd person, masculine, singular"), Strong's definition, how the KJV translates it, where the word comes from, and **every verse where it is used**.
+- **🔤 Word by word**: tap verses and choose 🔤 to see each original word with its sound, its meaning and its Strong's number.
+- **Hebrew & Greek dictionary** (in Grow): all of Strong's Hebrew (8,674 entries) and Greek (5,523 entries) dictionaries. Search in English (*love*), by number (*H7965*, *G26*), or by the word as it sounds (*shalom*, *chesed*, *agape*, *logos*).
 - **Listening**: keep reading aloud into the next chapter, with a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
 - Tap verses for more: **🖼️ Card** (a shareable image), **🧠 Memorize**, and **✍️ Journal** (a S.O.A.P. entry).
 - A **My highlights & notes** list, filterable by colour.
@@ -92,7 +99,12 @@
 
 ## Scripture & copyright
 
-Scripture in the app is from the **King James Version (KJV)**. The optional modern-English text shown side by side is the **World English Bible (WEB)**, which is in the public domain. It is in `js/web/`, built from [TehShrike/world-english-bible](https://github.com/TehShrike/world-english-bible) and lined up with KJV verse numbers. The full text in `js/kjv/` was built from two public KJV datasets ([thiagobodruk/bible](https://github.com/thiagobodruk/bible) and [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)), cross-checked word by word against each other. 41 verses where translators' margin notes had leaked into the verse text were cleaned, and the spacing before punctuation was fixed. The KJV is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes, prayer guides, topical notes and the old-word meanings were written for this app. New features store only Bible references and show the text from the bundled KJV, so the wording is always exact.
+Scripture in the app is from the **King James Version (KJV)** unless you choose another version. The other versions are all in the public domain:
+- **World English Bible** (`js/web/`), from [TehShrike/world-english-bible](https://github.com/TehShrike/world-english-bible).
+- **Berean Standard Bible** (dedicated to the public domain in 2023), **ASV**, **YLT**, **Darby**, **Webster** and the **Bible in Basic English** (public domain in the USA), in `js/ver/`, from [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases). Built with `tools/build_versions.py` and lined up with KJV verse numbers. Where a modern translation leaves out a verse found in the KJV (for example Matthew 17:21), the app says so.
+- **Hebrew** (`js/orig/01.js` to `39.js`): the Westminster Leningrad Codex (public domain), with Strong's lemmas and morphology from the [Open Scriptures Hebrew Bible](https://github.com/openscriptures/morphhb) (CC BY 4.0: "Original work of the Open Scriptures Hebrew Bible available at https://github.com/openscriptures/morphhb"). Verses are mapped to KJV numbering with its VerseMap. Cantillation marks are left out for easier reading.
+- **Greek** (`js/orig/40.js` to `66.js`): the [Robinson-Pierpont Byzantine Textform 2018](https://github.com/byztxt/byzantine-majority-text) (public domain), with Strong's numbers and parsing.
+- **Dictionaries** (`js/lex/`): Strong's Hebrew and Greek dictionaries (James Strong, 1890, public domain), from the [Open Scriptures digital edition](https://github.com/openscriptures/strongs) (CC BY-SA). Built with `tools/build_originals.py`. The full text in `js/kjv/` was built from two public KJV datasets ([thiagobodruk/bible](https://github.com/thiagobodruk/bible) and [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)), cross-checked word by word against each other. 41 verses where translators' margin notes had leaked into the verse text were cleaned, and the spacing before punctuation was fixed. The KJV is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes, prayer guides, topical notes and the old-word meanings were written for this app. New features store only Bible references and show the text from the bundled KJV, so the wording is always exact.
 
 ## Running it
 
@@ -109,10 +121,11 @@ You can also open `index.html` directly in a browser. Serving it over HTTP adds 
 To publish it, upload the folder to any static host, such as GitHub Pages, Netlify or Vercel.
 
 ### One downloadable HTML file
-`python3 tools/build_single_html.py` builds `dist/lamp-and-path.html`: the whole app in **one file** (about 10 MB), with the styles, fonts, code, the complete KJV and the modern-English text inside. Copy it to a phone or computer and open it in a browser. It needs no internet and no server. Your progress is saved in that browser. Use Profile → Back up to move it between devices.
+`python3 tools/build_single_html.py` builds `dist/lamp-and-path.html`: the whole app in **one file** (about 29 MB), with the styles, fonts, code, the KJV, BSB and WEB, and the Hebrew, Greek and dictionaries inside. Add `--versions all` for every version (about 50 MB), or `--no-original` to leave out the Hebrew and Greek.
+`python3 tools/build_single_html.py --bundles OUT_DIR` builds the page plus one bundle file per version, for hosts that publish a page with a few files beside it. Copy it to a phone or computer and open it in a browser. It needs no internet and no server. Your progress is saved in that browser. Use Profile → Back up to move it between devices.
 
 ### 100% offline
-Open the app once while connected, from its own web address (for example GitHub Pages). It then saves everything on the device in the background: the app, its fonts, and **all 66 books of the Bible**, in the KJV and in modern English (about 9 MB). A message says when it is ready, and **Profile → Offline** shows the status. After that, everything works with no internet: the Bible, search, highlights, reading plans, memory verses, journals, daily games, prayer list and reminders. Add it to your home screen to open it like a normal app.
+Open the app once while connected, from its own web address (for example GitHub Pages). It then saves everything on the device in the background: the app, its fonts, and **all 66 books of the Bible**, in the KJV and in modern English (about 9 MB). Other versions and the Hebrew and Greek are saved the first time you open them, or all at once from **Profile → Offline → Save**. A message says when it is ready, and **Profile → Offline** shows the status. After that, everything works with no internet: the Bible, search, highlights, reading plans, memory verses, journals, daily games, prayer list and reminders. Add it to your home screen to open it like a normal app.
 
 Fonts are bundled in `fonts/` (Cinzel, EB Garamond, Inter; SIL Open Font License), so nothing loads from other websites.
 
@@ -129,6 +142,10 @@ js/data/grow.js       Feelings, topical studies, reading plans, fasting scriptur
 js/data/library.js    Daily verses, quiz bank, 66 books, scripture prayers, ACTS guide
 js/kjv/01.js … 66.js  The full KJV text, one file per book
 js/web/01.js … 66.js  The World English Bible (modern English), lined up with KJV verse numbers
+js/ver/<id>/NN.js     BSB, ASV, YLT, Darby, Webster and BBE
+js/orig/NN.js         Hebrew (books 1-39) and Greek (books 40-66), word by word with Strong's numbers and grammar
+js/lex/               Strong's Hebrew and Greek dictionaries
+js/orig.js            Hebrew and Greek: word study, grammar in plain English, word-by-word view, dictionary search
 js/bible.js           Bible loading, reference parsing ("Phil 4:6-7"), lookup and search
 js/reader.js          Bible reader: highlights, notes, search, listen, sleep timer, modern English, old words
 js/praylist.js        "Who I'm praying for", alarms & reminders, calendar export, scheduler

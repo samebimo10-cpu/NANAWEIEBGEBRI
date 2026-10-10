@@ -17,17 +17,25 @@
   let pendingFlash = null;  // verses to flash on the next render
 
   const lordHTML = t => esc(t).replace(/LORD/g, '<span class="sc">Lord</span>');
-  const OPT_DEFAULTS = { web: false, gloss: true, cont: true, sleep: 0 };
+  const OPT_DEFAULTS = { ver: 'kjv', par: '', orig: false, gloss: true, cont: true, sleep: 0 };
   const opts = () => {
     const o = state.readerOpts || (state.readerOpts = {});
+    if ('web' in o) { if (o.web && !o.par) o.par = 'web'; delete o.web; }   // older setting: modern English side by side
     Object.keys(OPT_DEFAULTS).forEach(k => { if (!(k in o)) o[k] = OPT_DEFAULTS[k]; });
+    const has = id => B().VERSIONS.some(v => v.id === id);   // a single-file copy may not hold every version
+    if (!has(o.ver)) o.ver = 'kjv';
+    if (o.par && !has(o.par)) o.par = '';
     return o;
   };
+  const ver = () => opts().ver;
+  const vtext = (b, c, v) => B().verText(ver(), b, c, v);
+  const abbr = () => B().version(ver()).abbr;
+  const MISSING = 'This verse is not in the manuscripts this translation follows.';
   // very common words that need no underline every time they appear
   const GLOSS_SKIP = new Set(['hath', 'doth', 'saith', 'lest', 'verily', 'spake', 'thereof', 'therein', 'wherefore', 'abide']);
   function kjvHTML(t) {
     let h = esc(t);
-    if (opts().gloss && window.GLOSSARY) {
+    if (opts().gloss && window.GLOSSARY && (ver() === 'kjv' || ver() === 'webster')) {
       h = h.replace(/\b([A-Za-z]+)\b/g, w => {
         const k = w.toLowerCase();
         return window.GLOSSARY[k] && !GLOSS_SKIP.has(k) ? `<span class="gw" data-w="${k}">${w}</span>` : w;
@@ -47,6 +55,7 @@
         <div class="bar-actions">
           <button class="icon-btn sm" id="bSearch" title="Search the Bible">🔍</button>
           <button class="icon-btn sm" id="bMarks" title="My highlights &amp; notes">🖍️</button>
+          <button class="ver-chip" id="bVer" title="Choose a Bible version">${esc(B().version(opts().ver).abbr)} ▾</button>
           <button class="icon-btn sm" id="bListen" title="Listen to this chapter">🔊</button>
           <button class="icon-btn sm" id="bOpts" title="Text size, modern English, sleep timer">Aa</button>
         </div>
@@ -65,6 +74,7 @@
     $('#bMarks').addEventListener('click', () => openMarks());
     $('#bListen').addEventListener('click', toggleListen);
     $('#bOpts').addEventListener('click', openOptions);
+    $('#bVer').addEventListener('click', openVersions);
     $('#prevCh').addEventListener('click', () => step(-1));
     $('#nextCh').addEventListener('click', () => step(1));
     const f = pendingFlash || [];
@@ -96,19 +106,25 @@
     $('#prevCh').disabled = b === 0 && c === 1;
     $('#nextCh').disabled = b === 65 && c === B().CHAPTERS[65];
     let book;
+    const o = opts();
     try {
-      book = await B().load(b);
-      if (opts().web) await B().loadWeb(b).catch(() => null);
+      book = await B().loadVersion(o.ver, b);
+      await B().load(b);   // the KJV is always kept for highlights and notes
+      if (o.par && o.par !== o.ver) await B().loadVersion(o.par, b).catch(() => null);
+      if (o.orig) await window.Orig.load(b).catch(() => null);
     } catch (e) { art.innerHTML = `<p class="muted">${esc(e.message)}</p><button class="btn ghost" id="retryLoad">Try again</button>`; $('#retryLoad').onclick = () => drawChapter(); return; }
     if (cur.b !== b || cur.c !== c) return; // navigated away while loading
     const verses = book[c - 1];
-    const par = opts().web && B().webText(b, c, 1) !== undefined;
+    const par = o.par && o.par !== o.ver && B().verText(o.par, b, c, 1) !== undefined;
+    const orig = o.orig && window.Orig.isLoaded(b);
+    const main = B().version(o.ver), side = par ? B().version(o.par) : null;
     art.innerHTML = `
       <h1 class="ch-title"><span class="ch-book">${esc(B().NAMES[b])}</span><span class="ch-num">${c}</span></h1>
-      ${par ? '<div class="par-key"><span>KJV</span><span class="w">Modern English (WEB)</span></div>' : ''}
-      <p class="verses${par ? ' parallel' : ''}">${verses.map((t, i) => verseSpan(b, c, i + 1, t)).join(' ')}</p>
+      ${par || orig ? `<div class="par-key"><span>${esc(main.abbr)}</span>${side ? `<span class="w">${esc(side.abbr)} · ${esc(side.name)}</span>` : ''}${orig ? `<span class="o">${b < 39 ? 'Hebrew' : 'Greek'} · tap a word</span>` : ''}</div>` : ''}
+      <p class="verses${par || orig ? ' parallel' : ''}">${verses.map((t, i) => verseSpan(b, c, i + 1, t)).join(' ')}</p>
       <div class="read-done-row" id="readRow"></div>`;
-    if ($('#kjvNote')) $('#kjvNote').textContent = par ? 'King James Version, with the World English Bible (modern English). Both are in the public domain.' : 'King James Version · public domain';
+    $('#bVer').textContent = main.abbr + ' ▾';
+    if ($('#kjvNote')) $('#kjvNote').textContent = [main, side].filter(Boolean).map(v => `${v.name} (${v.year})`).join(' and ') + ' · public domain' + (orig ? ` · ${b < 39 ? 'Hebrew: Westminster Leningrad Codex' : 'Greek: Robinson-Pierpont Byzantine text'}` : '');
     drawReadRow();
     art.querySelectorAll('.v').forEach(el => el.addEventListener('click', e => verseClick(e, el)));
     const scroller = $('#bibleScroll');
@@ -129,6 +145,8 @@
     if (e.target.classList.contains('note-ic')) { openNote(+el.dataset.v); return; }
     const g = e.target.closest('.gw');
     if (g) { glossPop(g); return; }
+    const ow = e.target.closest('.ow');
+    if (ow) { window.Orig.openWord(cur.b, cur.c, +el.dataset.v, +ow.dataset.wi); return; }
     const v = +el.dataset.v;
     sel.has(v) ? sel.delete(v) : sel.add(v);
     el.classList.toggle('selected', sel.has(v));
@@ -178,15 +196,18 @@
     const k = B().key(b, c, v);
     const h = state.highlights[k];
     const n = state.verseNotes[k];
-    const web = opts().web ? B().webText(b, c, v) : undefined;
-    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${kjvHTML(t)}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${web ? `<span class="v-web">${esc(web)}</span>` : ''}</span>`;
+    const o = opts();
+    const web = o.par && o.par !== o.ver ? B().verText(o.par, b, c, v) : undefined;
+    const orig = o.orig && window.Orig.isLoaded(b) ? window.Orig.lineHTML(b, c, v) : '';
+    const body = t ? kjvHTML(t) : `<span class="v-missing">${MISSING}</span>`;
+    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web) : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
   }
 
   function refreshVerse(v) {
     const el = document.querySelector(`#chapter .v[data-v="${v}"]`);
     if (!el) return;
     const tmp = document.createElement('div');
-    tmp.innerHTML = verseSpan(cur.b, cur.c, v, B().text(cur.b, cur.c, v));
+    tmp.innerHTML = verseSpan(cur.b, cur.c, v, vtext(cur.b, cur.c, v));
     const nu = tmp.firstChild;
     if (sel.has(v)) nu.classList.add('selected');
     el.replaceWith(nu);
@@ -206,7 +227,7 @@
     }
     return `${B().NAMES[cur.b]} ${cur.c}:${parts.join(', ')}`;
   }
-  function selText() { return [...sel].sort((a, b) => a - b).map(v => B().text(cur.b, cur.c, v)).join(' '); }
+  function selText() { return [...sel].sort((a, b) => a - b).map(v => vtext(cur.b, cur.c, v) || B().text(cur.b, cur.c, v)).join(' '); }
 
   function updateSelBar() {
     const bar = $('#selBar');
@@ -220,6 +241,8 @@
       <div class="sel-actions">
         <button class="btn ghost small" id="sNote">📝 Note</button>
         <button class="btn ghost small" id="sPray">🙏 Pray this</button>
+        <button class="btn ghost small" id="sOrig">🔤 ${cur.b < 39 ? 'Hebrew' : 'Greek'}</button>
+        <button class="btn ghost small" id="sCmp">📚 Compare</button>
         <button class="btn ghost small" id="sCard">🖼️ Card</button>
         <button class="btn ghost small" id="sMem">🧠 Memorize</button>
         <button class="btn ghost small" id="sSoap">✍️ Journal</button>
@@ -230,6 +253,8 @@
     bar.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => highlight(s.dataset.c)));
     $('#sNote').addEventListener('click', () => openNote(Math.min(...sel)));
     $('#sCopy').addEventListener('click', copySel);
+    $('#sOrig').addEventListener('click', () => { const vs = [...sel].sort((a, b) => a - b).slice(0, 6); clearSel(); window.Orig.interlinear(cur.b, cur.c, vs); });
+    $('#sCmp').addEventListener('click', () => { const vs = [...sel].sort((a, b) => a - b).slice(0, 4); clearSel(); compare(cur.b, cur.c, vs); });
     const contiguous = () => { const vs = [...sel].sort((a, b) => a - b); return vs[vs.length - 1] - vs[0] === vs.length - 1; };
     const rangeRef = () => { const vs = [...sel].sort((a, b) => a - b); return B().refString(cur.b, cur.c, vs[0], vs[vs.length - 1]); };
     $('#sCard').addEventListener('click', () => { const r = selRef(), t = selText(); clearSel(); window.Cards.verse(r, t); });
@@ -264,7 +289,7 @@
   }
 
   async function copySel() {
-    const txt = `"${selText()}" (${selRef()}, KJV)`;
+    const txt = `"${selText()}" (${selRef()}, ${abbr()})`;
     try { await navigator.clipboard.writeText(txt); toast('📋 Copied'); }
     catch (e) {
       UI().openModal(`<div class="note-modal"><div class="eyebrow">Copy</div><h3>Select the text and copy it</h3><textarea class="notes" id="copyTxt" readonly>${esc(txt)}</textarea></div>`);
@@ -277,7 +302,7 @@
     const k = B().key(cur.b, cur.c, v);
     const existing = state.verseNotes[k];
     const ref = sel.size ? selRef() : `${B().NAMES[cur.b]} ${cur.c}:${v}`;
-    const text = sel.size ? selText() : B().text(cur.b, cur.c, v);
+    const text = sel.size ? selText() : (vtext(cur.b, cur.c, v) || B().text(cur.b, cur.c, v));
     UI().openModal(`
       <div class="note-modal">
         <div class="eyebrow">Note</div>
@@ -411,7 +436,7 @@
   function startListen(continuing) {
     if (!('speechSynthesis' in window)) { toast('Read-aloud is not supported on this device'); return; }
     const { b, c } = cur;
-    if (!B().isLoaded(b)) return;
+    if (vtext(b, c, 1) === undefined) return;
     reading = { v: 1, b, c };
     $('#bListen').textContent = '⏹';
     if (!continuing) sleepUntil = opts().sleep ? Date.now() + opts().sleep * 60000 : 0;
@@ -422,7 +447,7 @@
     const next = () => {
       if (!reading || reading.b !== cur.b || reading.c !== cur.c) return stopListen();
       if (sleepUntil && Date.now() >= sleepUntil) { stopListen(); toast('🌙 Sleep timer: reading stopped. Good night.'); return; }
-      const t = B().text(b, c, reading.v);
+      const t = vtext(b, c, reading.v);
       $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
       if (t === undefined) {
         const last = b === 65 && c === B().CHAPTERS[65];
@@ -466,9 +491,13 @@
         <h2>Aa · Reading options</h2>
         <div class="opt-row"><span><b>Text size</b><small id="fontVal">${Math.round(state.bibleFont * 100)}%</small></span>
           <span class="row gap"><button class="icon-btn sm" id="bSmaller" title="Smaller text">A−</button><button class="icon-btn sm" id="bBigger" title="Larger text">A+</button></span></div>
-        <h3 class="section-title">Understanding the KJV</h3>
-        ${sw('oWeb', o.web, 'Modern English side by side', 'Shows the World English Bible (public domain) under each verse')}
-        ${sw('oGloss', o.gloss, 'Explain old words', 'Old words like "shew" and "charity" are underlined. Tap one to see its meaning')}
+        <h3 class="section-title">Version</h3>
+        <div class="opt-row" id="oVerRow"><span><b>Reading</b><small>${esc(B().version(o.ver).name)} (${esc(B().version(o.ver).year)})</small></span><button class="btn ghost small" id="oVer">Change</button></div>
+        <label class="flabel" for="oPar">Side by side</label>
+        <select class="search" id="oPar"><option value="">Nothing (one version)</option>${B().VERSIONS.map(v => `<option value="${v.id}" ${o.par === v.id ? 'selected' : ''}>${esc(v.abbr)} · ${esc(v.name)}</option>`).join('')}</select>
+        <h3 class="section-title">Understanding the text</h3>
+        ${sw('oOrig', o.orig, 'Hebrew and Greek under each verse', 'The original-language words. Tap any word for its meaning, grammar and every place it is used')}
+        ${sw('oGloss', o.gloss, 'Explain old KJV words', 'Old words like "shew" and "charity" are underlined. Tap one to see its meaning')}
         <h3 class="section-title">Listening</h3>
         ${sw('oCont', o.cont, 'Keep reading into the next chapter', 'Listen through a whole book')}
         <div class="opt-row"><span><b>🌙 Sleep timer</b><small>Stop reading aloud after a while</small></span></div>
@@ -478,7 +507,9 @@
     $('#bSmaller').addEventListener('click', () => { setFont(-0.1); $('#fontVal').textContent = Math.round(state.bibleFont * 100) + '%'; });
     $('#bBigger').addEventListener('click', () => { setFont(0.1); $('#fontVal').textContent = Math.round(state.bibleFont * 100) + '%'; });
     const redraw = () => { save(); const y = $('#bibleScroll') ? $('#bibleScroll').scrollTop : 0; drawChapter().then(() => { if ($('#bibleScroll')) $('#bibleScroll').scrollTop = y; }); };
-    $('#oWeb').addEventListener('change', e => { o.web = e.target.checked; redraw(); });
+    $('#oPar').addEventListener('change', e => { o.par = e.target.value; redraw(); });
+    $('#oOrig').addEventListener('change', e => { o.orig = e.target.checked; redraw(); });
+    $('#oVer').addEventListener('click', openVersions);
     $('#oGloss').addEventListener('change', e => { o.gloss = e.target.checked; redraw(); });
     $('#oCont').addEventListener('change', e => { o.cont = e.target.checked; save(); });
     document.querySelectorAll('#oSleep .seg-btn').forEach(btn => btn.addEventListener('click', () => {
@@ -488,6 +519,42 @@
       toast(o.sleep ? `🌙 Reading aloud will stop after ${o.sleep} minutes` : 'Sleep timer off');
     }));
     const l = $('#oListen'); if (l) l.addEventListener('click', () => { UI().closeModal(); startListen(); });
+  }
+
+  /* ---------------- Versions ---------------- */
+  function openVersions() {
+    const o = opts();
+    UI().openModal(`
+      <div class="versions">
+        <div class="eyebrow">Bible versions</div>
+        <h2>Choose what to read</h2>
+        <p class="muted small">All of these are in the public domain, so they are free to read, share and keep offline.</p>
+        <div class="ver-list">${B().VERSIONS.map(v => `<button class="ver-item ${o.ver === v.id ? 'active' : ''}" data-ver="${v.id}">
+          <span class="ver-abbr">${esc(v.abbr)}</span><span class="ver-main"><b>${esc(v.name)}</b><small>${esc(v.year)} · ${esc(v.note)}</small></span>${o.ver === v.id ? '<span class="pill ok">Reading</span>' : ''}</button>`).join('')}</div>
+        <div class="ver-orig"><b>🔤 Hebrew and Greek</b><p class="muted small">The Old Testament in Hebrew (Westminster Leningrad Codex) and the New Testament in Greek (Robinson-Pierpont Byzantine text), with Strong's dictionary. Turn it on in <b>Aa</b>, or tap verses and choose 🔤.</p></div>
+      </div>`);
+    document.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => {
+      o.ver = b.dataset.ver; if (o.par === o.ver) o.par = ''; save();
+      UI().closeModal(); Sound.play('tap');
+      toast(`📖 Reading the ${B().version(o.ver).name}`);
+      drawChapter();
+    }));
+  }
+
+  /* The selected verses in every version, one under another. */
+  async function compare(b, c, vs) {
+    UI().openModal('<div class="compare"><p class="muted">Opening every version…</p></div>', { cls: 'parchment' });
+    const loaded = await Promise.all(B().VERSIONS.map(v => B().loadVersion(v.id, b).then(() => true).catch(() => false)));
+    if (!document.querySelector('#modal:not(.hidden) #modalBody .compare')) return;
+    $('#modalBody').innerHTML = `
+      <div class="compare">
+        <div class="eyebrow">Compare versions</div>
+        <h2>${esc(B().refString(b, c, vs[0], vs[vs.length - 1]))}</h2>
+        ${B().VERSIONS.map((v, i) => loaded[i] ? `<div class="cmp-item"><div class="cmp-head"><b>${esc(v.abbr)}</b><span class="muted small">${esc(v.name)} (${esc(v.year)})</span></div>
+          <p class="scripture">${vs.map(n => { const t = B().verText(v.id, b, c, n); return `${vs.length > 1 ? `<sup>${n}</sup>` : ''}${t ? lordHTML(t) : `<i class="muted">${MISSING}</i>`}`; }).join(' ')}</p></div>` : '').join('')}
+        <div class="row gap wrap"><button class="btn ghost" id="cmpOrig">🔤 See the ${b < 39 ? 'Hebrew' : 'Greek'}</button></div>
+      </div>`;
+    $('#cmpOrig').addEventListener('click', () => window.Orig.interlinear(b, c, vs));
   }
 
   /* ---------------- Public ---------------- */

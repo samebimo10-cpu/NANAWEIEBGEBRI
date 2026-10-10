@@ -3,7 +3,7 @@
  * the app itself, its fonts, and all 66 books of the Bible in the KJV and in modern English (about 9 MB).
  * After that the app opens and runs with no connection at all.
  */
-const VERSION = 'v9';
+const VERSION = 'v10';
 const SHELL = 'lamp-shell-' + VERSION;
 const BIBLE = 'lamp-bible-v1';   // the KJV text never changes, so it keeps its own long-lived cache
 
@@ -15,7 +15,7 @@ const SHELL_FILES = [
   './fonts/Inter-latin-567244.woff2', './fonts/Inter-latin-ext-395290.woff2', './fonts/GreatVibes-latin.woff2',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
   './js/data/journey.js', './js/data/library.js', './js/data/grow.js', './js/core.js', './js/bible.js',
-  './js/reader.js', './js/alarm.js', './js/requests.js', './js/praylist.js', './js/personal.js',
+  './js/orig.js', './js/reader.js', './js/alarm.js', './js/requests.js', './js/praylist.js', './js/personal.js',
   './js/cards.js', './js/fast.js', './js/grow.js', './js/app.js'
 ];
 const BOOK = i => String(i + 1).padStart(2, '0');
@@ -66,6 +66,18 @@ self.addEventListener('activate', e => {
 // The page can ask for a status check or to finish downloading anything missing.
 self.addEventListener('message', e => {
   if (e.data === 'offline-check') e.waitUntil(cacheBible());
+  // save a whole pack for offline use: { type: 'save-pack', files: [...] }
+  if (e.data && e.data.type === 'save-pack') e.waitUntil((async () => {
+    const cache = await caches.open(BIBLE);
+    let done = 0;
+    for (const url of e.data.files) {
+      if (!(await cache.match(url))) {
+        try { const res = await fetch(url); if (res.ok) await cache.put(url, res); } catch (err) { /* try again later */ }
+      }
+      done++;
+      if (done % 6 === 0 || done === e.data.files.length) tell({ type: 'pack-progress', pack: e.data.pack, done, total: e.data.files.length });
+    }
+  })());
 });
 
 self.addEventListener('fetch', e => {
@@ -75,7 +87,8 @@ self.addEventListener('fetch', e => {
   if (url.origin !== location.origin) return;
 
   // Bible text: from the device first; it never changes.
-  if (url.pathname.includes('/js/kjv/') || url.pathname.includes('/js/web/')) {
+  // (other versions, Hebrew, Greek and the dictionaries are saved the first time they are opened)
+  if (/\/js\/(kjv|web|ver|orig|lex)\//.test(url.pathname)) {
     e.respondWith(caches.open(BIBLE).then(async c => {
       const hit = await c.match(req, { ignoreSearch: true });
       if (hit) return hit;

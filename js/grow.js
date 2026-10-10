@@ -679,6 +679,7 @@
     ['sermons', '🎤', 'Sermon notes', () => `${state.sermons.length} saved`],
     ['ebenezer', '🪨', 'My faith story', () => `${timelineItems().length} milestones`],
     ['week', '📊', 'My week with God', () => 'Your last seven days'],
+    ['dict', '🔤', 'Hebrew & Greek dictionary', () => 'Every word of the original Bible, explained'],
     ['passages', '📖', 'Study passages & quizzes', () => `${Object.keys(state.completed).length} of ${window.JOURNEY.length} completed`],
     ['books', '📚', 'Books of the Bible', () => 'All 66, with summaries']
   ];
@@ -714,6 +715,7 @@
       case 'ebenezer': body.innerHTML = ebenezerHTML(); bindEbenezer(body); break;
       case 'week': body.innerHTML = weekHTML(); fillRefs(body); state.weekSeen = todayKey(); save(); break;
       case 'passages': UI().renderPassages(body); break;
+      case 'dict': window.Orig.renderDictionary(body); break;
       case 'books': UI().renderBooks(body); break;
     }
   }

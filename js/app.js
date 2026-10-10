@@ -718,6 +718,7 @@
         <div class="badges">${window.Core.BADGES.map(b => `<div class="badge ${state.badges.includes(b.id) ? 'earned' : ''}" title="${esc(b.desc)}"><div class="b-icon">${b.icon}</div><b>${esc(b.name)}</b><small>${esc(b.desc)}</small></div>`).join('')}</div>
         <h3 class="section-title">Offline</h3>
         <p class="offline-row" id="offlineRow">Checking…</p>
+        <div id="packs"></div>
         <h3 class="section-title">Settings</h3>
         <div class="row gap wrap">
           <button class="btn ghost" id="sndBtn">${state.sound ? '🔔 Sound on' : '🔕 Sound off'}</button>
@@ -730,6 +731,7 @@
         <p class="muted small credit">All scripture is from the King James Version, which is in the public domain. Context notes and quizzes are original to this app.</p>
       </div>`);
     updateOfflineRow();
+    renderPacks();
     $('#sndBtn').addEventListener('click', e => { state.sound = !state.sound; save(); e.target.textContent = state.sound ? '🔔 Sound on' : '🔕 Sound off'; Sound.play('tap'); });
     $('#persBtn').addEventListener('click', () => window.Personal.openSettings());
     $('#instBtn').addEventListener('click', () => window.Personal.install());
@@ -783,6 +785,28 @@
     row.className = 'offline-row ' + (st.ok ? 'ok' : '');
   }
 
+  /* Extra Bible versions and the Hebrew and Greek texts, saved for offline use on request. */
+  const nn = i => String(i + 1).padStart(2, '0');
+  function packs() {
+    const list = window.Bible.VERSIONS.filter(v => v.id !== 'kjv' && v.id !== 'web').map(v => ({ id: v.id, name: `${v.abbr} · ${v.name}`, size: '4 MB', files: Array.from({ length: 66 }, (_, i) => `./js/ver/${v.id}/${nn(i)}.js`) }));
+    list.push({ id: 'orig', name: '🔤 Hebrew & Greek with dictionary', size: '15 MB', files: [...Array.from({ length: 66 }, (_, i) => `./js/orig/${nn(i)}.js`), './js/lex/hebrew.js', './js/lex/greek.js'] });
+    return list;
+  }
+  async function renderPacks() {
+    const host = document.getElementById('packs');
+    if (!host) return;
+    if (!('caches' in window) || !navigator.serviceWorker || !navigator.serviceWorker.controller) { host.innerHTML = ''; return; }
+    const saved = new Set((await (await caches.open('lamp-bible-v1')).keys()).map(r => new URL(r.url).pathname));
+    const have = p => p.files.filter(f => saved.has(new URL(f, location.href).pathname)).length;
+    host.innerHTML = `<p class="muted small">Other versions and the Hebrew and Greek are saved on this device when you first open them. To have a whole one ready offline now, save it here.</p>
+      <div class="pack-list">${packs().map(p => { const n = have(p); return `<div class="pack"><span>${esc(p.name)}</span>${n >= p.files.length ? '<span class="pill ok">✓ Saved</span>' : `<button class="btn ghost small" data-pack="${p.id}">${n ? `Finish saving (${n}/${p.files.length})` : `Save (${p.size})`}</button>`}</div>`; }).join('')}</div>`;
+    host.querySelectorAll('[data-pack]').forEach(b => b.addEventListener('click', () => {
+      const p = packs().find(x => x.id === b.dataset.pack);
+      navigator.serviceWorker.controller.postMessage({ type: 'save-pack', pack: p.id, files: p.files });
+      b.disabled = true; b.textContent = 'Saving…';
+    }));
+  }
+
   /* In-page confirmation (browser confirm() dialogs are blocked in some viewers). */
   function ask(message, okLabel = 'OK') {
     return new Promise(resolve => {
@@ -821,10 +845,15 @@
     window.PrayList.startScheduler();
     window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.BIBLE_BUNDLES) {
       navigator.serviceWorker.addEventListener('message', e => {
         const m = e.data || {};
         if (m.type === 'offline-progress') updateOfflineRow(m.web ? `Saving modern English for offline use… ${m.web}/66 books` : `Saving the Bible for offline use… ${m.done}/${m.total} books`);
+        if (m.type === 'pack-progress') {
+          const b = document.querySelector(`[data-pack="${m.pack}"]`);
+          if (b) b.textContent = `Saving… ${m.done}/${m.total}`;
+          if (m.done === m.total) { renderPacks(); toast('✓ Saved for offline use'); }
+        }
         if (m.type === 'offline-ready') {
           updateOfflineRow();
           if (m.bible === m.total && !state.offlineReady) {

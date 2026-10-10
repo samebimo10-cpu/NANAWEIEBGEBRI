@@ -9,10 +9,23 @@
   const CHAPTERS = [50, 40, 27, 36, 34, 24, 21, 4, 31, 24, 22, 25, 29, 36, 10, 13, 10, 42, 150, 31, 12, 8, 66, 52, 5, 48, 12, 14, 3, 9, 1, 4, 7, 3, 3, 3, 2, 14, 4, 28, 16, 24, 21, 28, 16, 16, 13, 6, 6, 4, 4, 5, 3, 6, 4, 3, 1, 13, 5, 5, 3, 5, 1, 1, 1, 22];
   const SHORT = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1 Sam', '2 Sam', '1 Kgs', '2 Kgs', '1 Chr', '2 Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal', 'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1 Cor', '2 Cor', 'Gal', 'Eph', 'Phil', 'Col', '1 Thess', '2 Thess', '1 Tim', '2 Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1 Pet', '2 Pet', '1 John', '2 John', '3 John', 'Jude', 'Rev'];
 
-  // two texts: the King James Version, and the World English Bible (modern English) for side-by-side reading
-  const caches = { kjv: {}, web: {} };
+  // Public-domain translations. The KJV is the main text; the others can be read instead of it, or side by side.
+  const VERSIONS = [
+    { id: 'kjv', abbr: 'KJV', name: 'King James Version', year: '1611/1769', note: 'The classic English Bible.' },
+    { id: 'bsb', abbr: 'BSB', name: 'Berean Standard Bible', year: '2022', note: 'Modern, accurate and readable. Public domain since 2023.' },
+    { id: 'web', abbr: 'WEB', name: 'World English Bible', year: '2020', note: 'Modern English, close to the ASV.' },
+    { id: 'asv', abbr: 'ASV', name: 'American Standard Version', year: '1901', note: 'A careful, word-for-word revision of the KJV.' },
+    { id: 'ylt', abbr: 'YLT', name: "Young's Literal Translation", year: '1898', note: 'Follows the Hebrew and Greek word for word, and tense for tense.' },
+    { id: 'darby', abbr: 'DBY', name: 'Darby Bible', year: '1889', note: 'A literal translation by J. N. Darby.' },
+    { id: 'webster', abbr: 'WBS', name: 'Webster Bible', year: '1833', note: "Noah Webster's light update of the KJV's old words." },
+    { id: 'bbe', abbr: 'BBE', name: 'Bible in Basic English', year: '1949/1964', note: 'Simple English, using a vocabulary of about 1,000 words.' }
+  ];
+  // a single-file copy of the app may hold only some versions
+  if (window.ONLY_VERSIONS) for (let i = VERSIONS.length - 1; i >= 0; i--) if (!window.ONLY_VERSIONS.includes(VERSIONS[i].id)) VERSIONS.splice(i, 1);
+  const PATH = id => id === 'kjv' || id === 'web' ? id : 'ver/' + id;
+  const caches = {}, waiting = {};
+  VERSIONS.forEach(v => { caches[v.id] = {}; waiting[v.id] = {}; });
   const cache = caches.kjv;
-  const waiting = { kjv: {}, web: {} };
 
   function addTo(kind, i, data) {
     caches[kind][i] = data;
@@ -21,6 +34,7 @@
   }
   const _add = (i, data) => addTo('kjv', i, data);
   const _addWeb = (i, data) => addTo('web', i, data);
+  const _addVer = (id, i, data) => { if (caches[id]) addTo(id, i, data); };
 
   function loadKind(kind, i) {
     if (caches[kind][i]) return Promise.resolve(caches[kind][i]);
@@ -30,10 +44,12 @@
       W[i] = [{ res, rej }];
       const s = document.createElement('script');
       const nn = String(i + 1).padStart(2, '0');
+      // the app published as one page keeps each version in one bundle file
+      if (window.BIBLE_BUNDLES) { loadBundle(kind); return; }
       // the single-file build keeps books as text inside the page, to be run only when needed
       const inline = document.getElementById(`${kind}-src-${nn}`);
       if (inline) { s.textContent = inline.textContent; document.head.appendChild(s); return; }
-      s.src = `js/${kind}/${nn}.js`;
+      s.src = `js/${PATH(kind)}/${nn}.js`;
       s.async = true;
       s.onerror = () => {
         const w = W[i] || [];
@@ -43,6 +59,18 @@
       };
       document.head.appendChild(s);
     });
+  }
+  const bundles = {};
+  function loadBundle(kind) {
+    if (bundles[kind]) return;
+    bundles[kind] = true;
+    const s = document.createElement('script');
+    s.src = window.BIBLE_BUNDLES + kind.replace('/', '-') + '.js';
+    s.onerror = () => {
+      bundles[kind] = false;
+      Object.keys(waiting[kind] || {}).forEach(i => { (waiting[kind][i] || []).forEach(x => x.rej(new Error('Could not load this Bible version. Check your connection.'))); delete waiting[kind][i]; });
+    };
+    document.head.appendChild(s);
   }
   const load = i => loadKind('kjv', i);
   const loadWeb = i => loadKind('web', i);
@@ -154,6 +182,9 @@
     return { results, total, words: phrase ? [phrase] : words };
   }
 
-  const webText = (b, c, v) => caches.web[b] && caches.web[b][c - 1] ? caches.web[b][c - 1][v - 1] : undefined;
-  window.Bible = { NAMES, SHORT, CHAPTERS, _add, _addWeb, load, loadWeb, webText, loadAll, parse, lookup, refString, text, search, isLoaded: i => !!cache[i], key: (b, c, v) => `${b}.${c}.${v}` };
+  const verText = (id, b, c, v) => caches[id] && caches[id][b] && caches[id][b][c - 1] ? caches[id][b][c - 1][v - 1] : undefined;
+  const webText = (b, c, v) => verText('web', b, c, v);
+  const loadVersion = (id, b) => caches[id] ? loadKind(id, b) : Promise.reject(new Error('Unknown version'));
+  const version = id => VERSIONS.find(v => v.id === id) || VERSIONS[0];
+  window.Bible = { NAMES, SHORT, CHAPTERS, VERSIONS, version, _add, _addWeb, _addVer, load, loadWeb, loadVersion, webText, verText, loadAll, parse, lookup, refString, text, search, isLoaded: i => !!cache[i], key: (b, c, v) => `${b}.${c}.${v}` };
 })();
