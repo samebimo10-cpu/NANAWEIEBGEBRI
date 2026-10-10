@@ -127,6 +127,8 @@ for lang, fname, var, out_name in [('H', 'strongs-hebrew-dictionary.js', 'strong
             if rest.strip():
                 derivation, definition = head.strip() + ';', (rest.strip().rstrip(';') + '; ' + definition).strip().rstrip(';').replace(';  ', '; ')
         kjv = re.sub(r'(^|[\s(,])X\s', r'\1', (e.get('kjv_def') or '').strip())   # "X" marks an idiom in Strong's
+        e = {key: (val.replace('\ufffd', '').strip() if isinstance(val, str) else val) for key, val in e.items()}   # one source entry has a broken character
+        kjv = kjv.replace('\ufffd', '').strip()
         lex[k] = [e.get('lemma', ''), e.get('xlit') or e.get('translit', ''), e.get('pron', ''), definition, kjv, derivation]
     body = json.dumps(lex, ensure_ascii=False, separators=(',', ':'))
     with open(os.path.join(ROOT, 'js', 'lex', out_name + '.js'), 'w', encoding='utf-8') as f:
