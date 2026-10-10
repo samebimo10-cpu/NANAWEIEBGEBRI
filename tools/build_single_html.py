@@ -61,6 +61,7 @@ def inline(m):
         out += f'\n<script>\n{books}\n</script>'
         for vid in VERSIONS[1:]:
             out += ''.join(f'\n<script type="text/plain" id="{vid}-src-{i:02d}">{safe_js(read(f"js/{path_of(vid)}/{i:02d}.js"))}</script>' for i in range(1, 67))
+        out += ''.join(f'\n<script type="text/plain" id="xref-src-{i:02d}">{safe_js(read(f"js/xref/{i:02d}.js"))}</script>' for i in range(1, 67))
         if ORIGINAL:
             out += ''.join(f'\n<script type="text/plain" id="orig-src-{i:02d}">{safe_js(read(f"js/orig/{i:02d}.js"))}</script>' for i in range(1, 67))
             out += ''.join(f'\n<script type="text/plain" id="lex-src-{n}">{safe_js(read(f"js/lex/{n}.js"))}</script>' for n in ('hebrew', 'greek'))
@@ -86,6 +87,7 @@ if BUNDLES:
     groups = {vid: [f'js/{path_of(vid)}/{i:02d}.js' for i in range(1, 67)] for vid in ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe']}
     groups['orig-ot'] = [f'js/orig/{i:02d}.js' for i in range(1, 40)]
     groups['orig-nt'] = [f'js/orig/{i:02d}.js' for i in range(40, 67)]
+    groups['xref'] = [f'js/xref/{i:02d}.js' for i in range(1, 67)]
     groups['lex-hebrew'] = ['js/lex/hebrew.js']
     groups['lex-greek'] = ['js/lex/greek.js']
     for name, files in groups.items():

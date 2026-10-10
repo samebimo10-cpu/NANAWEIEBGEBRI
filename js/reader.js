@@ -17,7 +17,11 @@
   let pendingFlash = null;  // verses to flash on the next render
 
   const lordHTML = t => esc(t).replace(/LORD/g, '<span class="sc">Lord</span>');
-  const OPT_DEFAULTS = { ver: 'kjv', par: '', orig: false, gloss: true, cont: true, sleep: 0 };
+  const OPT_DEFAULTS = { ver: 'kjv', par: '', orig: false, gloss: true, cont: true, sleep: 0, page: 'parchment', font: 'serif', spacing: 'normal', layout: 'flow', voice: '', rate: 0.95, ambient: '' };
+  const PAGES = [['parchment', 'Parchment'], ['white', 'White'], ['sepia', 'Sepia'], ['night', 'Night']];
+  const FONTS = [['serif', 'Garamond'], ['classic', 'Georgia'], ['sans', 'Clean sans'], ['readable', 'Easy to read']];
+  const SPACING = [['compact', 'Compact', 1.6], ['normal', 'Normal', 1.85], ['roomy', 'Roomy', 2.2]];
+  const hlName = k => ((state.hlLabels || {})[k] || '').trim() || (COLORS.find(c => c[0] === k) || [, , k])[2];
   const opts = () => {
     const o = state.readerOpts || (state.readerOpts = {});
     if ('web' in o) { if (o.web && !o.par) o.par = 'web'; delete o.web; }   // older setting: modern English side by side
@@ -102,6 +106,7 @@
     const { b, c } = cur;
     const art = $('#chapter');
     if (!art) return;
+    applyLook();
     $('#bkName').textContent = `${B().NAMES[b]} ${c}`;
     $('#prevCh').disabled = b === 0 && c === 1;
     $('#nextCh').disabled = b === 65 && c === B().CHAPTERS[65];
@@ -120,12 +125,14 @@
     const main = B().version(o.ver), side = par ? B().version(o.par) : null;
     art.innerHTML = `
       <h1 class="ch-title"><span class="ch-book">${esc(B().NAMES[b])}</span><span class="ch-num">${c}</span></h1>
+      ${c === 1 && window.OVERVIEWS ? `<button class="about-book" id="aboutBook"><span>ℹ️</span><span><b>About ${esc(B().NAMES[b])}</b><small>${esc((t => t.indexOf(':') > 0 && t.indexOf(':') < 40 ? t.split(':')[0] : t.slice(0, 60).replace(/\s+\S*$/, '') + '…')(window.OVERVIEWS[b].theme))} · ${esc(window.OVERVIEWS[b].author)}</small></span><span>›</span></button>` : ''}
       ${par || orig ? `<div class="par-key"><span>${esc(main.abbr)}</span>${side ? `<span class="w">${esc(side.abbr)} · ${esc(side.name)}</span>` : ''}${orig ? `<span class="o">${b < 39 ? 'Hebrew' : 'Greek'} · tap a word</span>` : ''}</div>` : ''}
       <p class="verses${par || orig ? ' parallel' : ''}">${verses.map((t, i) => verseSpan(b, c, i + 1, t)).join(' ')}</p>
       <div class="read-done-row" id="readRow"></div>`;
     $('#bVer').textContent = main.abbr + ' ▾';
     if ($('#kjvNote')) $('#kjvNote').textContent = [main, side].filter(Boolean).map(v => `${v.name} (${v.year})`).join(' and ') + ' · public domain' + (orig ? ` · ${b < 39 ? 'Hebrew: Westminster Leningrad Codex' : 'Greek: Robinson-Pierpont Byzantine text'}` : '');
     drawReadRow();
+    const ab = $('#aboutBook'); if (ab) ab.addEventListener('click', () => window.Study.overview(b));
     art.querySelectorAll('.v').forEach(el => el.addEventListener('click', e => verseClick(e, el)));
     const scroller = $('#bibleScroll');
     if (flashFrom) {
@@ -186,6 +193,10 @@
     row.innerHTML = today
       ? `<div class="read-done">✓ Read today</div>${nxt ? `<button class="btn primary" id="readNext">Next in your plan: ${esc(B().NAMES[nxt[0]])} ${nxt[1]} →</button>` : ''}`
       : `<button class="btn primary big" id="readDone">✓ I've read this chapter</button>${last ? `<small class="muted">Last read ${new Date(last).toLocaleDateString()}</small>` : ''}${inPlanToday ? '<small class="muted">Part of today\'s reading plan</small>' : ''}`;
+    if (window.Connect && window.Connect.canShare()) {
+      const t = document.createElement('button'); t.className = 'btn ghost'; t.id = 'talkBtn'; t.textContent = '💬 Discuss this chapter with the group';
+      t.addEventListener('click', () => window.Connect.discuss(b, c)); row.appendChild(t);
+    }
     const d = $('#readDone');
     if (d) d.addEventListener('click', () => { window.Grow.markRead(b, c); drawReadRow(); });
     const n = $('#readNext');
@@ -200,7 +211,8 @@
     const web = o.par && o.par !== o.ver ? B().verText(o.par, b, c, v) : undefined;
     const orig = o.orig && window.Orig.isLoaded(b) ? window.Orig.lineHTML(b, c, v) : '';
     const body = t ? kjvHTML(t) : `<span class="v-missing">${MISSING}</span>`;
-    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web) : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
+    const bm = (state.bookmarks || {})[k] ? '<span class="bm-ic" title="Bookmarked">🔖</span>' : '';
+    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${bm}${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web) : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
   }
 
   function refreshVerse(v) {
@@ -236,11 +248,14 @@
     bar.classList.remove('hidden');
     bar.innerHTML = `
       <div class="sel-ref">${esc(selRef())}</div>
-      <div class="sel-colors">${COLORS.map(([k, hex, name]) => `<button class="swatch" data-c="${k}" style="--sw:${hex}" title="Highlight ${name}"></button>`).join('')}
+      <div class="sel-colors">${COLORS.map(([k, hex]) => `<button class="swatch" data-c="${k}" style="--sw:${hex}" title="Highlight: ${esc(hlName(k))}" aria-label="Highlight: ${esc(hlName(k))}"></button>`).join('')}
         <button class="swatch clear" data-c="" title="Remove highlight">⌫</button></div>
       <div class="sel-actions">
         <button class="btn ghost small" id="sNote">📝 Note</button>
         <button class="btn ghost small" id="sPray">🙏 Pray this</button>
+        ${window.Connect && window.Connect.canAsk() ? '<button class="btn ghost small" id="sAsk">✨ Ask</button>' : ''}
+        <button class="btn ghost small" id="sXref">🔗 Cross-refs</button>
+        <button class="btn ghost small" id="sBm">🔖 ${(state.bookmarks || {})[B().key(cur.b, cur.c, Math.min(...sel))] ? 'Remove bookmark' : 'Bookmark'}</button>
         <button class="btn ghost small" id="sOrig">🔤 ${cur.b < 39 ? 'Hebrew' : 'Greek'}</button>
         <button class="btn ghost small" id="sCmp">📚 Compare</button>
         <button class="btn ghost small" id="sCard">🖼️ Card</button>
@@ -253,6 +268,15 @@
     bar.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => highlight(s.dataset.c)));
     $('#sNote').addEventListener('click', () => openNote(Math.min(...sel)));
     $('#sCopy').addEventListener('click', copySel);
+    const sa = $('#sAsk'); if (sa) sa.addEventListener('click', () => { const r = selRef(), t = selText(); clearSel(); window.Connect.ask({ ref: r, text: t }); });
+    $('#sXref').addEventListener('click', () => { const v = Math.min(...sel); clearSel(); window.Study.crossRefs(cur.b, cur.c, v); });
+    $('#sBm').addEventListener('click', () => {
+      const v = Math.min(...sel), k = B().key(cur.b, cur.c, v);
+      state.bookmarks = state.bookmarks || {};
+      if (state.bookmarks[k]) { delete state.bookmarks[k]; toast('Bookmark removed'); }
+      else { state.bookmarks[k] = { at: Date.now(), ref: `${B().NAMES[cur.b]} ${cur.c}:${v}`, text: (vtext(cur.b, cur.c, v) || B().text(cur.b, cur.c, v) || '').slice(0, 200) }; toast('🔖 Bookmarked'); }
+      save(); Sound.play('tap'); refreshVerse(v); clearSel();
+    });
     $('#sOrig').addEventListener('click', () => { const vs = [...sel].sort((a, b) => a - b).slice(0, 6); clearSel(); window.Orig.interlinear(cur.b, cur.c, vs); });
     $('#sCmp').addEventListener('click', () => { const vs = [...sel].sort((a, b) => a - b).slice(0, 4); clearSel(); compare(cur.b, cur.c, vs); });
     const contiguous = () => { const vs = [...sel].sort((a, b) => a - b); return vs[vs.length - 1] - vs[0] === vs.length - 1; };
@@ -362,9 +386,11 @@
         <button class="btn ghost small" id="backBk">← Books</button>
         <h2 class="picker-title">${esc(B().NAMES[b])}</h2>
         <p class="muted small">${esc(window.BOOKS[b][2])}</p>
+        ${window.OVERVIEWS ? '<button class="btn ghost small" id="bkAbout">ℹ️ About this book</button>' : ''}
         <div class="ch-grid">${Array.from({ length: n }, (_, i) => `<button class="ch-btn ${b === cur.b && i + 1 === cur.c ? 'active' : ''}" data-c="${i + 1}">${i + 1}</button>`).join('')}</div>
       </div>`;
     $('#backBk').addEventListener('click', openPicker);
+    const ab = $('#bkAbout'); if (ab) ab.addEventListener('click', () => window.Study.overview(b));
     $$('.ch-btn').forEach(btn => btn.addEventListener('click', () => { UI().closeModal(); open(b, +btn.dataset.c); }));
   }
 
@@ -416,19 +442,50 @@
     const parseKey = k => k.split('.').map(Number);
     const hl = Object.entries(state.highlights).filter(([, h]) => !marksColor || h.color === marksColor).sort((a, b) => b[1].at - a[1].at);
     const notes = Object.entries(state.verseNotes).sort((a, b) => b[1].at - a[1].at);
+    const bms = Object.entries(state.bookmarks || {}).sort((a, b) => b[1].at - a[1].at);
     const html = `
       <div class="marks">
         <div class="eyebrow">My Bible</div>
-        <div class="seg"><button class="seg-btn ${marksTab === 'hl' ? 'active' : ''}" data-t="hl">🖍️ Highlights (${Object.keys(state.highlights).length})</button><button class="seg-btn ${marksTab === 'notes' ? 'active' : ''}" data-t="notes">📝 Notes (${notes.length})</button></div>
+        <div class="seg"><button class="seg-btn ${marksTab === 'hl' ? 'active' : ''}" data-t="hl">🖍️ Highlights (${Object.keys(state.highlights).length})</button><button class="seg-btn ${marksTab === 'notes' ? 'active' : ''}" data-t="notes">📝 Notes (${notes.length})</button><button class="seg-btn ${marksTab === 'bm' ? 'active' : ''}" data-t="bm">🔖 Bookmarks (${bms.length})</button></div>
         ${marksTab === 'hl' ? `
-          <div class="chips filter"><button class="chip ${!marksColor ? 'active' : ''}" data-col="">All</button>${COLORS.map(([k, hex, n]) => `<button class="chip ${marksColor === k ? 'active' : ''}" data-col="${k}"><i class="dotc" style="background:${hex}"></i>${n}</button>`).join('')}</div>
+          <div class="chips filter"><button class="chip ${!marksColor ? 'active' : ''}" data-col="">All</button>${COLORS.map(([k, hex]) => `<button class="chip ${marksColor === k ? 'active' : ''}" data-col="${k}"><i class="dotc" style="background:${hex}"></i>${esc(hlName(k))}</button>`).join('')}<button class="chip" id="hlNames">✏️ Name colours</button></div>
           <div class="results">${hl.length ? hl.map(([k, h]) => { const [b, c, v] = parseKey(k); return `<button class="result-item hlitem" data-k="${k}" style="--hc:${(COLORS.find(x => x[0] === h.color) || COLORS[0])[1]}"><b>${esc(B().NAMES[b])} ${c}:${v}</b><span>${lordHTML(h.text || '')}</span></button>`; }).join('') : '<p class="muted center">No highlights yet. In the Bible, tap a verse and choose a colour.</p>'}</div>`
+        : marksTab === 'bm' ? `<div class="results">${bms.length ? bms.map(([k, m]) => `<button class="result-item" data-k="${k}"><b>🔖 ${esc(m.ref)}</b><span>${lordHTML(m.text || '')}</span></button>`).join('') : '<p class="muted center">No bookmarks yet. Tap a verse, then 🔖 Bookmark.</p>'}</div>`
         : `<div class="results">${notes.length ? notes.map(([k, n]) => `<button class="result-item" data-k="${k}"><b>${esc(n.ref)}</b><span class="note-txt">${esc(n.text)}</span><span class="muted small">${lordHTML((n.verseText || '').slice(0, 140))}${(n.verseText || '').length > 140 ? '…' : ''}</span></button>`).join('') : '<p class="muted center">No notes yet. Tap a verse, then 📝 Note.</p>'}</div>`}
       </div>`;
     if (document.querySelector('#modal.open .marks')) $('#modalBody').innerHTML = html; else UI().openModal(html);
     $$('.marks .seg-btn').forEach(b => b.addEventListener('click', () => { marksTab = b.dataset.t; openMarks(); }));
     $$('.marks [data-col]').forEach(b => b.addEventListener('click', () => { marksColor = b.dataset.col; openMarks(); }));
+    const hn = $('#hlNames'); if (hn) hn.addEventListener('click', nameColours);
     $$('.marks .result-item').forEach(el => el.addEventListener('click', () => { const [b, c, v] = parseKey(el.dataset.k); UI().closeModal(); open(b, c, v); }));
+  }
+
+  /* Give each highlight colour a meaning, e.g. yellow = promises. */
+  function nameColours() {
+    const L = state.hlLabels || {};
+    $('#modalBody').innerHTML = `
+      <div class="pform marks">
+        <div class="eyebrow">My Bible</div>
+        <h2>What does each colour mean to you?</h2>
+        <p class="muted small">For example: yellow for promises, green for commands, blue for prayers, pink for God's love, purple for prophecy.</p>
+        ${COLORS.map(([k, hex, n]) => `<div class="hl-name-row"><i class="dotc big" style="background:${hex}"></i><input class="search" data-k="${k}" maxlength="24" placeholder="${n}" value="${esc(L[k] || '')}"></div>`).join('')}
+        <div class="row end gap"><button class="btn ghost" id="hlBack">Back</button><button class="btn primary" id="hlSave">Save</button></div>
+      </div>`;
+    $('#hlBack').addEventListener('click', openMarks);
+    $('#hlSave').addEventListener('click', () => {
+      state.hlLabels = {};
+      document.querySelectorAll('#modalBody input[data-k]').forEach(i => { if (i.value.trim()) state.hlLabels[i.dataset.k] = i.value.trim(); });
+      save(); toast('✓ Colour names saved'); openMarks();
+    });
+  }
+
+  /* Page style: background, typeface, line spacing and layout. */
+  function applyLook() {
+    const o = opts(), art = $('#chapter'), page = $('#biblePage');
+    if (!art) return;
+    art.className = `chapter page-${o.page} font-${o.font} layout-${o.layout}`;
+    art.style.lineHeight = (SPACING.find(x => x[0] === o.spacing) || SPACING[1])[2];
+    if (page) page.classList.toggle('night', o.page === 'night');
   }
 
   /* ---------------- Listen (verse by verse, following along) ---------------- */
@@ -442,8 +499,8 @@
     if (!continuing) sleepUntil = opts().sleep ? Date.now() + opts().sleep * 60000 : 0;
     if (!wakeLock && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
     speechSynthesis.cancel();
-    const voices = speechSynthesis.getVoices();
-    const voice = voices.find(v => /en-GB/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
+    const voice = window.Core.Speech.voice();
+    if (opts().ambient && window.Ambient) window.Ambient.start(opts().ambient);
     const next = () => {
       if (!reading || reading.b !== cur.b || reading.c !== cur.c) return stopListen();
       if (sleepUntil && Date.now() >= sleepUntil) { stopListen(); toast('🌙 Sleep timer: reading stopped. Good night.'); return; }
@@ -464,7 +521,7 @@
       const el = document.querySelector(`#chapter .v[data-v="${reading.v}"]`);
       if (el) { el.classList.add('reading'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
       const u = new SpeechSynthesisUtterance((reading.v === 1 ? `${B().NAMES[b]} chapter ${c}. ` : '') + t.replace(/LORD/g, 'Lord'));
-      u.rate = 0.92; if (voice) u.voice = voice;
+      u.rate = opts().rate || 0.95; if (voice) u.voice = voice;
       u.onend = () => { if (reading) { reading.v++; next(); } };
       u.onerror = () => stopListen();
       speechSynthesis.speak(u);
@@ -475,6 +532,7 @@
     if (!reading) return;
     reading = null;
     sleepUntil = 0;
+    if (window.Ambient && !continueListening) window.Ambient.stop();
     if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
@@ -491,6 +549,15 @@
         <h2>Aa · Reading options</h2>
         <div class="opt-row"><span><b>Text size</b><small id="fontVal">${Math.round(state.bibleFont * 100)}%</small></span>
           <span class="row gap"><button class="icon-btn sm" id="bSmaller" title="Smaller text">A−</button><button class="icon-btn sm" id="bBigger" title="Larger text">A+</button></span></div>
+        <h3 class="section-title">Page</h3>
+        <label class="flabel">Page colour</label>
+        <div class="seg small wrap-seg" id="oPage">${PAGES.map(([k, l]) => `<button class="seg-btn ${o.page === k ? 'active' : ''}" data-v="${k}">${l}</button>`).join('')}</div>
+        <label class="flabel">Typeface</label>
+        <div class="seg small wrap-seg" id="oFont">${FONTS.map(([k, l]) => `<button class="seg-btn ${o.font === k ? 'active' : ''}" data-v="${k}">${l}</button>`).join('')}</div>
+        <label class="flabel">Line spacing</label>
+        <div class="seg small wrap-seg" id="oSpacing">${SPACING.map(([k, l]) => `<button class="seg-btn ${o.spacing === k ? 'active' : ''}" data-v="${k}">${l}</button>`).join('')}</div>
+        <label class="flabel">Layout</label>
+        <div class="seg small wrap-seg" id="oLayout"><button class="seg-btn ${o.layout === 'flow' ? 'active' : ''}" data-v="flow">Paragraph</button><button class="seg-btn ${o.layout === 'verse' ? 'active' : ''}" data-v="verse">Verse by verse</button></div>
         <h3 class="section-title">Version</h3>
         <div class="opt-row" id="oVerRow"><span><b>Reading</b><small>${esc(B().version(o.ver).name)} (${esc(B().version(o.ver).year)})</small></span><button class="btn ghost small" id="oVer">Change</button></div>
         <label class="flabel" for="oPar">Side by side</label>
@@ -500,6 +567,13 @@
         ${sw('oGloss', o.gloss, 'Explain old KJV words', 'Old words like "shew" and "charity" are underlined. Tap one to see its meaning')}
         <h3 class="section-title">Listening</h3>
         ${sw('oCont', o.cont, 'Keep reading into the next chapter', 'Listen through a whole book')}
+        <label class="flabel" for="oVoice">Voice</label>
+        <select class="search" id="oVoice"><option value="">Best English voice on this device</option>${window.Core.Speech.voices().map(v => `<option value="${esc(v.name)}" ${o.voice === v.name ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}</select>
+        <label class="flabel">Speed</label>
+        <div class="seg small wrap-seg" id="oRate">${[[0.75, 'Slow'], [0.95, 'Normal'], [1.15, 'Brisk'], [1.4, 'Fast']].map(([r, l]) => `<button class="seg-btn ${Math.abs((o.rate || 0.95) - r) < 0.01 ? 'active' : ''}" data-v="${r}">${l}</button>`).join('')}</div>
+        <label class="flabel">Background music while listening</label>
+        <div class="seg small wrap-seg" id="oAmbient">${[['', 'None'], ['pad', 'Soft strings'], ['piano', 'Gentle piano'], ['rain', 'Rain']].map(([k, l]) => `<button class="seg-btn ${o.ambient === k ? 'active' : ''}" data-v="${k}">${l}</button>`).join('')}</div>
+        <div class="row gap"><button class="btn ghost small" id="oTry">▶ Try the voice</button></div>
         <div class="opt-row"><span><b>🌙 Sleep timer</b><small>Stop reading aloud after a while</small></span></div>
         <div class="seg small" id="oSleep">${[0, 10, 20, 30, 60].map(m => `<button class="seg-btn ${o.sleep === m ? 'active' : ''}" data-m="${m}">${m ? m + ' min' : 'Off'}</button>`).join('')}</div>
         <div class="row end gap wrap">${reading ? '' : '<button class="btn ghost" id="oListen">🔊 Start listening</button>'}<button class="btn primary" data-close>Done</button></div>
@@ -507,6 +581,19 @@
     $('#bSmaller').addEventListener('click', () => { setFont(-0.1); $('#fontVal').textContent = Math.round(state.bibleFont * 100) + '%'; });
     $('#bBigger').addEventListener('click', () => { setFont(0.1); $('#fontVal').textContent = Math.round(state.bibleFont * 100) + '%'; });
     const redraw = () => { save(); const y = $('#bibleScroll') ? $('#bibleScroll').scrollTop : 0; drawChapter().then(() => { if ($('#bibleScroll')) $('#bibleScroll').scrollTop = y; }); };
+    const pick = (id, key, num, after) => document.querySelectorAll(`#${id} .seg-btn`).forEach(btn => btn.addEventListener('click', () => {
+      o[key] = num ? +btn.dataset.v : btn.dataset.v; save();
+      document.querySelectorAll(`#${id} .seg-btn`).forEach(x => x.classList.toggle('active', x === btn));
+      after && after();
+    }));
+    pick('oPage', 'page', false, applyLook);
+    pick('oFont', 'font', false, applyLook);
+    pick('oSpacing', 'spacing', false, applyLook);
+    pick('oLayout', 'layout', false, applyLook);
+    pick('oRate', 'rate', true);
+    pick('oAmbient', 'ambient', false, () => { if (window.Ambient) { if (o.ambient) window.Ambient.preview(o.ambient); else window.Ambient.stop(); } });
+    $('#oVoice').addEventListener('change', e => { o.voice = e.target.value; save(); });
+    $('#oTry').addEventListener('click', () => window.Core.Speech.speak('The LORD is my shepherd; I shall not want.'));
     $('#oPar').addEventListener('change', e => { o.par = e.target.value; redraw(); });
     $('#oOrig').addEventListener('change', e => { o.orig = e.target.checked; redraw(); });
     $('#oVer').addEventListener('click', openVersions);
@@ -575,5 +662,5 @@
     return true;
   }
 
-  window.Reader = { render, open, openRef, stop: stopListen, openSearch };
+  window.Reader = { render, open, openRef, stop: stopListen, openSearch, refreshRow: () => drawReadRow() };
 })();

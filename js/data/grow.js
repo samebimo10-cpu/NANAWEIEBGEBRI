@@ -127,8 +127,25 @@ window.PLANS = [
   { id: 'gospels30', icon: '✝️', name: 'The Gospels in 30 Days', days: 30, desc: 'Matthew, Mark, Luke and John: the life, death and resurrection of Jesus.' },
   { id: 'pp31', icon: '🎵', name: 'Psalms and Proverbs', days: 31, desc: 'One Proverb and about five Psalms a day. Read all of both books in a month.' },
   { id: 'nt90', icon: '📜', name: 'New Testament in 90 Days', days: 90, desc: 'Every chapter from Matthew to Revelation in three months, about three chapters a day.' },
-  { id: 'year', icon: '📖', name: 'Bible in a Year', days: 365, desc: 'The whole Bible, Genesis to Revelation, in 365 days: about 3 to 4 chapters a day.' }
+  { id: 'year', icon: '📖', name: 'Bible in a Year', days: 365, desc: 'The whole Bible, Genesis to Revelation, in 365 days: about 3 to 4 chapters a day.' },
+  { id: 'chrono', icon: '⏳', name: 'Chronological Bible in a Year', days: 365, desc: 'The whole Bible in about the order events happened: Job with the patriarchs, the Psalms with David, the prophets with the kings, Paul’s letters within Acts.' }
 ];
+/* Chronological order (approximate): [book name, first chapter, last chapter] */
+window.CHRONO = [
+  ['Genesis', 1, 11], ['Job', 1, 42], ['Genesis', 12, 50], ['Exodus', 1, 40], ['Leviticus', 1, 27], ['Numbers', 1, 36], ['Deuteronomy', 1, 34], ['Psalms', 90, 90],
+  ['Joshua', 1, 24], ['Judges', 1, 21], ['Ruth', 1, 4], ['1 Samuel', 1, 31], ['1 Chronicles', 1, 10], ['2 Samuel', 1, 24], ['1 Chronicles', 11, 29],
+  ['Psalms', 1, 89], ['Psalms', 91, 150], ['1 Kings', 1, 11], ['2 Chronicles', 1, 9], ['Proverbs', 1, 31], ['Song of Solomon', 1, 8], ['Ecclesiastes', 1, 12],
+  ['1 Kings', 12, 22], ['2 Chronicles', 10, 20], ['2 Kings', 1, 14], ['2 Chronicles', 21, 25], ['Jonah', 1, 4], ['Amos', 1, 9], ['Hosea', 1, 14],
+  ['2 Kings', 15, 20], ['2 Chronicles', 26, 32], ['Isaiah', 1, 66], ['Micah', 1, 7], ['2 Kings', 21, 23], ['2 Chronicles', 33, 35], ['Nahum', 1, 3],
+  ['Zephaniah', 1, 3], ['Joel', 1, 3], ['Habakkuk', 1, 3], ['Jeremiah', 1, 52], ['2 Kings', 24, 25], ['2 Chronicles', 36, 36], ['Lamentations', 1, 5],
+  ['Obadiah', 1, 1], ['Ezekiel', 1, 48], ['Daniel', 1, 12], ['Ezra', 1, 6], ['Haggai', 1, 2], ['Zechariah', 1, 14], ['Esther', 1, 10], ['Ezra', 7, 10],
+  ['Nehemiah', 1, 13], ['Malachi', 1, 4],
+  ['Luke', 1, 2], ['Matthew', 1, 28], ['Mark', 1, 16], ['Luke', 3, 24], ['John', 1, 21], ['Acts', 1, 14], ['James', 1, 5], ['Galatians', 1, 6], ['Acts', 15, 17],
+  ['1 Thessalonians', 1, 5], ['2 Thessalonians', 1, 3], ['Acts', 18, 19], ['1 Corinthians', 1, 16], ['2 Corinthians', 1, 13], ['Acts', 20, 20], ['Romans', 1, 16],
+  ['Acts', 21, 28], ['Ephesians', 1, 6], ['Philippians', 1, 4], ['Colossians', 1, 4], ['Philemon', 1, 1], ['1 Timothy', 1, 6], ['Titus', 1, 3], ['1 Peter', 1, 5],
+  ['Hebrews', 1, 13], ['2 Timothy', 1, 4], ['2 Peter', 1, 3], ['Jude', 1, 1], ['1 John', 1, 5], ['2 John', 1, 1], ['3 John', 1, 1], ['Revelation', 1, 22]
+];
+
 window.START21 = ['Genesis 1', 'Genesis 3', 'Exodus 14', 'Exodus 20', 'Psalm 23', 'Psalm 51', 'Psalm 139', 'Isaiah 53', 'Matthew 5', 'Matthew 6', 'Matthew 7', 'John 1', 'John 3', 'John 11', 'John 15', 'Romans 8', 'Romans 12', '1 Corinthians 13', 'Ephesians 2', 'Philippians 4', 'Revelation 21'];
 
 /* Fasting companion: a scripture for each day of a fast */

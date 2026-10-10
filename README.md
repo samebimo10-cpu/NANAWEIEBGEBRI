@@ -29,6 +29,10 @@
 - **Versions** (tap the version button, e.g. **KJV ▾**): King James Version, Berean Standard Bible, World English Bible, American Standard Version (1901), Young's Literal Translation, Darby (1889), Webster (1833) and the Bible in Basic English. All are in the public domain and lined up to KJV verse numbers.
 - **Side by side**: read any version with a second one under each verse (**Aa → Side by side**).
 - **📚 Compare**: tap verses to see them in every version at once.
+- **🔗 Cross-references**: tap a verse to see the verses Bible readers most often link to it (OpenBible.info).
+- **ℹ️ About each book**: all 66 books have an overview (author, date, theme, outline by chapters and a key verse), at the top of chapter 1, in the book picker and in Grow → Books.
+- **Reading your way** (**Aa**): page colour (parchment, white, sepia, night), typeface (Garamond, Georgia, clean sans, easy to read), line spacing, and paragraph or verse-by-verse layout.
+- **🔖 Bookmarks**, and **name your highlight colours** (for example yellow = promises).
 - **Highlight** verses in five colours. Tap verses to select them, then pick a colour.
 - **Verse notes**: attach your own notes to any verse.
 - **"Pray this"**: send any verse to someone on your prayer list.
@@ -43,22 +47,30 @@
 - **Tap any Hebrew or Greek word** for a word study: the dictionary form, how to say it, its Strong's number, its grammar in plain English (for example "verb: Qal perfect, 3rd person, masculine, singular"), Strong's definition, how the KJV translates it, where the word comes from, and **every verse where it is used**.
 - **🔤 Word by word**: tap verses and choose 🔤 to see each original word with its sound, its meaning and its Strong's number.
 - **Hebrew & Greek dictionary** (in Grow): all of Strong's Hebrew (8,674 entries) and Greek (5,523 entries) dictionaries. Search in English (*love*), by number (*H7965*, *G26*), or by the word as it sounds (*shalom*, *chesed*, *agape*, *logos*).
-- **Listening**: keep reading aloud into the next chapter, with a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
+- **Listening**: choose the voice and speed, keep reading into the next chapter, add gentle background music (soft strings, piano or rain, generated on the device), and set a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
 - Tap verses for more: **🖼️ Card** (a shareable image), **🧠 Memorize**, and **✍️ Journal** (a S.O.A.P. entry).
 - A **My highlights & notes** list, filterable by colour.
 
 ### 🌱 Grow
-- **🗓️ Reading plans**: First Steps (21 days), the Gospels in 30 days, Psalms and Proverbs in a month, the New Testament in 90 days, and the Bible in a Year. If you fall behind, the app says so gently and can move the plan so today is a fresh start.
+- **🗓️ Reading plans**: First Steps (21 days), the Gospels in 30 days, Psalms and Proverbs in a month, the New Testament in 90 days, the Bible in a Year, the **Chronological Bible in a Year**, and **make your own plan** (any books, any number of days). If you fall behind, the app says so gently and can move the plan so today is a fresh start.
 - **💛 A word for how I feel**: anxious, afraid, grieving, lonely, tempted, discouraged, weary, waiting, unwell, guilty, angry, needing guidance, thankful or joyful. Each has six KJV passages and a prayer.
-- **🧠 Memory verses** with spaced repetition. Reviews come back after 1, 3, 7, 14, 30, 60 and 120 days. A "first letters" hint helps you along.
+- **🧠 Memory verses** with spaced repetition. Reviews come back after 1, 3, 7, 14, 30, 60 and 120 days. Three ways to practise: **flashcard**, **fade out** (words disappear a third at a time) and **type the first letters**.
 - **🧭 Topical studies**: Faith, Forgiveness, Prayer, Fear and Trust, Who I Am in Christ, the Holy Spirit, Money and Stewardship, Marriage and Family, and God's Love. Each is six steps with a short note on each passage, and ends with a question to answer.
 - **✍️ S.O.A.P. journal**: Scripture, Observation, Application, Prayer.
 - **🌙 Evening reflection**: three things you are thankful for, where you saw God today, anything to let go of, and tomorrow's step. After 5 pm it appears on the Daily page.
 - **🎤 Sermon notes**: Bible references you type (like *Romans 8:28* or *Ps 23*) become links you can tap.
 - **🪨 My faith story (Ebenezer)**: a timeline of what God has done, such as coming to faith, baptism, healing and provision. Answered prayers, finished plans and completed fasts are added automatically. On the anniversary of each one, the Daily page reminds you: "1 year ago today…"
 - **📊 My week with God**: chapters read, days of prayer, verses reviewed, journal entries, reflections and answered prayers, with an encouraging word. It appears on Sundays.
+- **🗺️ Bible places map**: an offline map of the Bible lands from Rome to Persia, with today's borders drawn faintly. 59 places, each with what happened there and key verses.
 - **📖 Study passages and quizzes**: 23 key passages with setting, background, themes, a reflection, your notes and a 3-question quiz for up to 3 stars.
 - **📚 Books of the Bible**: all 66 books with summaries. Tap a book to start reading it.
+
+### ✨ On the app link (claude.ai)
+When the app is opened from its claude.ai link, three more things appear:
+- **✨ Ask about the Bible**: ask about a passage (tap verses, then ✨ Ask) or any Bible question. Claude answers with history, culture and context, and **cites verses you can tap to check**. Where Christians differ, it describes the main views fairly.
+- **🤝 Prayer wall**: post prayer requests (with or without your name) for the people the link is shared with, tap "I'll pray", and mark them answered.
+- **💬 Read together**: a group reading plan, and a discussion for every chapter.
+These use the viewer's own Claude account, and only people the owner shares the link with can see the wall and discussions. They are hidden in the installed app and the offline file, which have no server.
 
 ### 🖼️ Share cards
 - **Verse cards**: turn any verse into a beautiful image in five styles and share it to WhatsApp, your status, or anywhere, or save it to your photos.
@@ -104,6 +116,8 @@ Scripture in the app is from the **King James Version (KJV)** unless you choose 
 - **Berean Standard Bible** (dedicated to the public domain in 2023), **ASV**, **YLT**, **Darby**, **Webster** and the **Bible in Basic English** (public domain in the USA), in `js/ver/`, from [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases). Built with `tools/build_versions.py` and lined up with KJV verse numbers. Where a modern translation leaves out a verse found in the KJV (for example Matthew 17:21), the app says so.
 - **Hebrew** (`js/orig/01.js` to `39.js`): the Westminster Leningrad Codex (public domain), with Strong's lemmas and morphology from the [Open Scriptures Hebrew Bible](https://github.com/openscriptures/morphhb) (CC BY 4.0: "Original work of the Open Scriptures Hebrew Bible available at https://github.com/openscriptures/morphhb"). Verses are mapped to KJV numbering with its VerseMap. Cantillation marks are left out for easier reading.
 - **Greek** (`js/orig/40.js` to `66.js`): the [Robinson-Pierpont Byzantine Textform 2018](https://github.com/byztxt/byzantine-majority-text) (public domain), with Strong's numbers and parsing.
+- **Cross-references** (`js/xref/`): from [OpenBible.info](https://www.openbible.info/labs/cross-references/) (CC BY), the ten most helpful for each verse. Built with `tools/build_study.py`.
+- **Map** (`js/data/map.js`): coastlines, rivers and borders from [Natural Earth](https://www.naturalearthdata.com/) (public domain). Built with `tools/build_map.py`. Place positions (`js/data/places.js`) are the commonly accepted sites.
 - **Dictionaries** (`js/lex/`): Strong's Hebrew and Greek dictionaries (James Strong, 1890, public domain), from the [Open Scriptures digital edition](https://github.com/openscriptures/strongs) (CC BY-SA). Built with `tools/build_originals.py`. The full text in `js/kjv/` was built from two public KJV datasets ([thiagobodruk/bible](https://github.com/thiagobodruk/bible) and [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)), cross-checked word by word against each other. 41 verses where translators' margin notes had leaked into the verse text were cleaned, and the spacing before punctuation was fixed. The KJV is in the **public domain** in most of the world. (In the United Kingdom the KJV is under a perpetual Crown patent. Quoting it in a free, non-commercial app like this is widely accepted.) Context notes, summaries, reflections, quizzes, prayer guides, topical notes and the old-word meanings were written for this app. New features store only Bible references and show the text from the bundled KJV, so the wording is always exact.
 
 ## Running it
@@ -146,6 +160,12 @@ js/ver/<id>/NN.js     BSB, ASV, YLT, Darby, Webster and BBE
 js/orig/NN.js         Hebrew (books 1-39) and Greek (books 40-66), word by word with Strong's numbers and grammar
 js/lex/               Strong's Hebrew and Greek dictionaries
 js/orig.js            Hebrew and Greek: word study, grammar in plain English, word-by-word view, dictionary search
+js/study.js           Cross-references, book overviews, Bible places map
+js/ambient.js         Background music for listening (generated, no audio files)
+js/connect.js         On the claude.ai link: Ask about the Bible, prayer wall, read together
+js/xref/NN.js         Cross-references
+js/data/overviews.js  Overviews of all 66 books
+js/data/places.js     Bible places; js/data/map.js map outline
 js/bible.js           Bible loading, reference parsing ("Phil 4:6-7"), lookup and search
 js/reader.js          Bible reader: highlights, notes, search, listen, sleep timer, modern English, old words
 js/praylist.js        "Who I'm praying for", alarms & reminders, calendar export, scheduler

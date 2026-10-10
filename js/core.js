@@ -257,15 +257,21 @@
       if (!this.supported) { toast('Read-aloud is not supported on this device'); return; }
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text.replace(/LORD/g, 'Lord'));
-      u.rate = 0.92; u.pitch = 1;
-      const voices = speechSynthesis.getVoices();
-      const v = voices.find(v => /en-GB/i.test(v.lang)) || voices.find(v => /^en/i.test(v.lang));
+      u.rate = (state.readerOpts && state.readerOpts.rate) || 0.95; u.pitch = 1;
+      const v = this.voice();
       if (v) u.voice = v;
       u.onend = u.onerror = () => { this.speaking = false; onEnd && onEnd(); };
       this.speaking = true;
       speechSynthesis.speak(u);
     },
-    stop() { if (this.supported) speechSynthesis.cancel(); this.speaking = false; }
+    stop() { if (this.supported) speechSynthesis.cancel(); this.speaking = false; },
+    voices() { return this.supported ? speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)) : []; },
+    /* the voice chosen in reading options, or the best English voice on this device */
+    voice() {
+      if (!this.supported) return null;
+      const all = speechSynthesis.getVoices(), want = state.readerOpts && state.readerOpts.voice;
+      return (want && all.find(v => v.name === want)) || all.find(v => /en-GB/i.test(v.lang)) || all.find(v => /^en/i.test(v.lang)) || null;
+    }
   };
 
   window.Core = { state, save, dateKey, daySeed, rng, shuffle, escapeHTML, levelInfo, addXP, today, markDaily, currentStreak, BADGES, checkBadges, toast, Sound, Speech, onChange: fn => listeners.push(fn) };

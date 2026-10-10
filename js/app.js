@@ -576,7 +576,7 @@
           <div><h3>${esc(b[0])}</h3><div class="book-sec">${esc(b[1])} · ${i < 39 ? 'Old' : 'New'} Testament</div><p>${esc(b[2])}</p></div>
         </button>` : '').join('')}</div>`;
     body.querySelectorAll('.chips.filter .chip').forEach(c => c.addEventListener('click', () => { bookFilter = c.dataset.s; renderBooks(body); }));
-    body.querySelectorAll('.book').forEach(c => c.addEventListener('click', () => window.Reader.open(+c.dataset.b, 1)));
+    body.querySelectorAll('.book').forEach(c => c.addEventListener('click', () => window.Study.overview(+c.dataset.b)));
   }
 
   /* ================= Prayer ================= */

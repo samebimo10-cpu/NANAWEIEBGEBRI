@@ -1076,3 +1076,97 @@ html.hc .v-orig { color: #000; }
 }
 .pack-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .pack { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); font-size: 0.9rem; }
+
+/* ---------- Reader: page styles ---------- */
+.chapter.page-white { background: #fffdf8; box-shadow: var(--shadow); color: #1d1a16; }
+.chapter.page-sepia { background: linear-gradient(180deg, #f3e3c3, #e8d2a6); color: #4a3218; }
+.chapter.page-night { background: #15121f; color: #d9d2c3; box-shadow: var(--shadow), inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.chapter.page-night .ch-title { color: #e7c98a; }
+.chapter.page-night .ch-book, .chapter.page-night .v sup { color: #b99a5a; }
+.chapter.page-night .v-web { color: #b8b0c9; border-left-color: rgba(120, 160, 255, 0.4); }
+.chapter.page-night .v-orig { background: rgba(255, 255, 255, 0.05); color: #e7dcc4; }
+.chapter.page-night .v.selected, .chapter.page-night .v:hover { background: rgba(255, 220, 140, 0.1); }
+.chapter.page-night .v.hl-yellow { background: rgba(255, 214, 10, 0.25); }
+.chapter.page-night .v.hl-green { background: rgba(64, 192, 87, 0.22); }
+.chapter.page-night .v.hl-blue { background: rgba(51, 154, 240, 0.22); }
+.chapter.page-night .v.hl-pink { background: rgba(240, 101, 149, 0.22); }
+.chapter.page-night .v.hl-purple { background: rgba(132, 94, 247, 0.25); }
+.chapter.page-night .gw { text-decoration-color: rgba(230, 200, 140, 0.6); }
+.chapter.page-night .read-done-row .muted, .chapter.page-night .par-key { color: #a99e86; }
+.chapter.page-night .about-book { background: rgba(255, 255, 255, 0.05); color: #e7dcc4; }
+.chapter.font-classic .verses { font-family: Georgia, 'Times New Roman', serif; }
+.chapter.font-sans .verses { font-family: var(--sans); font-size: 0.92em; }
+.chapter.font-readable .verses { font-family: Verdana, 'Atkinson Hyperlegible', Tahoma, sans-serif; font-size: 0.9em; letter-spacing: 0.01em; word-spacing: 0.08em; }
+.chapter .verses { line-height: inherit; }
+.chapter.layout-verse .v { display: block; padding: 3px 4px; margin-bottom: 4px; }
+.bm-ic { font-size: 0.75em; margin-right: 3px; }
+.wrap-seg { display: flex; flex-wrap: wrap; }
+.about-book { display: flex; align-items: center; gap: 12px; width: 100%; margin: -4px 0 16px; padding: 10px 14px; border: 1px solid rgba(120, 80, 30, 0.2); border-radius: 12px; background: rgba(255, 255, 255, 0.35); text-align: left; color: var(--ink); }
+.about-book span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.about-book small { color: #7a6448; font-size: 0.8rem; }
+.hl-name-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.hl-name-row .search { margin: 0; flex: 1; }
+.dotc.big { width: 22px; height: 22px; flex: none; }
+
+/* ---------- Overviews & cross-references ---------- */
+.overview .lead { font-family: var(--serif); font-size: 1.2rem; line-height: 1.5; color: var(--ink); }
+.ov-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.ov-facts div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: rgba(120, 80, 30, 0.08); }
+.ov-facts b { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: #9a6a24; }
+.ov-facts span { color: var(--ink); line-height: 1.35; }
+.ov-outline { margin: 0; padding-left: 1.4em; }
+.ov-outline li { margin: 4px 0; color: #9a6a24; }
+.ov-sec { width: 100%; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; padding: 8px 10px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.4); text-align: left; color: var(--ink); font: 1.05rem var(--serif); }
+.ov-sec:hover { background: #fff; }
+.ov-sec small { color: #7a6448; font: 0.8rem var(--sans); white-space: nowrap; }
+.xrefs h2 { margin: 4px 0 8px; }
+
+/* ---------- Map ---------- */
+.map-wrap { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); margin: 12px 0; }
+#bibleMap { display: block; width: 100%; height: min(62vh, 520px); touch-action: none; cursor: grab; }
+.map-btns { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+.map-btns .icon-btn { background: rgba(34, 26, 61, 0.85); }
+.place-card { padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)); margin-bottom: 12px; }
+.place-card h3 { font-family: var(--display); margin: 4px 0 6px; font-size: 1.3rem; }
+.place-card p { margin: 0 0 8px; line-height: 1.5; }
+.place-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; margin-top: 8px; }
+.place-item { display: flex; flex-direction: column; text-align: left; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
+.place-item small { color: var(--muted); font-size: 0.75rem; }
+.place-item:hover { border-color: var(--gold); }
+@media (max-width: 760px) {
+  .ov-facts { grid-template-columns: 1fr; }
+  #bibleMap { height: 58vh; }
+}
+
+/* ---------- Plan builder & memory modes ---------- */
+.plan-card.make { border-style: dashed; }
+.small-title { font-size: 0.95rem; margin: 14px 0 6px; }
+.pb-books { display: flex; flex-wrap: wrap; gap: 6px; }
+.pb-book { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); font-size: 0.85rem; }
+.pb-book.on { background: var(--gold); border-color: var(--gold); color: #2a1a06; font-weight: 700; }
+.mem-modes { margin: 4px auto 12px; justify-content: center; }
+.mem-gaps, .mem-type { text-align: left; line-height: 2.1; }
+.gap, .tgap { display: inline-block; min-width: var(--w); height: 1.3em; vertical-align: -0.2em; border: 0; border-bottom: 2px solid #b07a2a; background: rgba(176, 122, 42, 0.12); border-radius: 4px 4px 0 0; padding: 0 2px; font: inherit; color: transparent; cursor: pointer; }
+.gap.peek { color: #8a4e14; background: rgba(176, 122, 42, 0.22); }
+.tgap { cursor: default; }
+.type-in { text-align: center; font-size: 1.2rem; letter-spacing: 0.1em; }
+.type-in.wrong { animation: shake 0.3s; border-color: var(--bad); }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.parchment .type-in { background: rgba(255, 255, 255, 0.75); color: var(--ink); border-color: rgba(120, 80, 30, 0.3); }
+
+/* ---------- Ask about the Bible, prayer wall, group ---------- */
+.ask-ai .chat { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.bubble { padding: 12px 14px; border-radius: 14px; line-height: 1.55; max-width: 100%; }
+.bubble.me { align-self: flex-end; background: rgba(120, 80, 30, 0.14); color: var(--ink); max-width: 85%; }
+.bubble.ai { background: rgba(255, 255, 255, 0.6); color: var(--ink); border: 1px solid rgba(120, 80, 30, 0.18); }
+.bubble.ai p { margin: 0 0 8px; } .bubble.ai ul { margin: 0 0 8px; padding-left: 1.2em; }
+.bubble .ref-link { background: rgba(45, 122, 90, 0.15); color: #1f5a3c; }
+.ref-pop { display: block; margin: 6px 0; padding: 8px 10px; border-left: 3px solid #2d7a5a; background: rgba(45, 122, 90, 0.08); font: 0.95rem/1.5 var(--serif); }
+.thinking { animation: pulse-t 1.2s ease-in-out infinite; }
+@keyframes pulse-t { 50% { opacity: 0.4; } }
+.wall-new { margin: 10px 0 16px; }
+.wall-item, .talk-item { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); margin-bottom: 8px; }
+.wall-item.answered { border-color: rgba(79, 201, 143, 0.5); }
+.wall-item p, .talk-item p { margin: 6px 0 10px; line-height: 1.5; white-space: pre-wrap; }
+.wall-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.talk-item { background: rgba(255, 255, 255, 0.03); }

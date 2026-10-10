@@ -3,7 +3,7 @@
  * the app itself, its fonts, and all 66 books of the Bible in the KJV and in modern English (about 9 MB).
  * After that the app opens and runs with no connection at all.
  */
-const VERSION = 'v10';
+const VERSION = 'v11';
 const SHELL = 'lamp-shell-' + VERSION;
 const BIBLE = 'lamp-bible-v1';   // the KJV text never changes, so it keeps its own long-lived cache
 
@@ -14,14 +14,15 @@ const SHELL_FILES = [
   './fonts/EBGaramond-latin-ext-1a53db.woff2', './fonts/EBGaramond-latin-ext-9cc06b.woff2',
   './fonts/Inter-latin-567244.woff2', './fonts/Inter-latin-ext-395290.woff2', './fonts/GreatVibes-latin.woff2',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png',
-  './js/data/journey.js', './js/data/library.js', './js/data/grow.js', './js/core.js', './js/bible.js',
-  './js/orig.js', './js/reader.js', './js/alarm.js', './js/requests.js', './js/praylist.js', './js/personal.js',
-  './js/cards.js', './js/fast.js', './js/grow.js', './js/app.js'
+  './js/data/journey.js', './js/data/library.js', './js/data/grow.js', './js/data/overviews.js', './js/data/places.js', './js/data/map.js', './js/core.js', './js/bible.js',
+  './js/orig.js', './js/study.js', './js/ambient.js', './js/reader.js', './js/alarm.js', './js/requests.js', './js/praylist.js', './js/personal.js',
+  './js/cards.js', './js/fast.js', './js/grow.js', './js/connect.js', './js/app.js'
 ];
 const BOOK = i => String(i + 1).padStart(2, '0');
 const KJV_FILES = Array.from({ length: 66 }, (_, i) => `./js/kjv/${BOOK(i)}.js`);
 const WEB_FILES = Array.from({ length: 66 }, (_, i) => `./js/web/${BOOK(i)}.js`);   // modern English, side by side
-const BIBLE_FILES = [...KJV_FILES, ...WEB_FILES];
+const XREF_FILES = Array.from({ length: 66 }, (_, i) => `./js/xref/${BOOK(i)}.js`);   // cross-references
+const BIBLE_FILES = [...KJV_FILES, ...WEB_FILES, ...XREF_FILES];
 
 async function tell(msg) {
   const clients = await self.clients.matchAll({ includeUncontrolled: true });
@@ -38,7 +39,7 @@ async function cacheBible() {
       }
     }
     done++;
-    if (done % 6 === 0 || done === BIBLE_FILES.length) tell({ type: 'offline-progress', done: Math.min(done, 66), total: 66, web: Math.max(0, done - 66) });
+    if (done % 6 === 0 || done === BIBLE_FILES.length) tell({ type: 'offline-progress', done: Math.min(done, 66), total: 66, web: Math.max(0, Math.min(66, done - 66)) });
   }
   const have = (await Promise.all(KJV_FILES.map(u => cache.match(u)))).filter(Boolean).length;
   const web = (await Promise.all(WEB_FILES.map(u => cache.match(u)))).filter(Boolean).length;
@@ -88,7 +89,7 @@ self.addEventListener('fetch', e => {
 
   // Bible text: from the device first; it never changes.
   // (other versions, Hebrew, Greek and the dictionaries are saved the first time they are opened)
-  if (/\/js\/(kjv|web|ver|orig|lex)\//.test(url.pathname)) {
+  if (/\/js\/(kjv|web|ver|orig|lex|xref)\//.test(url.pathname)) {
     e.respondWith(caches.open(BIBLE).then(async c => {
       const hit = await c.match(req, { ignoreSearch: true });
       if (hit) return hit;

@@ -65,12 +65,20 @@
     else if (id === 'gospels30') s = split(range(39, 42), 30);
     else if (id === 'pp31') { const ps = split(range(18, 18), 31); s = ps.map((d, i) => [[19, i + 1], ...d]); }
     else if (id === 'nt90') s = split(range(39, 65), 90);
+    else if (id === 'chrono') s = split(window.CHRONO.flatMap(([n, a, z]) => { const b = B().NAMES.indexOf(n); return Array.from({ length: z - a + 1 }, (_, k) => [b, a + k]); }), 365);
+    else if (id === 'custom') {   // a plan the reader made: their books, over their number of days
+      const c = (state.plan && state.plan.custom) || { books: [42], days: 21 };
+      const list = c.books.slice().sort((a, b) => a - b).flatMap(b => range(b, b));
+      return split(list, Math.min(c.days, list.length));   // not cached: it depends on the saved plan
+    }
     else s = split(range(0, 65), 365);
     return (schedules[id] = s);
   }
   const chKey = (b, c) => `${b}.${c}`;
   const chName = (b, c) => `${B().NAMES[b]} ${c}`;
-  const planDef = id => window.PLANS.find(p => p.id === id);
+  const planDef = id => id === 'custom'
+    ? { id: 'custom', icon: '✏️', name: (state.plan && state.plan.custom && state.plan.custom.name) || 'My own plan', days: schedule('custom').length, desc: '' }
+    : window.PLANS.find(p => p.id === id);
 
   function planStatus() {
     const p = state.plan;
@@ -86,8 +94,9 @@
     return { p, def, days, isDone, doneDays, dayNow, next, behind, complete: doneDays === days.length };
   }
 
-  function startPlan(id) {
+  function startPlan(id, custom) {
     state.plan = { id, start: todayKey(), read: {} };
+    if (custom) state.plan.custom = custom;
     save(); Sound.play('open');
     toast(`🗓️ ${planDef(id).name} started. Day 1 is ready.`);
   }
@@ -166,7 +175,8 @@
       <div class="plan-grid">${window.PLANS.filter(p => !st || p.id !== st.p.id).map(p => {
         const done = state.plansDone.filter(x => x.id === p.id).length;
         return `<button class="plan-card" data-plan="${p.id}"><span class="pc-ic">${p.icon}</span><b>${esc(p.name)}</b><small>${p.days} days${done ? ` · ✓ finished ${done > 1 ? done + ' times' : ''}` : ''}</small><p>${esc(p.desc)}</p></button>`;
-      }).join('')}</div>`;
+      }).join('')}
+      <button class="plan-card make" id="planMake"><span class="pc-ic">✏️</span><b>Make my own plan</b><small>Your books, your pace</small><p>Choose any books of the Bible and how many days to read them in.</p></button></div>`;
     return html;
   }
 
@@ -195,10 +205,51 @@
       const st = planStatus();
       host.querySelector('#planDays').innerHTML = st.days.map((d, i) => `<div class="pd ${st.isDone(i) ? 'done' : ''} ${i === st.next ? 'now' : ''}"><b>Day ${i + 1}</b><span>${d.map(([b, c]) => esc(chName(b, c))).join(', ')}</span></div>`).join('');
     });
+    const mk = host.querySelector('#planMake'); if (mk) mk.addEventListener('click', planBuilder);
     host.querySelectorAll('[data-plan]').forEach(b => b.addEventListener('click', async () => {
       if (state.plan && !(await UI().ask(`Switch to "${planDef(b.dataset.plan).name}"? Your current plan's progress will be cleared.`, 'Switch plan'))) return;
       startPlan(b.dataset.plan); render();
     }));
+  }
+
+  /* Make my own plan: pick books and a number of days. */
+  function planBuilder() {
+    const pick = new Set([42]);
+    const sections = Array.from(new Set(window.BOOKS.map(b => b[1])));
+    UI().openModal(`
+      <div class="pform plan-builder">
+        <div class="eyebrow">✏️ Make my own plan</div>
+        <h2>What would you like to read?</h2>
+        <div class="chips">${[['ot', 'Old Testament'], ['nt', 'New Testament'], ['all', 'Whole Bible'], ['none', 'Clear']].map(([k, l]) => `<button class="chip" data-quick="${k}">${l}</button>`).join('')}</div>
+        ${sections.map(sec => `<h3 class="section-title small-title">${esc(sec)}</h3><div class="pb-books">${window.BOOKS.map((bk, i) => bk[1] === sec ? `<button class="pb-book" data-b="${i}">${esc(bk[0])}</button>` : '').join('')}</div>`).join('')}
+        <label class="flabel" for="pbDays">In how many days?</label>
+        <div class="row gap"><input class="search" type="number" id="pbDays" min="1" max="730" value="30" style="max-width:120px"><span class="muted small" id="pbInfo"></span></div>
+        <label class="flabel" for="pbName">Name <span class="muted">(optional)</span></label>
+        <input class="search" id="pbName" maxlength="40" placeholder="e.g. Paul’s letters this summer">
+        <div class="row end"><button class="btn primary" id="pbStart">Start my plan</button></div>
+      </div>`);
+    const total = () => [...pick].reduce((a, b) => a + B().CHAPTERS[b], 0);
+    const draw = () => {
+      document.querySelectorAll('.pb-book').forEach(el => el.classList.toggle('on', pick.has(+el.dataset.b)));
+      const days = Math.max(1, +$('#pbDays').value || 1), n = total();
+      $('#pbInfo').textContent = n ? `${n} chapters · about ${Math.max(1, Math.round(n / days * 10) / 10)} a day` : 'Choose at least one book';
+    };
+    document.querySelectorAll('.pb-book').forEach(el => el.addEventListener('click', () => { const b = +el.dataset.b; pick.has(b) ? pick.delete(b) : pick.add(b); draw(); }));
+    document.querySelectorAll('[data-quick]').forEach(el => el.addEventListener('click', () => {
+      const k = el.dataset.quick; pick.clear();
+      if (k !== 'none') for (let i = k === 'nt' ? 39 : 0; i < (k === 'ot' ? 39 : 66); i++) pick.add(i);
+      draw();
+    }));
+    $('#pbDays').addEventListener('input', draw);
+    draw();
+    $('#pbStart').addEventListener('click', async () => {
+      if (!pick.size) { toast('Choose at least one book'); return; }
+      const days = Math.max(1, Math.min(730, Math.round(+$('#pbDays').value || 30)));
+      if (state.plan && !(await UI().ask('Start this plan? Your current plan’s progress will be cleared.', 'Start'))) return;
+      const name = $('#pbName').value.trim() || ([...pick].length === 1 ? `${B().NAMES[[...pick][0]]} in ${days} days` : `My plan: ${total()} chapters in ${days} days`);
+      startPlan('custom', { books: [...pick], days, name });
+      UI().closeModal(); section = 'plans'; render();
+    });
   }
 
   /* ================= A word for how I feel ================= */
@@ -299,21 +350,79 @@
       let r;
       try { r = await B().lookup(m.ref); } catch (e) { return next(); }
       const text = r.verses.map(v => v[1]).join(' ');
+      const words = text.replace(/LORD/g, 'Lord').split(/\s+/);
       const html = `<div class="mem-card">
         <div class="eyebrow">🧠 Memory verse ${n} of ${n + queue.length}</div>
         <h2 class="mem-ref">${esc(m.ref)}</h2>
-        <p class="muted">Say the verse aloud or in your heart, then check yourself.</p>
-        <div class="mem-hint hidden" id="memHint">${esc(firstLetters(text))}</div>
-        <blockquote class="scripture hidden" id="memText">${lordHTML(text)}</blockquote>
-        <div class="row center gap wrap" id="memStep1"><button class="btn ghost" id="memShowHint">💡 First letters</button><button class="btn primary" id="memShow">Show the verse</button></div>
+        <div class="seg small wrap-seg mem-modes" id="memMode">${[['card', '🃏 Flashcard'], ['gaps', '🫥 Fade out'], ['type', '⌨️ First letters']].map(([k, l]) => `<button class="seg-btn ${(state.memMode || 'card') === k ? 'active' : ''}" data-m="${k}">${l}</button>`).join('')}</div>
+        <div id="memBody"></div>
         <div class="row center gap wrap hidden" id="memStep2"><button class="btn ghost" id="memAgain">Still learning</button><button class="btn primary" id="memGot">✓ I remembered it</button></div>
       </div>`;
       if (document.querySelector('#modal.open .mem-card, #modal.open .result')) $('#modalBody').innerHTML = html; else UI().openModal(html, { cls: 'parchment' });
-      $('#memShowHint').addEventListener('click', () => $('#memHint').classList.remove('hidden'));
-      $('#memShow').addEventListener('click', () => {
-        $('#memText').classList.remove('hidden'); $('#memStep1').classList.add('hidden'); $('#memStep2').classList.remove('hidden');
-        window.Core.Speech.speak(m.ref + '. ' + text);
-      });
+      const ready = () => $('#memStep2').classList.remove('hidden');
+      const drawMode = () => {
+        const mode = state.memMode || 'card', body = $('#memBody');
+        $('#memStep2').classList.add('hidden');
+        if (mode === 'card') {
+          body.innerHTML = `<p class="muted">Say the verse aloud or in your heart, then turn the card over.</p>
+            <div class="mem-hint hidden" id="memHint">${esc(firstLetters(text))}</div>
+            <blockquote class="scripture hidden" id="memText">${lordHTML(text)}</blockquote>
+            <div class="row center gap wrap" id="memStep1"><button class="btn ghost" id="memShowHint">💡 First letters</button><button class="btn primary" id="memShow">Turn the card over</button></div>`;
+          $('#memShowHint').addEventListener('click', () => $('#memHint').classList.remove('hidden'));
+          $('#memShow').addEventListener('click', () => {
+            $('#memText').classList.remove('hidden'); $('#memStep1').classList.add('hidden'); ready();
+            window.Core.Speech.speak(m.ref + '. ' + text);
+          });
+        } else if (mode === 'gaps') {
+          // words fade out a third at a time; tap a gap to peek
+          let level = 1;
+          const draw = () => {
+            body.innerHTML = `<p class="muted">Read it with the missing words. Then hide more, until you can say it all.</p>
+              <p class="scripture mem-gaps">${words.map((w, i) => (level >= 3 || (i * 7 + 3) % 3 < level) && /[A-Za-z]/.test(w) ? `<button class="gap" data-i="${i}" style="--w:${Math.max(2, w.length)}ch" aria-label="Show this word">${esc(w.replace(/[A-Za-z’']/g, ' '))}</button>` : esc(w)).join(' ')}</p>
+              <div class="row center gap wrap">${level < 3 ? '<button class="btn ghost" id="gapMore">🫥 Hide more words</button>' : ''}<button class="btn primary" id="gapDone">I can say it</button></div>`;
+            body.querySelectorAll('.gap').forEach(g => g.addEventListener('click', () => { g.textContent = words[+g.dataset.i]; g.classList.add('peek'); }));
+            const more = $('#gapMore'); if (more) more.addEventListener('click', () => { level++; Sound.play('tap'); draw(); });
+            $('#gapDone').addEventListener('click', () => { body.querySelector('.mem-gaps').innerHTML = lordHTML(text); $('#gapDone').remove(); const mm = $('#gapMore'); if (mm) mm.remove(); ready(); });
+          };
+          draw();
+        } else {
+          // type the first letter of each word
+          const need = words.map(w => (w.match(/[A-Za-z]/) || [''])[0].toLowerCase());
+          let at = 0, mistakes = 0;
+          while (at < words.length && !need[at]) at++;
+          body.innerHTML = `<p class="muted">Type the first letter of each word. Correct letters bring the words back.</p>
+            <p class="scripture mem-type" id="memTyped"></p>
+            <input class="search type-in" id="memIn" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Type here: t, L, i, m…" aria-label="First letters">
+            <p class="muted small center" id="memScore"></p>`;
+          const shown = () => { $('#memTyped').innerHTML = words.map((w, i) => i < at ? esc(w) : `<span class="tgap" style="--w:${Math.max(2, w.length)}ch"></span>`).join(' '); };
+          shown();
+          const inp = $('#memIn');
+          setTimeout(() => inp.focus(), 80);
+          inp.addEventListener('input', () => {
+            const typed = inp.value.replace(/[^A-Za-z]/g, '').toLowerCase();
+            inp.value = '';
+            for (const ch of typed) {
+              if (at >= words.length) break;
+              if (ch === need[at]) { at++; while (at < words.length && !need[at]) at++; }
+              else { mistakes++; inp.classList.remove('wrong'); void inp.offsetWidth; inp.classList.add('wrong'); Sound.play('wrong'); }
+            }
+            shown();
+            $('#memScore').textContent = mistakes ? `${mistakes} slip${mistakes === 1 ? '' : 's'}` : '';
+            if (at >= words.length) {
+              inp.remove();
+              $('#memScore').textContent = mistakes ? `Done, with ${mistakes} slip${mistakes === 1 ? '' : 's'}.` : 'Perfect, no slips!';
+              Sound.play(mistakes ? 'tap' : 'correct');
+              ready();
+            }
+          });
+        }
+      };
+      drawMode();
+      document.querySelectorAll('#memMode .seg-btn').forEach(btn => btn.addEventListener('click', () => {
+        state.memMode = btn.dataset.m; save();
+        document.querySelectorAll('#memMode .seg-btn').forEach(x => x.classList.toggle('active', x === btn));
+        drawMode();
+      }));
       const grade = ok => {
         window.Core.Speech.stop();
         if (!practice || m.due <= todayKey()) {
@@ -679,6 +788,10 @@
     ['sermons', '🎤', 'Sermon notes', () => `${state.sermons.length} saved`],
     ['ebenezer', '🪨', 'My faith story', () => `${timelineItems().length} milestones`],
     ['week', '📊', 'My week with God', () => 'Your last seven days'],
+    ['ask', '✨', 'Ask about the Bible', () => 'Answers with verses you can check', () => window.Connect && window.Connect.canAsk()],
+    ['wall', '🤝', 'Prayer wall', () => 'Pray for one another', () => window.Connect && window.Connect.canShare()],
+    ['group', '💬', 'Read together', () => 'A group plan and chapter discussions', () => window.Connect && window.Connect.canShare()],
+    ['map', '🗺️', 'Bible places map', () => `${window.PLACES.length} places, from Ur to Rome`],
     ['dict', '🔤', 'Hebrew & Greek dictionary', () => 'Every word of the original Bible, explained'],
     ['passages', '📖', 'Study passages & quizzes', () => `${Object.keys(state.completed).length} of ${window.JOURNEY.length} completed`],
     ['books', '📚', 'Books of the Bible', () => 'All 66, with summaries']
@@ -694,8 +807,8 @@
       page.innerHTML = `
         <section class="hero slim"><div><div class="eyebrow">Grow</div><h1>Go deeper in the Word</h1>
           <p class="muted">"But grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ." (2 Peter 3:18)</p></div></section>
-        <div class="grow-grid">${SECTIONS.map(([k, ic, name, sub]) => `<button class="grow-tile" data-sec="${k}"><span class="gt-ic">${ic}</span><span class="gt-t"><b>${name}</b><small>${esc(sub())}</small></span>${k === 'memory' && due().length ? `<span class="count">${due().length}</span>` : ''}</button>`).join('')}</div>`;
-      page.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); open(b.dataset.sec); }));
+        <div class="grow-grid">${SECTIONS.filter(x => !x[4] || x[4]()).map(([k, ic, name, sub]) => `<button class="grow-tile" data-sec="${k}"><span class="gt-ic">${ic}</span><span class="gt-t"><b>${name}</b><small>${esc(sub())}</small></span>${k === 'memory' && due().length ? `<span class="count">${due().length}</span>` : ''}</button>`).join('')}</div>`;
+      page.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); if (b.dataset.sec === 'ask') { window.Connect.ask(); return; } open(b.dataset.sec); }));
       return;
     }
     const back = arg && (section === 'topics') ? '← Topics' : '← Grow';
@@ -716,6 +829,9 @@
       case 'week': body.innerHTML = weekHTML(); fillRefs(body); state.weekSeen = todayKey(); save(); break;
       case 'passages': UI().renderPassages(body); break;
       case 'dict': window.Orig.renderDictionary(body); break;
+      case 'map': window.Study.renderMap(body); break;
+      case 'wall': window.Connect.renderWall(body); break;
+      case 'group': window.Connect.renderGroup(body); break;
       case 'books': UI().renderBooks(body); break;
     }
   }
