@@ -1170,3 +1170,29 @@ html.hc .v-orig { color: #000; }
 .wall-item p, .talk-item p { margin: 6px 0 10px; line-height: 1.5; white-space: pre-wrap; }
 .wall-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .talk-item { background: rgba(255, 255, 255, 0.03); }
+
+/* ---------- Background music ---------- */
+.music-btn { margin-left: auto; }
+.music-btn + .settings-btn { margin-left: 0; }
+.track-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.track { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
+.track:hover { border-color: var(--gold); }
+.track.on { border-color: var(--gold); background: rgba(242, 193, 78, 0.12); }
+.tr-ic { font-size: 1.6rem; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: rgba(242, 193, 78, 0.14); flex: none; }
+.tr-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.tr-main small { color: var(--muted); }
+.tr-btn { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #2a1a06; font-weight: 800; flex: none; }
+.track.on .tr-main small { color: var(--gold2); }
+.vol { width: 100%; accent-color: var(--gold); }
+.music-pill { position: fixed; left: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 30; display: flex; align-items: center; gap: 4px; max-width: min(70vw, 320px);
+  padding: 4px 4px 4px 12px; border-radius: 999px; background: rgba(34, 26, 61, 0.95); border: 1px solid rgba(255, 223, 138, 0.4); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); animation: rise2 0.3s ease; }
+.mp-open { display: flex; align-items: center; gap: 8px; border: 0; background: none; min-width: 0; padding: 4px 0; }
+.mp-t { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mp-open span:first-child { animation: mp-glow 2.4s ease-in-out infinite; }
+@keyframes mp-glow { 50% { transform: scale(1.12); } }
+.mp-stop { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--gold); color: #2a1a06; font-size: 0.85rem; flex: none; }
+@media (max-width: 760px) {
+  .music-btn { width: 36px; height: 36px; font-size: 1rem; }
+  .music-btn + .settings-btn { margin-left: 0; }
+  .music-pill { bottom: calc(76px + env(safe-area-inset-bottom)); }
+}

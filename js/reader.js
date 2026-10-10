@@ -532,7 +532,6 @@
     if (!reading) return;
     reading = null;
     sleepUntil = 0;
-    if (window.Ambient && !continueListening) window.Ambient.stop();
     if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
@@ -571,8 +570,7 @@
         <select class="search" id="oVoice"><option value="">Best English voice on this device</option>${window.Core.Speech.voices().map(v => `<option value="${esc(v.name)}" ${o.voice === v.name ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}</select>
         <label class="flabel">Speed</label>
         <div class="seg small wrap-seg" id="oRate">${[[0.75, 'Slow'], [0.95, 'Normal'], [1.15, 'Brisk'], [1.4, 'Fast']].map(([r, l]) => `<button class="seg-btn ${Math.abs((o.rate || 0.95) - r) < 0.01 ? 'active' : ''}" data-v="${r}">${l}</button>`).join('')}</div>
-        <label class="flabel">Background music while listening</label>
-        <div class="seg small wrap-seg" id="oAmbient">${[['', 'None'], ['pad', 'Soft strings'], ['piano', 'Gentle piano'], ['rain', 'Rain']].map(([k, l]) => `<button class="seg-btn ${o.ambient === k ? 'active' : ''}" data-v="${k}">${l}</button>`).join('')}</div>
+        <div class="opt-row"><span><b>🎵 Background music</b><small>${o.ambient && window.Ambient.track(o.ambient) ? 'Plays while you listen: ' + esc(window.Ambient.track(o.ambient)[2]) : 'Calm piano, running stream, hymns and more'}</small></span><button class="btn ghost small" id="oMusic">Choose</button></div>
         <div class="row gap"><button class="btn ghost small" id="oTry">▶ Try the voice</button></div>
         <div class="opt-row"><span><b>🌙 Sleep timer</b><small>Stop reading aloud after a while</small></span></div>
         <div class="seg small" id="oSleep">${[0, 10, 20, 30, 60].map(m => `<button class="seg-btn ${o.sleep === m ? 'active' : ''}" data-m="${m}">${m ? m + ' min' : 'Off'}</button>`).join('')}</div>
@@ -591,7 +589,7 @@
     pick('oSpacing', 'spacing', false, applyLook);
     pick('oLayout', 'layout', false, applyLook);
     pick('oRate', 'rate', true);
-    pick('oAmbient', 'ambient', false, () => { if (window.Ambient) { if (o.ambient) window.Ambient.preview(o.ambient); else window.Ambient.stop(); } });
+    $('#oMusic').addEventListener('click', () => window.Ambient.openPanel());
     $('#oVoice').addEventListener('change', e => { o.voice = e.target.value; save(); });
     $('#oTry').addEventListener('click', () => window.Core.Speech.speak('The LORD is my shepherd; I shall not want.'));
     $('#oPar').addEventListener('change', e => { o.par = e.target.value; redraw(); });

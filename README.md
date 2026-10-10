@@ -47,7 +47,13 @@
 - **Tap any Hebrew or Greek word** for a word study: the dictionary form, how to say it, its Strong's number, its grammar in plain English (for example "verb: Qal perfect, 3rd person, masculine, singular"), Strong's definition, how the KJV translates it, where the word comes from, and **every verse where it is used**.
 - **🔤 Word by word**: tap verses and choose 🔤 to see each original word with its sound, its meaning and its Strong's number.
 - **Hebrew & Greek dictionary** (in Grow): all of Strong's Hebrew (8,674 entries) and Greek (5,523 entries) dictionaries. Search in English (*love*), by number (*H7965*, *G26*), or by the word as it sounds (*shalom*, *chesed*, *agape*, *logos*).
-- **Listening**: choose the voice and speed, keep reading into the next chapter, add gentle background music (soft strings, piano or rain, generated on the device), and set a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
+- **Listening**: choose the voice and speed, keep reading into the next chapter, and set a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
+- **🎵 Background music** (the 🎵 button at the top, from anywhere in the app): play while you read, study or pray, or only while the Bible is read aloud. All of it is generated on the device, so there are no audio files and it works offline:
+  - **🎹 Deep calm piano**: slow, warm chords at a resting heartbeat (about 63 beats a minute) with a gently wandering melody and soft reverb, for study and prayer.
+  - **🏞️ Running stream**: flowing water with trickles and droplets.
+  - **⛪ Hymns**: public-domain hymn tunes played softly on piano: *Amazing Grace* (NEW BRITAIN), *Joyful, Joyful, We Adore Thee* (HYMN TO JOY) and *Jesus Loves Me*.
+  - **🎻 Soft strings** and **🌧️ Rain**.
+  A small bar shows what is playing, with a pause button. Phones pause web-app sound when the screen locks, so keep the app open.
 - Tap verses for more: **🖼️ Card** (a shareable image), **🧠 Memorize**, and **✍️ Journal** (a S.O.A.P. entry).
 - A **My highlights & notes** list, filterable by colour.
 

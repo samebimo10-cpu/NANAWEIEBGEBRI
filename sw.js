@@ -3,7 +3,7 @@
  * the app itself, its fonts, and all 66 books of the Bible in the KJV and in modern English (about 9 MB).
  * After that the app opens and runs with no connection at all.
  */
-const VERSION = 'v11';
+const VERSION = 'v12';
 const SHELL = 'lamp-shell-' + VERSION;
 const BIBLE = 'lamp-bible-v1';   // the KJV text never changes, so it keeps its own long-lived cache
 

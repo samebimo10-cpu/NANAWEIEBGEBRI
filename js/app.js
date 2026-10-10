@@ -838,6 +838,7 @@
     $$('.tab').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); if (b.dataset.view === 'grow') window.Grow.home(); show(b.dataset.view); }));
     $('#profileBtn').addEventListener('click', openProfile);
     $('#settingsBtn').addEventListener('click', () => window.Personal.openSettings());
+    $('#musicBtn').addEventListener('click', () => window.Ambient.openPanel());
     window.Personal.start();
     updateHUD();
 
