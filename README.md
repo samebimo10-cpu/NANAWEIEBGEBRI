@@ -48,6 +48,7 @@
 - **🔤 Word by word**: tap verses and choose 🔤 to see each original word with its sound, its meaning and its Strong's number.
 - **Hebrew & Greek dictionary** (in Grow): all of Strong's Hebrew (8,674 entries) and Greek (5,523 entries) dictionaries. Search in English (*love*), by number (*H7965*, *G26*), or by the word as it sounds (*shalom*, *chesed*, *agape*, *logos*).
 - **Listening**: choose the voice and speed, keep reading into the next chapter, and set a **🌙 sleep timer** (10, 20, 30 or 60 minutes) for listening at night.
+- **Listening screen**: while the Bible is read aloud, a dark screen shows the verse being read, a clock and big controls (pause, previous and next verse, music, sleep timer, stop). It keeps the phone awake and dims itself to save battery, for the bedside, the car or a pocket. Phones stop reading aloud when the screen locks, so keep it open. Turn it off in **Aa → Listening screen**.
 - **🎵 Background music** (the 🎵 button at the top, from anywhere in the app): play while you read, study or pray, or only while the Bible is read aloud. All of it is generated on the device, so there are no audio files and it works offline:
   - **🎹 Deep calm piano**: slow, warm chords at a resting heartbeat (about 63 beats a minute) with a gently wandering melody and soft reverb, for study and prayer.
   - **🏞️ Running stream**: flowing water with trickles and droplets.

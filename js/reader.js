@@ -490,53 +490,191 @@
 
   /* ---------------- Listen (verse by verse, following along) ---------------- */
   function toggleListen() { reading ? stopListen() : startListen(); }
+  let speakGen = 0;   // each utterance gets a number, so events from a cancelled one are ignored
   function startListen(continuing) {
     if (!('speechSynthesis' in window)) { toast('Read-aloud is not supported on this device'); return; }
     const { b, c } = cur;
     if (vtext(b, c, 1) === undefined) return;
-    reading = { v: 1, b, c };
+    reading = { v: 1, b, c, paused: false };
     $('#bListen').textContent = '⏹';
     if (!continuing) sleepUntil = opts().sleep ? Date.now() + opts().sleep * 60000 : 0;
-    if (!wakeLock && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {});
+    keepAwake();
     speechSynthesis.cancel();
-    const voice = window.Core.Speech.voice();
     if (opts().ambient && window.Ambient) window.Ambient.start(opts().ambient);
-    const next = () => {
-      if (!reading || reading.b !== cur.b || reading.c !== cur.c) return stopListen();
-      if (sleepUntil && Date.now() >= sleepUntil) { stopListen(); toast('🌙 Sleep timer: reading stopped. Good night.'); return; }
-      const t = vtext(b, c, reading.v);
-      $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
-      if (t === undefined) {
-        const last = b === 65 && c === B().CHAPTERS[65];
-        if (opts().cont && !last) {
-          const keep = sleepUntil;
-          stopListen();
-          sleepUntil = keep;
-          continueListening = true;
-          step(1);
-          return;
-        }
-        return stopListen();
-      }
-      const el = document.querySelector(`#chapter .v[data-v="${reading.v}"]`);
-      if (el) { el.classList.add('reading'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-      const u = new SpeechSynthesisUtterance((reading.v === 1 ? `${B().NAMES[b]} chapter ${c}. ` : '') + t.replace(/LORD/g, 'Lord'));
-      u.rate = opts().rate || 0.95; if (voice) u.voice = voice;
-      u.onend = () => { if (reading) { reading.v++; next(); } };
-      u.onerror = () => stopListen();
-      speechSynthesis.speak(u);
-    };
-    next();
+    if (opts().screen !== false) ListenScreen.show();
+    speakVerse();
   }
-  function stopListen() {
+  /* Read the current verse, then move on. */
+  function speakVerse() {
+    if (!reading || reading.paused) return;
+    const { b, c } = reading;
+    if (reading.b !== cur.b || reading.c !== cur.c) return stopListen();
+    if (sleepUntil && Date.now() >= sleepUntil) { stopListen(); toast('🌙 Sleep timer: reading stopped. Good night.'); return; }
+    const t = vtext(b, c, reading.v);
+    $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
+    if (t === undefined) {   // end of the chapter
+      const last = b === 65 && c === B().CHAPTERS[65];
+      if (opts().cont && !last) {
+        const keep = sleepUntil;
+        stopListen(true);
+        sleepUntil = keep;
+        continueListening = true;
+        step(1);
+        return;
+      }
+      return stopListen();
+    }
+    if (!t) { reading.v++; return speakVerse(); }   // a verse this translation leaves out
+    const el = document.querySelector(`#chapter .v[data-v="${reading.v}"]`);
+    if (el) { el.classList.add('reading'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    ListenScreen.update();
+    const gen = ++speakGen;
+    const u = new SpeechSynthesisUtterance((reading.v === 1 ? `${B().NAMES[b]} chapter ${c}. ` : '') + t.replace(/LORD/g, 'Lord'));
+    u.rate = opts().rate || 0.95;
+    const voice = window.Core.Speech.voice(); if (voice) u.voice = voice;
+    u.onend = () => { if (gen !== speakGen || !reading || reading.paused) return; reading.v++; speakVerse(); };
+    u.onerror = e => { if (gen !== speakGen || !reading || reading.paused) return; if (e && (e.error === 'interrupted' || e.error === 'canceled')) return; stopListen(); };
+    speechSynthesis.speak(u);
+  }
+  function pauseListen() {
+    if (!reading || reading.paused) return;
+    reading.paused = true; speakGen++;
+    speechSynthesis.cancel();
+    ListenScreen.update();
+  }
+  function resumeListen() {
+    if (!reading || !reading.paused) return;
+    reading.paused = false; keepAwake();
+    speakVerse();
+  }
+  /* Jump to another verse: d = -1 or +1 */
+  function skipVerse(d) {
+    if (!reading) return;
+    reading.v = Math.max(1, Math.min(countVerses(), reading.v + d));
+    speakGen++; speechSynthesis.cancel();
+    if (!reading.paused) speakVerse(); else ListenScreen.update();
+  }
+  const countVerses = () => { let n = 0; while (vtext(reading.b, reading.c, n + 1) !== undefined) n++; return n; };
+  /* Keep the screen awake while reading; phones release this when the app is hidden, so ask again on return. */
+  function keepAwake() {
+    if (!wakeLock && navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; l.addEventListener && l.addEventListener('release', () => { wakeLock = null; }); }).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !reading) return;
+    keepAwake();
+    // if the phone silenced the voice while hidden, carry on from the same verse
+    if (!reading.paused && !speechSynthesis.speaking) { speakGen++; speakVerse(); }
+  });
+  function stopListen(continuing) {
     if (!reading) return;
     reading = null;
     sleepUntil = 0;
-    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+    speakGen++;
+    if (!continuing && wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
     const b = $('#bListen'); if (b) b.textContent = '🔊';
+    if (!continuing) ListenScreen.hide();
   }
+
+  /* ---------------- The listening screen ----------------
+   * A dark, dim screen while the Bible is read aloud: the verse being read, a clock, and big controls.
+   * It keeps the phone awake with little light, for the bedside, the car or a pocket. */
+  const ListenScreen = (() => {
+    let el = null, dimTimer = null, clockTimer = null, hidden = false;
+    const fmt = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    function wake() {
+      if (!el) return;
+      el.classList.remove('dim');
+      clearTimeout(dimTimer);
+      dimTimer = setTimeout(() => el && el.classList.add('dim'), 12000);
+    }
+    function show() {
+      hidden = false;
+      if (el) { update(); wake(); return; }
+      el = document.createElement('div');
+      el.className = 'listen-screen';
+      el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Listening');
+      el.innerHTML = `
+        <div class="ls-top"><span class="ls-clock" id="lsClock"></span><span class="ls-sleep" id="lsSleep"></span></div>
+        <div class="ls-main">
+          <div class="ls-ref" id="lsRef"></div>
+          <p class="ls-verse" id="lsVerse"></p>
+          <div class="ls-prog"><i id="lsProg"></i></div>
+        </div>
+        <div class="ls-controls">
+          <button class="ls-btn" id="lsPrev" aria-label="Previous verse">⏮</button>
+          <button class="ls-btn big" id="lsPlay" aria-label="Pause">⏸</button>
+          <button class="ls-btn" id="lsNext" aria-label="Next verse">⏭</button>
+        </div>
+        <div class="ls-row">
+          <button class="ls-small" id="lsMusic">🎵 Music</button>
+          <button class="ls-small" id="lsTimer">🌙 Sleep timer</button>
+          <button class="ls-small" id="lsPage">📖 Show the page</button>
+          <button class="ls-small stop" id="lsStop">⏹ Stop</button>
+        </div>
+        <p class="ls-hint">Keep this screen open: phones stop reading aloud when the screen locks. It dims by itself to save battery; tap to brighten.</p>`;
+      document.body.appendChild(el);
+      document.body.classList.add('listening');
+      el.addEventListener('pointerdown', wake);
+      el.querySelector('#lsPlay').addEventListener('click', () => { reading && reading.paused ? resumeListen() : pauseListen(); update(); });
+      el.querySelector('#lsPrev').addEventListener('click', () => skipVerse(-1));
+      el.querySelector('#lsNext').addEventListener('click', () => skipVerse(1));
+      el.querySelector('#lsStop').addEventListener('click', () => stopListen());
+      el.querySelector('#lsPage').addEventListener('click', () => { hidden = true; el.classList.add('away'); showPill(); });
+      el.querySelector('#lsMusic').addEventListener('click', () => window.Ambient && window.Ambient.openPanel());
+      el.querySelector('#lsTimer').addEventListener('click', cycleTimer);
+      clockTimer = setInterval(tick, 15000);
+      tick(); update(); wake();
+    }
+    function cycleTimer() {
+      const steps = [0, 10, 20, 30, 60];
+      const left = sleepUntil ? Math.round((sleepUntil - Date.now()) / 60000) : 0;
+      const nextMin = steps.find(m => m > left) || 0;
+      sleepUntil = nextMin ? Date.now() + nextMin * 60000 : 0;
+      toast(nextMin ? `🌙 Reading will stop in ${nextMin} minutes` : 'Sleep timer off');
+      tick();
+    }
+    function tick() {
+      if (!el) return;
+      el.querySelector('#lsClock').textContent = fmt(new Date());
+      const left = sleepUntil ? Math.max(0, Math.ceil((sleepUntil - Date.now()) / 60000)) : 0;
+      el.querySelector('#lsSleep').textContent = left ? `🌙 ${left} min left` : '';
+      el.querySelector('#lsTimer').textContent = left ? `🌙 ${left} min` : '🌙 Sleep timer';
+    }
+    function update() {
+      const pill = document.getElementById('listenPill');
+      if (pill) pill.querySelector('.lp-t').textContent = reading ? `${B().NAMES[reading.b]} ${reading.c}:${reading.v}` : '';
+      if (!el || !reading) return;
+      const t = vtext(reading.b, reading.c, reading.v) || '';
+      const n = countVerses();
+      el.querySelector('#lsRef').textContent = `${B().NAMES[reading.b]} ${reading.c}:${reading.v} · ${B().version(ver()).abbr}`;
+      el.querySelector('#lsVerse').innerHTML = lordHTML(t);
+      el.querySelector('#lsProg').style.width = (n ? reading.v / n * 100 : 0) + '%';
+      el.querySelector('#lsPlay').textContent = reading.paused ? '▶' : '⏸';
+      el.querySelector('#lsPlay').setAttribute('aria-label', reading.paused ? 'Resume' : 'Pause');
+      el.classList.toggle('paused', !!reading.paused);
+      tick();
+    }
+    /* a small bar to come back to the listening screen while looking at the page */
+    function showPill() {
+      if (document.getElementById('listenPill')) return;
+      const p = document.createElement('div');
+      p.id = 'listenPill'; p.className = 'listen-pill';
+      p.innerHTML = `<button class="lp-open">🔊 <span class="lp-t"></span></button><button class="lp-stop" aria-label="Stop reading">⏹</button>`;
+      document.body.appendChild(p);
+      p.querySelector('.lp-open').addEventListener('click', () => { hidden = false; p.remove(); el && el.classList.remove('away'); wake(); });
+      p.querySelector('.lp-stop').addEventListener('click', () => stopListen());
+      update();
+    }
+    function hide() {
+      clearTimeout(dimTimer); clearInterval(clockTimer);
+      document.body.classList.remove('listening');
+      if (el) { el.classList.add('closing'); const e = el; setTimeout(() => e.remove(), 300); el = null; }
+      const p = document.getElementById('listenPill'); if (p) p.remove();
+    }
+    return { show: () => { if (!hidden) show(); else update(); }, update, hide };
+  })();
 
   /* ---------------- Reading options ---------------- */
   function openOptions() {
@@ -566,6 +704,7 @@
         ${sw('oGloss', o.gloss, 'Explain old KJV words', 'Old words like "shew" and "charity" are underlined. Tap one to see its meaning')}
         <h3 class="section-title">Listening</h3>
         ${sw('oCont', o.cont, 'Keep reading into the next chapter', 'Listen through a whole book')}
+        ${sw('oScreen', o.screen !== false, 'Listening screen', 'A dim screen with big controls while reading aloud, for the bedside or the car')}
         <label class="flabel" for="oVoice">Voice</label>
         <select class="search" id="oVoice"></select>
         <small class="muted" id="oVoiceNote"></small>
@@ -611,6 +750,7 @@
     $('#oVer').addEventListener('click', openVersions);
     $('#oGloss').addEventListener('change', e => { o.gloss = e.target.checked; redraw(); });
     $('#oCont').addEventListener('change', e => { o.cont = e.target.checked; save(); });
+    $('#oScreen').addEventListener('change', e => { o.screen = e.target.checked; save(); });
     document.querySelectorAll('#oSleep .seg-btn').forEach(btn => btn.addEventListener('click', () => {
       o.sleep = +btn.dataset.m; save();
       document.querySelectorAll('#oSleep .seg-btn').forEach(x => x.classList.toggle('active', x === btn));
