@@ -567,7 +567,8 @@
         <h3 class="section-title">Listening</h3>
         ${sw('oCont', o.cont, 'Keep reading into the next chapter', 'Listen through a whole book')}
         <label class="flabel" for="oVoice">Voice</label>
-        <select class="search" id="oVoice"><option value="">Best English voice on this device</option>${window.Core.Speech.voices().map(v => `<option value="${esc(v.name)}" ${o.voice === v.name ? 'selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}</select>
+        <select class="search" id="oVoice"></select>
+        <small class="muted" id="oVoiceNote"></small>
         <label class="flabel">Speed</label>
         <div class="seg small wrap-seg" id="oRate">${[[0.75, 'Slow'], [0.95, 'Normal'], [1.15, 'Brisk'], [1.4, 'Fast']].map(([r, l]) => `<button class="seg-btn ${Math.abs((o.rate || 0.95) - r) < 0.01 ? 'active' : ''}" data-v="${r}">${l}</button>`).join('')}</div>
         <div class="opt-row"><span><b>🎵 Background music</b><small>${o.ambient && window.Ambient.track(o.ambient) ? 'Plays while you listen: ' + esc(window.Ambient.track(o.ambient)[2]) : 'Calm piano, running stream, hymns and more'}</small></span><button class="btn ghost small" id="oMusic">Choose</button></div>
@@ -590,7 +591,20 @@
     pick('oLayout', 'layout', false, applyLook);
     pick('oRate', 'rate', true);
     $('#oMusic').addEventListener('click', () => window.Ambient.openPanel());
-    $('#oVoice').addEventListener('change', e => { o.voice = e.target.value; save(); });
+    // phones often finish loading their voices a moment after the app opens, so fill the list when they arrive
+    const fillVoices = () => {
+      const sel = $('#oVoice'); if (!sel) return;
+      const vs = window.Core.Speech.voices();
+      sel.innerHTML = `<option value="">Best English voice on this device</option>` + vs.map(v => `<option value="${esc(v.name)}" ${o.voice === v.name ? 'selected' : ''}>${window.Core.Speech.natural(v) ? '★ ' : ''}${esc(v.name)} (${esc(v.lang)})</option>`).join('');
+      $('#oVoiceNote').textContent = vs.length ? `${vs.length} English voice${vs.length === 1 ? '' : 's'} on this device. ★ marks natural-sounding ones.` : 'Loading voices…';
+    };
+    fillVoices();
+    if ('speechSynthesis' in window) {
+      speechSynthesis.addEventListener('voiceschanged', fillVoices);
+      UI().onModalClose(() => speechSynthesis.removeEventListener('voiceschanged', fillVoices));
+      setTimeout(fillVoices, 800);
+    }
+    $('#oVoice').addEventListener('change', e => { o.voice = e.target.value; save(); toast(e.target.value ? `🔊 Voice: ${e.target.value}` : '🔊 Using the best voice on this device'); });
     $('#oTry').addEventListener('click', () => window.Core.Speech.speak('The LORD is my shepherd; I shall not want.'));
     $('#oPar').addEventListener('change', e => { o.par = e.target.value; redraw(); });
     $('#oOrig').addEventListener('change', e => { o.orig = e.target.checked; redraw(); });

@@ -265,12 +265,19 @@
       speechSynthesis.speak(u);
     },
     stop() { if (this.supported) speechSynthesis.cancel(); this.speaking = false; },
-    voices() { return this.supported ? speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)) : []; },
+    /* English voices, the most natural-sounding first (Premium, Enhanced, Natural, Neural, Siri, Google online) */
+    natural: v => /premium|enhanced|natural|neural|siri|wavenet|online|google/i.test(v.name),
+    voices() {
+      if (!this.supported) return [];
+      const rank = v => (this.natural(v) ? 0 : 2) + (v.localService === false ? 0 : 0.5);
+      return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+    },
     /* the voice chosen in reading options, or the best English voice on this device */
     voice() {
       if (!this.supported) return null;
       const all = speechSynthesis.getVoices(), want = state.readerOpts && state.readerOpts.voice;
-      return (want && all.find(v => v.name === want)) || all.find(v => /en-GB/i.test(v.lang)) || all.find(v => /^en/i.test(v.lang)) || null;
+      const en = this.voices();
+      return (want && all.find(v => v.name === want)) || en.find(v => this.natural(v)) || all.find(v => /en-GB/i.test(v.lang)) || en[0] || null;
     }
   };
 
