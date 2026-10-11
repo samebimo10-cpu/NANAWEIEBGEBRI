@@ -122,7 +122,7 @@
           <button class="btn primary" id="stSave">✓ Save${opts.chain === false ? '' : ' & next verse'}</button>
         </div>` : `<p class="muted">Recording with the microphone is not available here. Record the verse with your phone's voice recorder, then add the file:</p>`}
         <div class="row center gap wrap">
-          <label class="btn ghost small">📂 Use an audio file<input type="file" id="stFile" accept="audio/*" hidden></label>
+          <label class="btn ghost small">📂 Use an audio file<input type="file" id="stFile" hidden></label>
           ${opts.chain === false ? '' : '<button class="btn ghost small" id="stSkip">Skip this verse →</button>'}
         </div>
         <p class="muted small">Read clearly, at a calm pace. Recordings stay on this phone; export them from Bible Voices to share.</p>
@@ -152,7 +152,8 @@
       V().current = e.target.value; save();
     });
     $('#stFile').addEventListener('change', async e => {
-      const f = e.target.files[0]; if (!f) return;
+      const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+      if (window.Ambient && window.Ambient.playable && !(await window.Ambient.playable(f))) { toast('That file could not be played on this phone. Choose a sound recording.'); return; }
       if (await keep(f, f.type, 0)) { toast('✓ Saved'); goNext(); }
     });
     const skip = $('#stSkip'); if (skip) skip.addEventListener('click', goNext);

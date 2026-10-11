@@ -246,10 +246,26 @@
     playMine(myIndex + d);
   }
   function stopMine() { if (player) { player.pause(); } }
+  /* Downloaded music often arrives with no type or an odd one (WhatsApp, Telegram, browsers),
+     so instead of trusting the name, ask this phone whether it can actually play the file. */
+  const SOUND_EXT = /\.(mp3|m4a|m4b|aac|wav|ogg|oga|opus|flac|webm|weba|mp4|3gp|3gpp|amr|wma|mka|caf|aiff?)$/i;
+  function playable(f) {
+    if (/^(image|text)\//.test(f.type) || /\.(pdf|docx?|xlsx?|pptx?|zip|apk|jpe?g|png|gif|txt|json|html?)$/i.test(f.name)) return Promise.resolve(false);
+    return new Promise(res => {
+      const a = new Audio(), url = URL.createObjectURL(f);
+      let done = false;
+      const end = ok => { if (done) return; done = true; clearTimeout(t); a.removeAttribute('src'); a.load(); URL.revokeObjectURL(url); res(ok); };
+      const t = setTimeout(() => end(/^(audio|video)\//.test(f.type) || SOUND_EXT.test(f.name)), 6000);
+      a.preload = 'metadata';
+      a.onloadedmetadata = () => end(true);
+      a.onerror = () => end(false);
+      a.src = url;
+    });
+  }
   async function addFiles(files) {
     let added = 0, skipped = 0;
     for (const f of files) {
-      if (!/^audio\//.test(f.type) && !/\.(mp3|m4a|aac|wav|ogg|oga|opus|flac|webm|weba)$/i.test(f.name)) { skipped++; continue; }
+      if (!(await playable(f))) { skipped++; continue; }
       try {
         await window.MediaStore.put('music', { id: window.MediaStore.uid('m'), name: f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' '), type: f.type, size: f.size, blob: f, added: Date.now() + added });
         added++;
@@ -258,7 +274,7 @@
     window.MediaStore.persist();
     await loadList();
     if (added) window.Core.toast(`🎶 Added ${added} file${added === 1 ? '' : 's'} to My music`);
-    if (skipped) window.Core.toast(`${skipped} file${skipped === 1 ? ' was' : 's were'} not audio and ${skipped === 1 ? 'was' : 'were'} skipped`);
+    if (skipped) window.Core.toast(`${skipped} file${skipped === 1 ? '' : 's'} could not be played on this phone and ${skipped === 1 ? 'was' : 'were'} skipped`);
     return added;
   }
   async function removeMine(id) {
@@ -352,8 +368,10 @@
       const total = myList.reduce((a, x) => a + (x.size || 0), 0);
       host.innerHTML = `
         <p class="muted small">Play your own songs, worship music or sermons from this phone. They play like a music player, so they can usually keep going with the screen locked.</p>
+        <p class="muted small">Can't see your downloaded songs? Tap <b>📁 Browse all files</b>, open the menu (☰) and choose <b>Downloads</b>, <b>Music</b>, your phone's storage or a WhatsApp/Telegram folder. You can pick many songs at once by pressing and holding.</p>
         <div class="row gap wrap">
-          <label class="btn primary small add-music">＋ Add music from this phone<input type="file" id="musFiles" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac" multiple hidden></label>
+          <label class="btn primary small add-music">＋ Add music<input type="file" id="musFiles" accept="audio/*,video/mp4,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac,.amr,.3gp,.wma,.webm" multiple hidden></label>
+          <label class="btn ghost small add-music">📁 Browse all files<input type="file" id="musAny" multiple hidden></label>
           ${myList.length ? `<button class="btn ghost small ${kind === 'mine' ? 'on' : ''}" id="musPlayAll">${kind === 'mine' ? '⏸ Pause' : '▶ Play all'}</button>
           <button class="btn ghost small ${mine.shuffle ? 'on' : ''}" id="musShuffle" aria-pressed="${mine.shuffle}">🔀 Shuffle</button>
           <button class="btn ghost small ${mine.repeat ? 'on' : ''}" id="musRepeat" aria-pressed="${mine.repeat}">🔂 Repeat one</button>` : ''}
@@ -364,7 +382,12 @@
           <button class="my-del" data-del="${m.id}" aria-label="Remove ${esc(m.name)}">✕</button></div>`).join('')}</div>
           <p class="muted small">${myList.length} file${myList.length === 1 ? '' : 's'} · ${window.MediaStore.size(total)}${use && use.quota ? ` · space left on this phone for the app: about ${window.MediaStore.size(Math.max(0, use.quota - use.usage))}` : ''}</p>`
         : '<p class="muted small">No music added yet.</p>'}`;
-      host.querySelector('#musFiles').addEventListener('change', async e => { const n = await addFiles([...e.target.files]); e.target.value = ''; drawMine(); if (n && !kind) start('mine'); });
+      host.querySelectorAll('#musFiles, #musAny').forEach(inp => inp.addEventListener('change', async e => {
+        const files = [...e.target.files]; e.target.value = '';
+        if (!files.length) return;
+        window.Core.toast(`Adding ${files.length} file${files.length === 1 ? '' : 's'}…`);
+        const n = await addFiles(files); drawMine(); if (n && !kind) start('mine');
+      }));
       const pa = host.querySelector('#musPlayAll'); if (pa) pa.addEventListener('click', () => { if (kind === 'mine' && player && !player.paused) { player.pause(); drawMine(); } else start('mine'); });
       const sh = host.querySelector('#musShuffle'); if (sh) sh.addEventListener('click', () => { mine.shuffle = !mine.shuffle; saveMine(); drawMine(); });
       const rp = host.querySelector('#musRepeat'); if (rp) rp.addEventListener('click', () => { mine.repeat = !mine.repeat; saveMine(); drawMine(); });
@@ -419,5 +442,5 @@
   const sync = () => { if (kind === 'mine') changed(); };
   setTimeout(() => { const p = getPlayer(); p.addEventListener('play', sync); p.addEventListener('pause', sync); }, 0);
 
-  window.Ambient = { openPanel, addFiles, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNS, start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
+  window.Ambient = { openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNS, start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
 })();
