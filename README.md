@@ -52,7 +52,7 @@
 - **🎵 Background music** (the 🎵 button at the top, from anywhere in the app): play while you read, study or pray, or only while the Bible is read aloud. All of it is generated on the device, so there are no audio files and it works offline:
   - **🎹 Deep calm piano**: slow, warm chords at a resting heartbeat (about 63 beats a minute) with a gently wandering melody and soft reverb, for study and prayer.
   - **🏞️ Running stream**: flowing water with trickles and droplets.
-  - **⛪ Hymns**: public-domain hymn tunes played softly on piano: *Amazing Grace* (NEW BRITAIN), *Joyful, Joyful, We Adore Thee* (HYMN TO JOY) and *Jesus Loves Me*.
+  - **⛪ Hymns**: 27 well-loved hymns played on piano in four-part harmony (soprano, alto, tenor and bass), each in its usual key, or in an easier key with **🎼 Easy keys**. Tap 🔂 to play one hymn over and over, or tick the hymns you want and tap **Play selected** to play them one after another in a loop (with 🔀 shuffle and ⏭ skip). The list: Amazing Grace, Great Is Thy Faithfulness, How Great Thou Art, Blessed Assurance, It Is Well With My Soul, Holy, Holy, Holy, What a Friend We Have in Jesus, To God Be the Glory, Rock of Ages, Leaning on the Everlasting Arms, Be Thou My Vision, When I Survey the Wondrous Cross, Crown Him with Many Crowns, 'Tis So Sweet to Trust in Jesus, The Old Rugged Cross, Softly and Tenderly, A Mighty Fortress Is Our God, Take My Life and Let It Be, Guide Me, O Thou Great Jehovah, Pass Me Not, O Gentle Savior, Come, Thou Fount, Jesus Paid It All, Standing on the Promises, Count Your Blessings, Praise to the Lord, the Almighty, Joyful, Joyful, We Adore Thee and Jesus Loves Me. The scores are public domain, from the [freehymns](https://github.com/freehymns/hymns) project. *Great Is Thy Faithfulness* (1923) and *How Great Thou Art* (1949) are still under copyright in most countries, so for those two the app plays only their chord progression.
   - **🎻 Soft strings** and **🌧️ Rain**.
   A small bar shows what is playing, with a pause button. Phones pause web-app sound when the screen locks, so keep the app open.
   - **🎶 My music**: add songs, hymns or sermons already saved on your phone (**＋ Add music**, choose one or many audio files; if your downloaded songs don't show, use **📁 Browse all files** and open Downloads, Music or a WhatsApp/Telegram folder). The app checks that each file can play on the phone, so downloads with odd names or no file type still work. They are kept in the app's storage on this phone, so they play offline. Play all, shuffle or repeat, play or remove any song, and skip with ⏭ on the small bar. Your own music keeps playing with the screen locked and shows on the lock screen with play, pause and skip.
@@ -175,7 +175,8 @@ js/orig/NN.js         Hebrew (books 1-39) and Greek (books 40-66), word by word 
 js/lex/               Strong's Hebrew and Greek dictionaries
 js/orig.js            Hebrew and Greek: word study, grammar in plain English, word-by-word view, dictionary search
 js/study.js           Cross-references, book overviews, Bible places map
-js/ambient.js         Background music: generated tracks and My music from the phone
+js/ambient.js         Background music: generated tracks, the hymn player and My music from the phone
+js/data/hymns.js      27 hymns in four parts (built by tools/build_hymns.py)
 js/mediastore.js      Storage on the phone for added music and recorded readings (IndexedDB)
 js/voices.js          Bible Voices: record the Bible verse by verse, play, export and import
 js/connect.js         On the claude.ai link: Ask about the Bible, prayer wall, read together

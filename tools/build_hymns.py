@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+"""
+Build js/data/hymns.js: public-domain hymns in four parts, for the app's hymn player.
+
+The scores come from the freehymns project (https://github.com/freehymns/hymns), ABC files marked
+"Public Domain". Each hymn is moved into the key the app plays it in, and every note is stored as
+  start, length (in 1/24 of a quarter note), MIDI pitch, voice (0 soprano, 1 alto, 2 tenor, 3 bass)
+
+Usage:
+  git clone --depth 1 https://github.com/freehymns/hymns.git /tmp/freehymns
+  python3 tools/build_hymns.py /tmp/freehymns/music
+"""
+import json, os, re, sys
+from fractions import Fraction as F
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRC = sys.argv[1] if len(sys.argv) > 1 else '/tmp/freehymns/music'
+TPQ = 24   # ticks per quarter note
+
+# number, title, freehymns file, tune name, primary key, easy key, time (as usually printed), common progression
+HYMNS = [
+    (1, 'Amazing Grace', 'n/NewBritain', 'NEW BRITAIN', 'G', 'F', '3/4', 'I – IV – I – V7'),
+    (2, 'Great Is Thy Faithfulness', None, 'FAITHFULNESS', 'Eb', 'D', '3/4', 'I – IV – I – V7 – I'),
+    (3, 'How Great Thou Art', None, 'O STORE GUD', 'Bb', 'A', '4/4', 'I – IV – I – V7 – I'),
+    (4, 'Blessed Assurance', 'a/Assurance', 'ASSURANCE', 'D', 'C', '9/8', 'I – IV – I – V – I'),
+    (5, 'It Is Well With My Soul', 'v/VilleDuHavre', 'VILLE DU HAVRE', 'C', 'Bb', '4/4', 'I – V – IV – I'),
+    (6, 'Holy, Holy, Holy! Lord God Almighty', 'n/Nicaea', 'NICAEA', 'D', 'C', '4/4', 'I – vi – ii – V7 – I'),
+    (7, 'What a Friend We Have in Jesus', 'e/Erie', 'CONVERSE', 'F', 'Eb', '4/4', 'I – IV – I – V – I'),
+    (8, 'To God Be the Glory', 't/ToGodBeTheGlory', 'TO GOD BE THE GLORY', 'Ab', 'G', '3/4', 'I – V – I – IV – V7 – I'),
+    (9, 'Rock of Ages', 't/Toplady', 'TOPLADY', 'Bb', 'A', '3/4', 'I – IV – I – V7 – I'),
+    (10, 'Leaning on the Everlasting Arms', 'l/LeaningOnTheEverlastingArms', 'SHOWALTER', 'Ab', 'G', '4/4', 'I – IV – I – V – I'),
+    (11, 'Be Thou My Vision', 's/Slane', 'SLANE', 'Eb', 'D', '3/4', 'I – vi – IV – I – V'),
+    (12, 'When I Survey the Wondrous Cross', 'h/Hamburg', 'HAMBURG', 'F', 'Eb', '4/4', 'I – IV – I – ii – V7 – I'),
+    (13, 'Crown Him with Many Crowns', 'd/Diademata', 'DIADEMATA', 'D', 'C', '4/4', 'I – IV – V – vi – ii – V – I'),
+    (14, "'Tis So Sweet to Trust in Jesus", 't/TisSoSweetToTrustInJesus', 'TRUST IN JESUS', 'Ab', 'G', '4/4', 'I – IV – I – V7 – I'),
+    (15, 'The Old Rugged Cross', 'the/TheOldRuggedCross', 'OLD RUGGED CROSS', 'Bb', 'A', '6/8', 'I – IV – I – V7 – I'),
+    (16, 'Softly and Tenderly Jesus Is Calling', 's/SoftlyAndTenderlyJesusIsCalling', 'THOMPSON', 'Ab', 'G', '6/8', 'I – IV – I – V7 – I'),
+    (17, 'A Mighty Fortress Is Our God', 'an/AMightyFortressIsOurGod', 'EIN FESTE BURG', 'C', 'D', '4/4', 'I – V – vi – IV – V – I'),
+    (18, 'Take My Life and Let It Be', 'h/Hendon', 'HENDON', 'F', 'G', '4/4', 'I – ii – V7 – I'),
+    (19, 'Guide Me, O Thou Great Jehovah', 'c/CwmRhondda', 'CWM RHONDDA', 'Ab', 'G', '4/4', 'I – IV – I – V – I'),
+    (20, 'Pass Me Not, O Gentle Savior', 'p/PassMeNotOGentleSavior', 'PASS ME NOT', 'Ab', 'G', '4/4', 'I – IV – I – V7 – I'),
+    (21, 'Come, Thou Fount of Every Blessing', 'n/Nettleton', 'NETTLETON', 'D', 'C', '3/4', 'I – V – IV – I'),
+    (22, 'Jesus Paid It All', 'j/JesusPaidItAll', 'ALL TO CHRIST', 'Eb', 'D', '3/4', 'I – V – I – IV – V7 – I'),
+    (23, 'Standing on the Promises', 's/StandingOnThePromises', 'PROMISES', 'Bb', 'A', '4/4', 'I – IV – I – V7 – I'),
+    (24, 'Count Your Blessings', 'c/CountYourBlessings', 'BLESSINGS', 'Eb', 'D', '2/4', 'I – V – I – IV – V – I'),
+    (25, 'Praise to the Lord, the Almighty', 'l/LobeDenHerren', 'LOBE DEN HERREN', 'G', 'F', '3/4', 'I – IV – V – vi – I'),
+    # two the app already played before the list above
+    (26, 'Joyful, Joyful, We Adore Thee', 'o/OdeToJoy', 'HYMN TO JOY', 'G', 'F', '4/4', 'I – V – I'),
+    (27, 'Jesus Loves Me', 'j/JesusLovesMe', 'JESUS LOVES ME', 'C', 'D', '4/4', 'I – IV – I – V – I'),
+]
+# Great Is Thy Faithfulness (Runyan, 1923) and How Great Thou Art (Hine, 1949) are still under copyright in most
+# countries, so the app plays only their chord progressions (from the table above), not the melodies.
+
+# quarter notes a minute where the score's playback tempo is too slow or missing
+TEMPO = {11: 100, 15: 75}
+
+PC = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+SHARPS, FLATS = 'FCGDAEB', 'BEADGCF'
+KEY_SIG = {'C': 0, 'G': 1, 'D': 2, 'A': 3, 'E': 4, 'B': 5, 'F#': 6, 'C#': 7, 'F': -1, 'Bb': -2, 'Eb': -3, 'Ab': -4, 'Db': -5, 'Gb': -6, 'Cb': -7}
+KEY_PC = {k: (PC[k[0]] + (1 if k.endswith('#') else -1 if k.endswith('b') else 0)) % 12 for k in KEY_SIG}
+
+
+def key_accidentals(k):
+    k = k.strip().split()[0] if k.strip() else 'C'
+    minor = k.endswith('m') and not k.endswith('maj')
+    if minor:
+        k = k[:-1]
+        # relative major
+        rel = [n for n, p in KEY_PC.items() if p == (KEY_PC[k] + 3) % 12]
+        k = sorted(rel, key=lambda n: abs(KEY_SIG[n]))[0]
+    n = KEY_SIG[k]
+    acc = {}
+    for i in range(abs(n)):
+        acc[(SHARPS if n > 0 else FLATS)[i]] = 1 if n > 0 else -1
+    return k, acc
+
+
+def parse_len(s):
+    if not s:
+        return F(1)
+    m = re.fullmatch(r'(\d*)(/*)(\d*)', s)
+    num = int(m.group(1)) if m.group(1) else 1
+    slashes = len(m.group(2))
+    if m.group(3):
+        return F(num, int(m.group(3)))
+    return F(num, 2 ** slashes)
+
+
+TOKEN = re.compile(r"""
+    (?P<field>\[[A-Za-z]:[^\]]*\])
+  | (?P<deco>![^!]*!)
+  | (?P<annot>"[^"]*")
+  | (?P<grace>\{[^}]*\})
+  | (?P<chord>\[(?:[\^_=]*[A-Ga-g][,']*[\d/]*-?\s*)+\](?P<clen>[\d/]*)(?P<ctie>-?))
+  | (?P<note>(?P<acc>\^\^|__|\^|_|=)?(?P<let>[A-Ga-g])(?P<oct>[,']*)(?P<len>[\d/]*)(?P<tie>-?))
+  | (?P<rest>[zx](?P<rlen>[\d/]*))
+  | (?P<bar>:?\|[\]|:]?|::|\[\|)
+  | (?P<tuplet>\(\d)
+  | (?P<skip>[()\s\\.~yHTMLRSOPuv>`])
+""", re.X)
+
+
+def parse_voice(body, unit, keyacc):
+    """Return a list of [start, dur, midi, tie] in whole-note fractions, plus bar lengths."""
+    t = F(0)
+    out, bars, bar_start = [], [], F(0)
+    local = {}
+    silent = False
+    tuplet = None   # (factor, remaining)
+
+    def pitch(acc, let, octs):
+        up = let.islower()
+        L = let.upper()
+        midi = 60 + PC[L] + (12 if up else 0) + 12 * octs.count("'") - 12 * octs.count(',')
+        keyname = (L, midi // 12)
+        if acc:
+            a = {'^': 1, '^^': 2, '_': -1, '__': -2, '=': 0}[acc]
+            local[keyname] = a
+        a = local.get(keyname, keyacc.get(L, 0))
+        return midi + a
+
+    pos = 0
+    while pos < len(body):
+        m = TOKEN.match(body, pos)
+        if not m:
+            raise ValueError('cannot read: ' + body[pos:pos + 30])
+        pos = m.end()
+        g = m.lastgroup
+        if g in ('field', 'annot', 'grace', 'skip'):
+            if g == 'field' and m.group(0)[1] == 'K':
+                _, keyacc = key_accidentals(m.group(0)[3:-1])
+            continue
+        if g == 'deco':
+            if m.group(0) == '!silent!':
+                silent = True
+            continue
+        if g == 'tuplet':
+            n = int(m.group(0)[1:])
+            tuplet = [F({2: 3, 3: 2, 4: 3, 6: 2}.get(n, n - 1), n), n]
+            continue
+        if g == 'bar':
+            bars.append(t - bar_start)
+            bar_start = t
+            local = {}
+            continue
+        factor = F(1)
+        if tuplet:
+            factor = tuplet[0]
+            tuplet[1] -= 1
+            if tuplet[1] == 0:
+                tuplet = None
+        if g == 'rest':
+            t += parse_len(m.group('rlen')) * unit * factor
+            silent = False
+            continue
+        if g == 'note':
+            d = parse_len(m.group('len')) * unit * factor
+            midi = pitch(m.group('acc'), m.group('let'), m.group('oct'))
+            if not silent:
+                out.append([t, d, midi, bool(m.group('tie'))])
+            silent = False
+            t += d
+            continue
+        if g == 'chord':
+            inner = m.group(0)[1:m.group(0).rindex(']')]
+            clen = parse_len(m.group('clen')) * unit * factor
+            longest = F(0)
+            for nm in re.finditer(r"(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([\d/]*)(-?)", inner):
+                d = parse_len(nm.group(4)) * clen
+                midi = pitch(nm.group(1), nm.group(2), nm.group(3))
+                if not silent:
+                    out.append([t, d, midi, bool(nm.group(5) or m.group('ctie'))])
+                longest = max(longest, d) if longest else d
+            silent = False
+            t += longest
+            continue
+    if t > bar_start:
+        bars.append(t - bar_start)
+    # join tied notes
+    notes = sorted(out, key=lambda n: (n[0], n[2]))
+    merged = []
+    open_ties = {}
+    for n in notes:
+        prev = open_ties.pop(n[2], None)
+        if prev is not None and prev[0] + prev[1] == n[0]:
+            prev[1] += n[1]
+            if n[3]:
+                open_ties[n[2]] = prev
+            continue
+        merged.append(n)
+        if n[3]:
+            open_ties[n[2]] = n
+    return merged, t, bars
+
+
+def parse_file(path):
+    text = open(path, encoding='utf-8').read()
+    head, voices, cur = {}, {}, None
+    order = []
+    for raw in text.split('\n'):
+        line = raw.split('%')[0].rstrip() if not raw.startswith('%%') else ''
+        if not line.strip():
+            continue
+        m = re.match(r'^([A-Za-z+]):\s?(.*)$', line)
+        if m:
+            k, v = m.group(1), m.group(2)
+            if k == 'V':
+                cur = v.split()[0]
+                if cur not in voices:
+                    voices[cur] = []
+                    order.append(cur)
+                continue
+            if k in 'wW+':
+                continue
+            if cur is None:
+                head.setdefault(k, v)
+            elif k == 'K':
+                voices[cur].append('[K:%s]' % v)
+            continue
+        if cur is None:
+            cur = '1'
+            voices[cur] = []
+            order.append(cur)
+        voices[cur].append(line)
+    unit = F(head.get('L', '1/8').strip())
+    key, keyacc = key_accidentals(head.get('K', 'C'))
+    meter = head.get('M', '4/4').strip()
+    q = re.search(r'(\d+)/(\d+)\s*=\s*(\d+)', head.get('Q', ''))
+    bpm = int(q.group(3)) * F(int(q.group(1)), int(q.group(2))) * 4 if q else None   # quarter notes a minute
+    parts = []
+    for v in order:
+        body = ' '.join(voices[v])
+        notes, total, bars = parse_voice(body, unit, keyacc)
+        parts.append((v, notes, total, bars))
+    return dict(key=key, meter=meter, bpm=bpm, parts=parts, title=head.get('T', ''))
+
+
+def nearest_shift(src, dst):
+    s = (KEY_PC[dst] - KEY_PC[src]) % 12
+    return s - 12 if s > 6 else s
+
+
+def build():
+    out = []
+    problems = []
+    for num, title, path, tune, key, easy, ts, prog in HYMNS:
+        item = dict(n=num, title=title, tune=tune, key=key, easy=easy, ts=ts, prog=prog)
+        if not path:
+            item['chordsOnly'] = True
+            out.append(item)
+            continue
+        h = parse_file(os.path.join(SRC, path + '.abc'))
+        shift = nearest_shift(h['key'], key)
+        totals = [p[2] for p in h['parts'] if p[1]]
+        if len(set(totals)) != 1:
+            problems.append('%s: voices end at different times %s' % (title, [str(x) for x in totals]))
+        num_, den_ = (int(x) for x in h['meter'].split('/'))
+        barlen = F(num_, den_)
+        for v, notes, total, bars in h['parts']:
+            odd = [i for i, b in enumerate(bars) if b != barlen and 0 < i < len(bars) - 1]
+            if odd:
+                problems.append('%s voice %s: bars %s are %s long, not %s' % (title, v, odd[:5], [str(bars[i]) for i in odd[:5]], barlen))
+        # voices in score order: the first is the melody. Where the melody line also carries the alto in chords,
+        # the lower notes of each chord are alto.
+        voiced = [p for p in h['parts'] if p[1]]
+        flat = []
+        for vi, (v, notes, total, bars) in enumerate(voiced):
+            top = {}
+            for st, d, midi, _ in notes:
+                top[st] = max(top.get(st, 0), midi)
+            for st, d, midi, _ in notes:
+                a, b = st * 4 * TPQ, d * 4 * TPQ
+                if a.denominator != 1 or b.denominator != 1:
+                    problems.append('%s: note timing finer than 1/%d quarter' % (title, TPQ))
+                voice = min(vi, 3)
+                if vi == 0 and midi < top[st]:
+                    voice = 1
+                flat.append([int(a), int(b), midi + shift, voice])
+        flat.sort(key=lambda n: (n[0], n[3]))
+        enc = []
+        for n in flat:
+            enc += n
+        item.update(meter=h['meter'], bpm=int(TEMPO.get(num) or h['bpm'] or 100), len=int(max(totals) * 4 * TPQ), source=os.path.basename(path), notes=enc)
+        melody = [n for n in flat if n[3] == 0][:12]
+        print('%2d %-38s %s->%s %+d  %s  bpm %s  notes %d  melody %s' % (num, title, h['key'], key, shift, h['meter'], item['bpm'], len(flat),
+              ' '.join('CDEFGAB'[[0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6][n[2] % 12]] + ('#' if n[2] % 12 in (1, 3, 6, 8, 10) else '') for n in melody)))
+        out.append(item)
+    for p in problems:
+        print('CHECK:', p)
+    js = ('/* Public-domain hymns in four parts, built by tools/build_hymns.py from the freehymns project\n'
+          ' * (https://github.com/freehymns/hymns, scores marked "Public Domain").\n'
+          ' * notes: start, length (1/%d of a quarter note), MIDI pitch, voice (0 soprano … 3 bass), repeated. */\n'
+          'window.HYMNAL = %s;\n') % (TPQ, json.dumps(out, separators=(',', ':'), ensure_ascii=False))
+    dest = os.path.join(ROOT, 'js', 'data', 'hymns.js')
+    open(dest, 'w', encoding='utf-8').write(js)
+    print(dest, len(js) // 1024, 'KB')
+
+
+if __name__ == '__main__':
+    build()
