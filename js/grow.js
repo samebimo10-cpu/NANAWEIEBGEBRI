@@ -378,9 +378,9 @@
           let level = 1;
           const draw = () => {
             body.innerHTML = `<p class="muted">Read it with the missing words. Then hide more, until you can say it all.</p>
-              <p class="scripture mem-gaps">${words.map((w, i) => (level >= 3 || (i * 7 + 3) % 3 < level) && /[A-Za-z]/.test(w) ? `<button class="gap" data-i="${i}" style="--w:${Math.max(2, w.length)}ch" aria-label="Show this word">${esc(w.replace(/[A-Za-z’']/g, ' '))}</button>` : esc(w)).join(' ')}</p>
+              <p class="scripture mem-gaps">${words.map((w, i) => (level >= 3 || (i * 7 + 3) % 3 < level) && /[A-Za-z]/.test(w) ? `<button class="mgap" data-i="${i}" style="--w:${Math.max(2, w.length)}ch" aria-label="Show this word">${esc(w.replace(/[A-Za-z’']/g, ' '))}</button>` : esc(w)).join(' ')}</p>
               <div class="row center gap wrap">${level < 3 ? '<button class="btn ghost" id="gapMore">🫥 Hide more words</button>' : ''}<button class="btn primary" id="gapDone">I can say it</button></div>`;
-            body.querySelectorAll('.gap').forEach(g => g.addEventListener('click', () => { g.textContent = words[+g.dataset.i]; g.classList.add('peek'); }));
+            body.querySelectorAll('.mgap').forEach(g => g.addEventListener('click', () => { g.textContent = words[+g.dataset.i]; g.classList.add('peek'); }));
             const more = $('#gapMore'); if (more) more.addEventListener('click', () => { level++; Sound.play('tap'); draw(); });
             $('#gapDone').addEventListener('click', () => { body.querySelector('.mem-gaps').innerHTML = lordHTML(text); $('#gapDone').remove(); const mm = $('#gapMore'); if (mm) mm.remove(); ready(); });
           };
@@ -791,6 +791,7 @@
     ['ask', '✨', 'Ask about the Bible', () => 'Answers with verses you can check', () => window.Connect && window.Connect.canAsk()],
     ['wall', '🤝', 'Prayer wall', () => 'Pray for one another', () => window.Connect && window.Connect.canShare()],
     ['group', '💬', 'Read together', () => 'A group plan and chapter discussions', () => window.Connect && window.Connect.canShare()],
+    ['voices', '🎙️', 'Bible Voices', () => 'Read the Bible aloud together, verse by verse'],
     ['map', '🗺️', 'Bible places map', () => `${window.PLACES.length} places, from Ur to Rome`],
     ['dict', '🔤', 'Hebrew & Greek dictionary', () => 'Every word of the original Bible, explained'],
     ['passages', '📖', 'Study passages & quizzes', () => `${Object.keys(state.completed).length} of ${window.JOURNEY.length} completed`],
@@ -830,6 +831,7 @@
       case 'passages': UI().renderPassages(body); break;
       case 'dict': window.Orig.renderDictionary(body); break;
       case 'map': window.Study.renderMap(body); break;
+      case 'voices': window.Voices.render(body); break;
       case 'wall': window.Connect.renderWall(body); break;
       case 'group': window.Connect.renderGroup(body); break;
       case 'books': UI().renderBooks(body); break;

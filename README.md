@@ -55,6 +55,13 @@
   - **⛪ Hymns**: public-domain hymn tunes played softly on piano: *Amazing Grace* (NEW BRITAIN), *Joyful, Joyful, We Adore Thee* (HYMN TO JOY) and *Jesus Loves Me*.
   - **🎻 Soft strings** and **🌧️ Rain**.
   A small bar shows what is playing, with a pause button. Phones pause web-app sound when the screen locks, so keep the app open.
+  - **🎶 My music**: add songs, hymns or sermons already saved on your phone (**＋ Add music from this phone**, choose one or many audio files). They are kept in the app's storage on this phone, so they play offline. Play all, shuffle or repeat, play or remove any song, and skip with ⏭ on the small bar. Your own music keeps playing with the screen locked and shows on the lock screen with play, pause and skip.
+- **🎙️ Bible Voices** (Grow → Bible Voices): several people read the Bible aloud verse by verse until the whole Bible (31,102 verses) is recorded.
+  - Add each reader by name, then tap **Continue** to record the next verse nobody has read yet: tap ●, read, tap ■, listen back, then **Save & next verse**. You can also record any verse from the reader (select it → 🎙️ Record), or add an audio file instead of using the microphone.
+  - Progress shows how much of the Bible is recorded, per book and per reader.
+  - Recorded verses show a 🎙️ in the reader; tap it to hear that reading. When the Bible is read aloud, recorded verses play in the reader's own voice and the device voice reads the rest. Choose a preferred reader, or turn recordings off.
+  - Recordings stay on the phone that made them. To bring readers together, **Export** the recordings to a file, send it (WhatsApp, email, Drive) and **Import** it on the other phone; readers are matched by name and nothing is duplicated.
+  - Recording with the microphone works in the installed app and on any https link. Where the microphone is not available, record with the phone's voice recorder and add the file.
 - Tap verses for more: **🖼️ Card** (a shareable image), **🧠 Memorize**, and **✍️ Journal** (a S.O.A.P. entry).
 - A **My highlights & notes** list, filterable by colour.
 
@@ -168,7 +175,9 @@ js/orig/NN.js         Hebrew (books 1-39) and Greek (books 40-66), word by word 
 js/lex/               Strong's Hebrew and Greek dictionaries
 js/orig.js            Hebrew and Greek: word study, grammar in plain English, word-by-word view, dictionary search
 js/study.js           Cross-references, book overviews, Bible places map
-js/ambient.js         Background music for listening (generated, no audio files)
+js/ambient.js         Background music: generated tracks and My music from the phone
+js/mediastore.js      Storage on the phone for added music and recorded readings (IndexedDB)
+js/voices.js          Bible Voices: record the Bible verse by verse, play, export and import
 js/connect.js         On the claude.ai link: Ask about the Bible, prayer wall, read together
 js/xref/NN.js         Cross-references
 js/data/overviews.js  Overviews of all 66 books

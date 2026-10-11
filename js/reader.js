@@ -117,6 +117,7 @@
       await B().load(b);   // the KJV is always kept for highlights and notes
       if (o.par && o.par !== o.ver) await B().loadVersion(o.par, b).catch(() => null);
       if (o.orig) await window.Orig.load(b).catch(() => null);
+      if (window.Voices) await window.Voices.loadIndex().catch(() => null);
     } catch (e) { art.innerHTML = `<p class="muted">${esc(e.message)}</p><button class="btn ghost" id="retryLoad">Try again</button>`; $('#retryLoad').onclick = () => drawChapter(); return; }
     if (cur.b !== b || cur.c !== c) return; // navigated away while loading
     const verses = book[c - 1];
@@ -152,6 +153,7 @@
     if (e.target.classList.contains('note-ic')) { openNote(+el.dataset.v); return; }
     const g = e.target.closest('.gw');
     if (g) { glossPop(g); return; }
+    if (e.target.closest('.vc-ic')) { window.Voices.playVerse(cur.b, cur.c, +el.dataset.v); return; }
     const ow = e.target.closest('.ow');
     if (ow) { window.Orig.openWord(cur.b, cur.c, +el.dataset.v, +ow.dataset.wi); return; }
     const v = +el.dataset.v;
@@ -212,7 +214,8 @@
     const orig = o.orig && window.Orig.isLoaded(b) ? window.Orig.lineHTML(b, c, v) : '';
     const body = t ? kjvHTML(t) : `<span class="v-missing">${MISSING}</span>`;
     const bm = (state.bookmarks || {})[k] ? '<span class="bm-ic" title="Bookmarked">🔖</span>' : '';
-    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${bm}${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web) : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
+    const vc = window.Voices && window.Voices.has(b, c, v) ? '<button class="vc-ic" title="Play the recorded reading" aria-label="Play the recorded reading of verse ' + v + '">🎙️</button>' : '';
+    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${bm}${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${vc}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web) : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
   }
 
   function refreshVerse(v) {
@@ -255,6 +258,7 @@
         <button class="btn ghost small" id="sPray">🙏 Pray this</button>
         ${window.Connect && window.Connect.canAsk() ? '<button class="btn ghost small" id="sAsk">✨ Ask</button>' : ''}
         <button class="btn ghost small" id="sXref">🔗 Cross-refs</button>
+        <button class="btn ghost small" id="sRec">🎙️ Record</button>
         <button class="btn ghost small" id="sBm">🔖 ${(state.bookmarks || {})[B().key(cur.b, cur.c, Math.min(...sel))] ? 'Remove bookmark' : 'Bookmark'}</button>
         <button class="btn ghost small" id="sOrig">🔤 ${cur.b < 39 ? 'Hebrew' : 'Greek'}</button>
         <button class="btn ghost small" id="sCmp">📚 Compare</button>
@@ -269,6 +273,7 @@
     $('#sNote').addEventListener('click', () => openNote(Math.min(...sel)));
     $('#sCopy').addEventListener('click', copySel);
     const sa = $('#sAsk'); if (sa) sa.addEventListener('click', () => { const r = selRef(), t = selText(); clearSel(); window.Connect.ask({ ref: r, text: t }); });
+    $('#sRec').addEventListener('click', () => { const v = Math.min(...sel); clearSel(); window.Voices.studio(cur.b, cur.c, v); });
     $('#sXref').addEventListener('click', () => { const v = Math.min(...sel); clearSel(); window.Study.crossRefs(cur.b, cur.c, v); });
     $('#sBm').addEventListener('click', () => {
       const v = Math.min(...sel), k = B().key(cur.b, cur.c, v);
@@ -502,7 +507,7 @@
     speechSynthesis.cancel();
     if (opts().ambient && window.Ambient) window.Ambient.start(opts().ambient);
     if (opts().screen !== false) ListenScreen.show();
-    speakVerse();
+    if (window.Voices) window.Voices.loadIndex().then(speakVerse, speakVerse); else speakVerse();
   }
   /* Read the current verse, then move on. */
   function speakVerse() {
@@ -529,6 +534,20 @@
     if (el) { el.classList.add('reading'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
     ListenScreen.update();
     const gen = ++speakGen;
+    // a verse someone has recorded plays in their own voice; the phone's voice reads the rest
+    const recd = window.Voices && window.Voices.useRecordings() && window.Voices.pick(b, c, reading.v);
+    if (recd) {
+      ListenScreen.voice(window.Voices.reader(recd.readerId).name);
+      window.Voices.play(recd).then(ok => {
+        if (gen !== speakGen || !reading || reading.paused) return;
+        if (ok) { reading.v++; speakVerse(); } else { speakGen++; ttsVerse(b, c, t, speakGen); }
+      });
+      return;
+    }
+    ListenScreen.voice('');
+    ttsVerse(b, c, t, gen);
+  }
+  function ttsVerse(b, c, t, gen) {
     const u = new SpeechSynthesisUtterance((reading.v === 1 ? `${B().NAMES[b]} chapter ${c}. ` : '') + t.replace(/LORD/g, 'Lord'));
     u.rate = opts().rate || 0.95;
     const voice = window.Core.Speech.voice(); if (voice) u.voice = voice;
@@ -539,6 +558,7 @@
   function pauseListen() {
     if (!reading || reading.paused) return;
     reading.paused = true; speakGen++;
+    if (window.Voices) window.Voices.stopAll();
     speechSynthesis.cancel();
     ListenScreen.update();
   }
@@ -551,7 +571,7 @@
   function skipVerse(d) {
     if (!reading) return;
     reading.v = Math.max(1, Math.min(countVerses(), reading.v + d));
-    speakGen++; speechSynthesis.cancel();
+    speakGen++; speechSynthesis.cancel(); if (window.Voices) window.Voices.stopAll();
     if (!reading.paused) speakVerse(); else ListenScreen.update();
   }
   const countVerses = () => { let n = 0; while (vtext(reading.b, reading.c, n + 1) !== undefined) n++; return n; };
@@ -563,7 +583,7 @@
     if (document.visibilityState !== 'visible' || !reading) return;
     keepAwake();
     // if the phone silenced the voice while hidden, carry on from the same verse
-    if (!reading.paused && !speechSynthesis.speaking) { speakGen++; speakVerse(); }
+    if (!reading.paused && !speechSynthesis.speaking && !(window.Voices && window.Voices.busy())) { speakGen++; speakVerse(); }
   });
   function stopListen(continuing) {
     if (!reading) return;
@@ -572,6 +592,7 @@
     speakGen++;
     if (!continuing && wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     if ('speechSynthesis' in window) speechSynthesis.cancel();
+    if (window.Voices) window.Voices.stopAll();
     $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
     const b = $('#bListen'); if (b) b.textContent = '🔊';
     if (!continuing) ListenScreen.hide();
@@ -599,6 +620,7 @@
         <div class="ls-top"><span class="ls-clock" id="lsClock"></span><span class="ls-sleep" id="lsSleep"></span></div>
         <div class="ls-main">
           <div class="ls-ref" id="lsRef"></div>
+          <div class="ls-voice" id="lsVoice"></div>
           <p class="ls-verse" id="lsVerse"></p>
           <div class="ls-prog"><i id="lsProg"></i></div>
         </div>
@@ -673,7 +695,8 @@
       if (el) { el.classList.add('closing'); const e = el; setTimeout(() => e.remove(), 300); el = null; }
       const p = document.getElementById('listenPill'); if (p) p.remove();
     }
-    return { show: () => { if (!hidden) show(); else update(); }, update, hide };
+    const voice = name => { const v = el && el.querySelector('#lsVoice'); if (v) v.textContent = name ? `🎙️ Read by ${name}` : ''; };
+    return { show: () => { if (!hidden) show(); else update(); }, update, hide, voice };
   })();
 
   /* ---------------- Reading options ---------------- */
@@ -814,5 +837,6 @@
     return true;
   }
 
-  window.Reader = { render, open, openRef, stop: stopListen, openSearch, refreshRow: () => drawReadRow() };
+  window.Reader = { render, open, openRef, stop: stopListen, openSearch, refreshRow: () => drawReadRow(),
+    refreshVoices: () => window.Voices && window.Voices.loadIndex(true).then(() => { if (!cur) return; $$('#chapter .v').forEach(el => refreshVerse(+el.dataset.v)); }) };
 })();

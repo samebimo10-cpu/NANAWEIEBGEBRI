@@ -190,10 +190,96 @@
     src.connect(f).connect(g).connect(dry); src.start(); keep(src);
   }
 
+  /* ---------------- My music: sound files from this phone ----------------
+   * Played through an ordinary audio player, so phones usually keep it going with the screen locked,
+   * with play, pause and skip on the lock screen. */
+  const MINE = ['mine', '🎶', 'My music', 'Songs and recordings from this phone'];
+  let player = null, myList = [], myIndex = -1, myUrl = null;
+  const mine = { shuffle: false, repeat: false };
+  try { Object.assign(mine, JSON.parse(localStorage.getItem('lamp-mymusic') || '{}')); } catch (e) { /* defaults */ }
+  const saveMine = () => { try { localStorage.setItem('lamp-mymusic', JSON.stringify(mine)); } catch (e) { /* not saved */ } };
+  async function loadList() {
+    try { myList = (await window.MediaStore.list('music')).sort((a, b) => a.added - b.added); } catch (e) { myList = []; }
+    return myList;
+  }
+  function getPlayer() {
+    if (player) return player;
+    player = new Audio();
+    player.preload = 'auto';
+    player.addEventListener('ended', () => { if (kind === 'mine') nextMine(mine.repeat ? 0 : 1, true); });
+    player.addEventListener('error', () => { if (kind === 'mine') { window.Core.toast('This file could not be played. Skipping it.'); nextMine(1, true); } });
+    if ('mediaSession' in navigator) {
+      const ms = navigator.mediaSession;
+      const on = (a, f) => { try { ms.setActionHandler(a, f); } catch (e) { /* not supported */ } };
+      on('play', () => { if (kind === 'mine') player.play(); });
+      on('pause', () => { if (kind === 'mine') player.pause(); });
+      on('nexttrack', () => nextMine(1));
+      on('previoustrack', () => nextMine(-1));
+      on('stop', () => stop());
+    }
+    return player;
+  }
+  async function playMine(i) {
+    if (!myList.length) await loadList();
+    if (!myList.length) { window.Core.toast('Add some music from your phone first'); return; }
+    myIndex = (i + myList.length) % myList.length;
+    const meta = myList[myIndex];
+    let rec;
+    try { rec = await window.MediaStore.get('music', meta.id); } catch (e) { rec = null; }
+    if (!rec || !rec.blob) { window.Core.toast('That file is missing'); return; }
+    const p = getPlayer();
+    if (myUrl) URL.revokeObjectURL(myUrl);
+    myUrl = URL.createObjectURL(rec.blob);
+    p.src = myUrl; p.volume = volume;
+    kind = 'mine'; current = meta.name;
+    try { await p.play(); } catch (e) { if (e && e.name === 'NotAllowedError') window.Core.toast('Tap ▶ to start the music'); }
+    if ('mediaSession' in navigator && window.MediaMetadata) {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: meta.name, artist: 'My music', album: (window.Personal && window.Personal.appTitle()) || 'Lamp & Path' });
+    }
+    changed();
+  }
+  function nextMine(d, auto) {
+    if (!myList.length) return;
+    if (auto && !mine.repeat && !mine.shuffle && d > 0 && myIndex === myList.length - 1) { playMine(0); return; }   // the list repeats from the top
+    if (d === 0) { playMine(myIndex); return; }
+    if (mine.shuffle && myList.length > 1) { let j; do { j = Math.floor(Math.random() * myList.length); } while (j === myIndex); playMine(j); return; }
+    playMine(myIndex + d);
+  }
+  function stopMine() { if (player) { player.pause(); } }
+  async function addFiles(files) {
+    let added = 0, skipped = 0;
+    for (const f of files) {
+      if (!/^audio\//.test(f.type) && !/\.(mp3|m4a|aac|wav|ogg|oga|opus|flac|webm|weba)$/i.test(f.name)) { skipped++; continue; }
+      try {
+        await window.MediaStore.put('music', { id: window.MediaStore.uid('m'), name: f.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' '), type: f.type, size: f.size, blob: f, added: Date.now() + added });
+        added++;
+      } catch (e) { window.Core.toast('Not enough space on this phone for more music'); break; }
+    }
+    window.MediaStore.persist();
+    await loadList();
+    if (added) window.Core.toast(`🎶 Added ${added} file${added === 1 ? '' : 's'} to My music`);
+    if (skipped) window.Core.toast(`${skipped} file${skipped === 1 ? ' was' : 's were'} not audio and ${skipped === 1 ? 'was' : 'were'} skipped`);
+    return added;
+  }
+  async function removeMine(id) {
+    const i = myList.findIndex(x => x.id === id);
+    if (kind === 'mine' && i === myIndex) stop();
+    await window.MediaStore.del('music', id);
+    await loadList();
+    if (myIndex > i) myIndex--;
+  }
+
   /* ---------------- Controls ---------------- */
-  function start(k) {
+  function start(k, from) {
     k = OLD[k] || k;
     clearTimeout(previewTimer);
+    if (k === 'mine') {
+      if (kind && kind !== 'mine') fadeOutGenerated();
+      const i = from ? myList.findIndex(x => x.id === from) : (kind === 'mine' ? myIndex : 0);
+      playMine(i < 0 ? 0 : i);
+      return;
+    }
+    if (kind === 'mine') { stopMine(); kind = ''; }
     if (kind === k) return;
     const c = ctx(); if (!c) return;
     setup(c);
@@ -203,8 +289,15 @@
     ({ calm, stream, hymns, pad, rain }[k] || (() => {}))(c);
     changed();
   }
+  function fadeOutGenerated() {
+    if (!ac || !master) return;
+    master.gain.cancelScheduledValues(ac.currentTime);
+    master.gain.setValueAtTime(master.gain.value, ac.currentTime); master.gain.linearRampToValueAtTime(0, ac.currentTime + 1);
+    setTimeout(() => { if (kind === 'mine' || !kind) clear(); }, 1100);
+  }
   function stop() {
     clearTimeout(previewTimer);
+    if (kind === 'mine') { stopMine(); kind = ''; current = ''; if ('mediaSession' in navigator) navigator.mediaSession.metadata = null; changed(); return; }
     if (!ac || !master || !kind) return;
     kind = ''; current = '';
     master.gain.cancelScheduledValues(ac.currentTime);
@@ -214,11 +307,12 @@
   }
   function setVolume(v) {
     volume = Math.max(0, Math.min(1, v));
+    if (player) player.volume = volume;
     if (ac && master && kind) { master.gain.cancelScheduledValues(ac.currentTime); master.gain.setTargetAtTime(volume, ac.currentTime, 0.2); }
   }
   /* a short sample in the settings */
   function preview(k) { start(k); clearTimeout(previewTimer); previewTimer = setTimeout(stop, 8000); }
-  const track = k => TRACKS.find(t => t[0] === (OLD[k] || k));
+  const track = k => (OLD[k] || k) === 'mine' ? MINE : TRACKS.find(t => t[0] === (OLD[k] || k));
 
   /* ---------------- The music panel and the "now playing" bar ---------------- */
   const store = () => (window.Core.state.readerOpts = window.Core.state.readerOpts || {});
@@ -232,10 +326,12 @@
         <div class="track-list">${TRACKS.map(([k, ic, name, sub]) => `<button class="track ${kind === k ? 'on' : ''}" data-k="${k}">
           <span class="tr-ic">${ic}</span><span class="tr-main"><b>${esc(name)}</b><small>${esc(kind === k && current ? 'Now playing: ' + current : sub)}</small></span>
           <span class="tr-btn">${kind === k ? '⏸' : '▶'}</span></button>`).join('')}</div>
+        <h3 class="section-title">🎶 My music</h3>
+        <div id="myMusic"><p class="muted small">Loading…</p></div>
         <label class="flabel" for="musVol">Volume</label>
         <input type="range" id="musVol" min="0" max="100" value="${Math.round(volume * 100)}" class="vol">
         <label class="check-row"><input type="checkbox" id="musListen" ${o.ambient ? 'checked' : ''}> Play ${esc((track(o.ambient || kind || 'calm') || TRACKS[0])[2].toLowerCase())} when I listen to the Bible read aloud</label>
-        <p class="muted small">Hymn tunes are in the public domain. All music here is generated, not recorded.</p>
+        <p class="muted small">The hymn tunes are in the public domain, and the sounds above are generated on your phone. Music you add stays on this phone and is never uploaded.</p>
       </div>`;
     window.UI.openModal(html());
     const bind = () => {
@@ -248,7 +344,43 @@
       document.getElementById('musVol').addEventListener('change', () => window.Core.save());
       document.getElementById('musListen').addEventListener('change', e => { store().ambient = e.target.checked ? (kind || 'calm') : ''; window.Core.save(); });
     };
-    const refresh = () => { const body = document.getElementById('modalBody'); if (body && body.querySelector('.music-panel')) { body.innerHTML = html(); bind(); } };
+    const drawMine = async () => {
+      const host = document.getElementById('myMusic'); if (!host) return;
+      await loadList();
+      const use = await window.MediaStore.usage();
+      if (!document.getElementById('myMusic')) return;
+      const total = myList.reduce((a, x) => a + (x.size || 0), 0);
+      host.innerHTML = `
+        <p class="muted small">Play your own songs, worship music or sermons from this phone. They play like a music player, so they can usually keep going with the screen locked.</p>
+        <div class="row gap wrap">
+          <label class="btn primary small add-music">＋ Add music from this phone<input type="file" id="musFiles" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg,.opus,.flac" multiple hidden></label>
+          ${myList.length ? `<button class="btn ghost small ${kind === 'mine' ? 'on' : ''}" id="musPlayAll">${kind === 'mine' ? '⏸ Pause' : '▶ Play all'}</button>
+          <button class="btn ghost small ${mine.shuffle ? 'on' : ''}" id="musShuffle" aria-pressed="${mine.shuffle}">🔀 Shuffle</button>
+          <button class="btn ghost small ${mine.repeat ? 'on' : ''}" id="musRepeat" aria-pressed="${mine.repeat}">🔂 Repeat one</button>` : ''}
+        </div>
+        ${myList.length ? `<div class="my-list">${myList.map((m, i) => `<div class="my-row ${kind === 'mine' && i === myIndex ? 'on' : ''}">
+          <button class="my-play" data-id="${m.id}" aria-label="Play ${esc(m.name)}">${kind === 'mine' && i === myIndex && player && !player.paused ? '⏸' : '▶'}</button>
+          <span class="my-name">${esc(m.name)}<small>${window.MediaStore.size(m.size || 0)}</small></span>
+          <button class="my-del" data-del="${m.id}" aria-label="Remove ${esc(m.name)}">✕</button></div>`).join('')}</div>
+          <p class="muted small">${myList.length} file${myList.length === 1 ? '' : 's'} · ${window.MediaStore.size(total)}${use && use.quota ? ` · space left on this phone for the app: about ${window.MediaStore.size(Math.max(0, use.quota - use.usage))}` : ''}</p>`
+        : '<p class="muted small">No music added yet.</p>'}`;
+      host.querySelector('#musFiles').addEventListener('change', async e => { const n = await addFiles([...e.target.files]); e.target.value = ''; drawMine(); if (n && !kind) start('mine'); });
+      const pa = host.querySelector('#musPlayAll'); if (pa) pa.addEventListener('click', () => { if (kind === 'mine' && player && !player.paused) { player.pause(); drawMine(); } else start('mine'); });
+      const sh = host.querySelector('#musShuffle'); if (sh) sh.addEventListener('click', () => { mine.shuffle = !mine.shuffle; saveMine(); drawMine(); });
+      const rp = host.querySelector('#musRepeat'); if (rp) rp.addEventListener('click', () => { mine.repeat = !mine.repeat; saveMine(); drawMine(); });
+      host.querySelectorAll('.my-play').forEach(b => b.addEventListener('click', () => {
+        const i = myList.findIndex(x => x.id === b.dataset.id);
+        if (kind === 'mine' && i === myIndex && player) { player.paused ? player.play() : player.pause(); setTimeout(drawMine, 50); }
+        else start('mine', b.dataset.id);
+      }));
+      host.querySelectorAll('.my-del').forEach(b => b.addEventListener('click', async () => {
+        const m = myList.find(x => x.id === b.dataset.del);
+        if (!(await window.UI.ask(`Remove "${m.name}" from My music? (The original file on your phone is not touched.)`, 'Remove'))) return;
+        await removeMine(m.id); drawMine();
+      }));
+    };
+    const refresh = () => { const body = document.getElementById('modalBody'); if (body && body.querySelector('.music-panel')) { body.innerHTML = html(); bind(); drawMine(); } };
+    drawMine();
     bind();
     const off = () => refresh();
     listeners.push(off);
@@ -265,6 +397,13 @@
     el.innerHTML = `<button class="mp-open" aria-label="Music settings"><span>${t[1]}</span><span class="mp-t">${window.Core.escapeHTML(current || t[2])}</span></button><button class="mp-stop" aria-label="Stop the music">⏸</button>`;
     el.querySelector('.mp-open').addEventListener('click', openPanel);
     el.querySelector('.mp-stop').addEventListener('click', stop);
+    if (kind === 'mine' && player) {
+      const b = el.querySelector('.mp-stop');
+      b.textContent = player.paused ? '▶' : '⏸';
+      b.onclick = e => { e.stopImmediatePropagation(); player.paused ? player.play() : player.pause(); };
+      const skip = document.createElement('button'); skip.className = 'mp-next'; skip.textContent = '⏭'; skip.setAttribute('aria-label', 'Next song');
+      skip.addEventListener('click', () => nextMine(1)); el.appendChild(skip);
+    }
   }
   listeners.push(pill);
   if (window.Core && window.Core.state && typeof window.Core.state.musicVolume === 'number') volume = window.Core.state.musicVolume;
@@ -276,5 +415,9 @@
     return Math.sqrt(d.reduce((a, x) => a + x * x, 0) / d.length);
   }
 
-  window.Ambient = { openPanel, level, TRACKS, HYMNS, start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
+  // keep the bar and panel in step with the player (lock-screen controls can pause it too)
+  const sync = () => { if (kind === 'mine') changed(); };
+  setTimeout(() => { const p = getPlayer(); p.addEventListener('play', sync); p.addEventListener('pause', sync); }, 0);
+
+  window.Ambient = { openPanel, addFiles, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNS, start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
 })();
