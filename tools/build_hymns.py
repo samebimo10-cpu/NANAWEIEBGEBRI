@@ -44,10 +44,42 @@ HYMNS = [
     (23, 'Standing on the Promises', 's/StandingOnThePromises', 'PROMISES', 'Bb', 'A', '4/4', 'I – IV – I – V7 – I'),
     (24, 'Count Your Blessings', 'c/CountYourBlessings', 'BLESSINGS', 'Eb', 'D', '2/4', 'I – V – I – IV – V – I'),
     (25, 'Praise to the Lord, the Almighty', 'l/LobeDenHerren', 'LOBE DEN HERREN', 'G', 'F', '3/4', 'I – IV – V – vi – I'),
-    # two the app already played before the list above
-    (26, 'Joyful, Joyful, We Adore Thee', 'o/OdeToJoy', 'HYMN TO JOY', 'G', 'F', '4/4', 'I – V – I'),
-    (27, 'Jesus Loves Me', 'j/JesusLovesMe', 'JESUS LOVES ME', 'C', 'D', '4/4', 'I – IV – I – V – I'),
+    # two the app already played before the lists here
+    (51, 'Joyful, Joyful, We Adore Thee', 'o/OdeToJoy', 'HYMN TO JOY', 'G', 'F', '4/4', 'I – V – I'),
+    (52, 'Jesus Loves Me', 'j/JesusLovesMe', 'JESUS LOVES ME', 'C', 'D', '4/4', 'I – IV – I – V – I'),
 ]
+# African songs and choruses: number, title, language, freehymns file (when the tune is a public-domain hymn),
+# key (and easy key), time, keyboard style, chords. Without a public-domain score the app plays a keyboard backing
+# in this style, key and progression for singing along (the tunes of these choruses are not in any free score,
+# and some are recent songs whose tunes are under copyright).
+SONGS = [
+    (26, "Åfọpẹ́ F'Ọ́lọ́run (Now Thank We All Our God)", 'Yoruba / Classic', 'n/NunDankett', 'F', 'Eb', '4/4', 'Hymnal March', 'I - V - I - IV - V7 - I'),
+    (27, 'Báwo Ni Ma Ṣe Dupe (How Can I Express My Thanks)', 'Yoruba', None, 'G', 'F', '4/4', 'Afro-Highlife', 'I - IV - V - I'),
+    (28, 'Káṣẹ́ Mọ́gbá (Gba Gbogbo Ogo)', 'Yoruba', None, 'C', 'D', '4/4', 'Slow Worship', 'I - vi - IV - V'),
+    (29, "Ọlọ́run T'ó Dá Àwọn Òkè Ńlá", 'Yoruba', None, 'F', 'G', '4/4', 'Traditional Hymn', 'I - IV - I - V7 - I'),
+    (30, 'Ẹ Yọ̀ Nínú Olúwa (Rejoice in the Lord)', 'Yoruba', None, 'G', 'F', '3/4', 'Joyful', 'I - IV - V - I'),
+    (31, "N'ígbà Ti Mọ́ Rò Ìfẹ́ Rẹ̀ (When I Contemplate His Love)", 'Yoruba', None, 'Eb', 'D', '4/4', 'Meditative', 'I - IV - I - V7 - I'),
+    (32, 'Nitori Ti O Feran Mi', 'Yoruba', None, 'C', 'D', '4/4', 'Hymnal Call-Response', 'I - V - vi - IV'),
+    (33, 'Imela, Imela (Thank You, Thank You)', 'Igbo', None, 'C', 'D', '4/4', 'African Ballad', 'I - V - vi - IV'),
+    (34, 'Nara Ekele Mo (Accept My Thanksgiving)', 'Igbo', None, 'F', 'G', '4/4', 'Mid-Tempo Praise', 'I - IV - V - I'),
+    (35, 'Ekwueme (The One Who Keeps His Word)', 'Igbo', None, 'D', 'C', '4/4', 'Slow Worship', 'vi - IV - I - V'),
+    (36, 'Chukwu Nna, Anyị A Bịawala', 'Igbo', None, 'G', 'F', '4/4', 'Processional', 'I - IV - V - I'),
+    (37, 'Otuto Dirichukwu N’elu Kakasi Elu', 'Igbo', None, 'F', 'G', '3/4', 'Classical Mass', 'I - IV - I - V7 - I'),
+    (38, 'Kosisochukwu (As It Pleases God)', 'Igbo', None, 'C', 'D', '4/4', 'Soft Worship', 'I - vi - IV - V'),
+    (39, 'Ngozi Bụ Nke Dị Dị mma', 'Igbo', None, 'G', 'F', '4/4', 'Praise', 'I - IV - V - I'),
+    (40, 'Osó-o, Osó-o (Nagode)', 'Hausa / Indigenous', None, 'C', 'D', '4/4', 'Afro-Beat Praise', 'I - IV - V - I'),
+    (41, 'Nagode Sarki Yesu (Thank You King Jesus)', 'Hausa', None, 'G', 'F', '4/4', 'Highlife/Praise', 'I - IV - I - V'),
+    (42, 'Yesu Mai Ceto (Jesus the Savior)', 'Hausa', None, 'F', 'G', '4/4', 'Worship', 'I - vi - IV - V'),
+    (43, 'Ubangiji Shi Ne Makiyaya Na (The Lord Is My Shepherd)', 'Hausa', 'c/Crimond', 'D', 'C', '3/4', 'Psalm Tune', 'I - IV - I - V - I'),
+    (44, 'Kumbaya, My Lord', 'African-American / Gullah', None, 'C', 'D', '4/4', 'Folk Hymn', 'I - IV - I - V7'),
+    (45, 'Siyahamba (We Are Marching in the Light of God)', 'Zulu / South African', None, 'G', 'F', '4/4', 'Syncopated March', 'I - IV - V7 - I'),
+    (46, 'Senzeni Na? (What Have We Done?)', 'Xhosa / Zulu', None, 'F', 'G', '4/4', 'Choral Hymn', 'I - IV - I - V'),
+    (47, 'What Shall I Render unto Jehovah?', 'Indigenous chorus', None, 'G', 'F', '4/4', 'Highlife / Praise', 'I - IV - V - I'),
+    (48, 'Praising the Lord Always', 'Indigenous chorus', None, 'F', 'G', '4/4', 'Afro-Praise', 'I - IV - I - V'),
+    (49, 'Master Jesus, You Are the Pillar That Holds My Life', 'Indigenous chorus', None, 'C', 'D', '4/4', 'Slow Praise', 'I - IV - V - I'),
+    (50, 'We Give You All the Glory, We Worship You Our Lord', 'Indigenous chorus', None, 'F', 'G', '4/4', 'Worship', 'I - IV - I - V - I'),
+]
+
 # Great Is Thy Faithfulness (Runyan, 1923) and How Great Thou Art (Hine, 1949) are still under copyright in most
 # countries, so the app plays only their chord progressions (from the table above), not the melodies.
 
@@ -243,10 +275,16 @@ def nearest_shift(src, dst):
 def build():
     out = []
     problems = []
-    for num, title, path, tune, key, easy, ts, prog in HYMNS:
-        item = dict(n=num, title=title, tune=tune, key=key, easy=easy, ts=ts, prog=prog)
+    rows = [(num, title, None, path, tune, key, easy, ts, None, prog) for num, title, path, tune, key, easy, ts, prog in HYMNS]
+    rows += [(num, title, lang, path, None, key, easy, ts, style, prog.replace(' - ', ' – ')) for num, title, lang, path, key, easy, ts, style, prog in SONGS]
+    rows.sort(key=lambda r: r[0])
+    for num, title, lang, path, tune, key, easy, ts, style, prog in rows:
+        item = dict(n=num, title=title, key=key, easy=easy, ts=ts, prog=prog)
+        if tune: item['tune'] = tune
+        if lang: item['lang'] = lang
+        if style: item['style'] = style
         if not path:
-            item['chordsOnly'] = True
+            item['backing'] = style or 'Traditional Hymn'
             out.append(item)
             continue
         h = parse_file(os.path.join(SRC, path + '.abc'))

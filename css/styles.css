@@ -1277,3 +1277,4 @@ body.listening #modal { z-index: 80; }
 .hy-name small { display: block; color: var(--muted); font-size: 0.75rem; margin-top: 2px; }
 .hy-play { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.08); color: inherit; font-size: 1rem; cursor: pointer; }
 .hy-row.on .hy-play { background: var(--gold); color: #2a1a06; }
+.hy-show .chip { color: inherit; cursor: pointer; }

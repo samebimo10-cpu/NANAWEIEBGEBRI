@@ -10,7 +10,7 @@
   const TRACKS = [
     ['calm', '🎹', 'Deep calm piano', 'Slow, warm piano for study and prayer'],
     ['stream', '🏞️', 'Running stream', 'Flowing water and gentle trickles'],
-    ['hymns', '⛪', 'Hymns', '27 well-loved hymns in four parts, played on piano'],
+    ['hymns', '⛪', 'Hymns & songs', 'Hymns in four parts, and African songs with keyboard backing'],
     ['pad', '🎻', 'Soft strings', 'A warm, slowly changing chord'],
     ['rain', '🌧️', 'Rain', 'Steady, soft rain']
   ];
@@ -22,22 +22,38 @@
   const changed = () => listeners.forEach(f => f(kind));
 
   function ctx() {
-    if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ac = new AC(); }
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+      // 'playback' asks the phone for larger sound buffers: steadier sound, no crackle when it is busy
+      try { ac = new AC({ latencyHint: 'playback' }); } catch (e) { ac = new AC(); }
+    }
     if (ac.state === 'suspended') ac.resume();
     return ac;
   }
-  /* A soft hall: a convolution reverb from a decaying noise impulse. */
+  /* A soft hall: a convolution reverb from a decaying impulse that grows darker as it fades (no hiss),
+     then a gentle limiter so loud chords never distort. */
   function setup(c) {
     if (master) return;
-    master = c.createGain(); master.gain.value = 0; master.connect(c.destination);
+    const limiter = c.createDynamicsCompressor();
+    limiter.threshold.value = -10; limiter.knee.value = 8; limiter.ratio.value = 8; limiter.attack.value = 0.004; limiter.release.value = 0.25;
+    limiter.connect(c.destination);
+    master = c.createGain(); master.gain.value = 0; master.connect(limiter);
     meter = c.createAnalyser(); meter.fftSize = 2048; master.connect(meter);
-    dry = c.createGain(); dry.gain.value = 0.75; dry.connect(master);
+    dry = c.createGain(); dry.gain.value = 0.8; dry.connect(master);
     verb = c.createConvolver();
-    const len = Math.floor(c.sampleRate * 3.2), ir = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+    const len = Math.floor(c.sampleRate * 2.4), ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch); let lp = 0;
+      for (let i = 0; i < len; i++) {
+        const x = i / len, k = 0.35 * Math.pow(1 - x, 2) + 0.02;   // a low-pass that closes over time
+        lp += k * ((Math.random() * 2 - 1) - lp);
+        d[i] = lp * Math.pow(1 - x, 3) * (i < 40 ? i / 40 : 1);
+      }
+    }
     verb.buffer = ir;
-    const wet = c.createGain(); wet.gain.value = 0.55;
+    const wet = c.createGain(); wet.gain.value = 1.1;
     verb.connect(wet).connect(master);
+    warmPiano(c);
   }
   const every = (fn, ms) => { timers.push(setInterval(fn, ms)); };
   const later = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
@@ -48,20 +64,54 @@
   }
   const keep = n => { nodes.push(n); if (nodes.length > 400) nodes.splice(0, 200); return n; };
 
-  /* ---------------- A gentle piano voice ---------------- */
-  function piano(c, midi, t, vel = 0.5, len = 4) {
-    const f = hz(midi), out = c.createGain(), tone = c.createBiquadFilter();
-    tone.type = 'lowpass'; tone.frequency.value = 1800 + vel * 1600; tone.Q.value = 0.3;
-    out.connect(tone); tone.connect(dry); tone.connect(verb);
-    // a few partials, slightly stretched like real strings, each fading at its own pace
+  /* ---------------- A gentle piano voice ----------------
+   * Each note is drawn once, ahead of time, into a short recording (every third key; the keys between play it a
+   * little faster or slower). Playing a note is then one light sound source instead of a stack of oscillators,
+   * so phones keep up and the sound stays clean. Until the recordings are ready, the notes are made live. */
+  const SR = 22050, samples = new Map();
+  const anchor = m => Math.max(24, Math.min(105, Math.round((m - 21) / 3) * 3 + 21));
+  function partials(c, out, midi, t, vel, len) {
+    const f = hz(midi);
     [[1, 1, 1], [2, 0.42, 0.75], [3, 0.18, 0.55], [4, 0.08, 0.4], [5, 0.04, 0.3]].forEach(([h, amp, decay]) => {
       const o = c.createOscillator(), g = c.createGain();
       o.type = 'sine'; o.frequency.value = f * h * (1 + 0.0004 * h * h);
       const a = vel * amp * 0.27, d = Math.max(0.6, len * decay * (midi > 72 ? 0.7 : 1));
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 0.012);
       g.gain.exponentialRampToValueAtTime(a * 0.35, t + 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.05); keep(o);
+      o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.05); if (c === ac) keep(o);
     });
+  }
+  function warmPiano(c) {
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC) return;
+    for (let m = 24; m <= 105; m += 3) {
+      if (samples.has(m)) continue;
+      const secs = m < 60 ? 6 : m < 76 ? 5 : 3.5;
+      try {
+        const oc = new OAC(1, Math.ceil(SR * secs), SR), tone = oc.createBiquadFilter();
+        tone.type = 'lowpass'; tone.frequency.value = Math.min(2600, hz(m) * 9); tone.Q.value = 0.3; tone.connect(oc.destination);
+        partials(oc, tone, m, 0, 1, secs);
+        samples.set(m, 'pending');
+        Promise.resolve(oc.startRendering()).then(buf => samples.set(m, buf)).catch(() => samples.delete(m));
+      } catch (e) { return; }
+    }
+  }
+  function piano(c, midi, t, vel = 0.5, len = 4) {
+    const a = anchor(midi), buf = samples.get(a);
+    if (buf && typeof buf === 'object') {
+      const s = c.createBufferSource(), g = c.createGain();
+      s.buffer = buf; s.playbackRate.value = Math.pow(2, (midi - a) / 12);
+      // the recording fades by itself; let the damper come down at the end of the note
+      const end = t + Math.max(0.5, len * (midi > 72 ? 0.7 : 1));
+      g.gain.setValueAtTime(vel, t); g.gain.setTargetAtTime(0, end, 0.18);
+      s.connect(g); g.connect(dry); g.connect(verb);
+      s.start(t); s.stop(Math.min(end + 1.2, t + buf.duration / s.playbackRate.value)); keep(s);
+      return;
+    }
+    const out = c.createGain(), tone = c.createBiquadFilter();
+    tone.type = 'lowpass'; tone.frequency.value = 1800 + vel * 1600; tone.Q.value = 0.3;
+    out.connect(tone); tone.connect(dry); tone.connect(verb);
+    partials(c, out, midi, t, vel, len);
   }
 
   /* ---------------- 1. Deep calm piano ---------------- */
@@ -129,12 +179,13 @@
    * 27 public-domain hymns in four parts (js/data/hymns.js), played on the piano in the key from the hymn list.
    * Play one hymn on repeat, or the hymns you tick one after another in a loop. */
   const KEYPC = { C: 0, 'C#': 1, Db: 1, D: 2, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
-  const hs = { sel: null, one: 0, easy: false, shuffle: false };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
+  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all' };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
   try { Object.assign(hs, JSON.parse(localStorage.getItem('lamp-hymns') || '{}')); } catch (e) { /* defaults */ }
   const saveHymns = () => { try { localStorage.setItem('lamp-hymns', JSON.stringify(hs)); } catch (e) { /* not saved */ } };
   const HYMNAL = () => window.HYMNAL || [];
   const hymnBy = n => HYMNAL().find(h => h.n === n);
-  const ticked = () => HYMNAL().filter(h => !hs.sel || hs.sel.includes(h.n));
+  const shown = () => HYMNAL().filter(h => hs.show === 'hymns' ? !h.lang : hs.show === 'african' ? !!h.lang : true);
+  const ticked = () => shown().filter(h => !hs.sel || hs.sel.includes(h.n));   // ticked, in the list being shown
   const keyName = k => k.replace('b', '♭').replace('#', '♯') + ' major';
   const hymnKey = h => hs.easy ? h.easy : h.key;
   function shiftFor(h) { const s = (KEYPC[hymnKey(h)] - KEYPC[h.key] + 12) % 12; return s > 6 ? s - 12 : s; }
@@ -142,29 +193,108 @@
   const VEL = [0.46, 0.19, 0.19, 0.3];    // melody clear, inner voices soft, a warm bass
   const DEG = { I: [0, 4, 7], ii: [2, 5, 9], iii: [4, 7, 11], IV: [5, 9, 12], V: [7, 11, 14], vi: [9, 12, 16] };
 
-  /* For the two hymns whose tunes are still under copyright: a quiet meditation on their chord progression only. */
-  function chordPiece(h) {
-    const T = 24, [bn, bd] = h.ts.split('/').map(Number);
-    const beat = bd === 8 ? T / 2 : T * 4 / bd, bar = bn * beat;
-    const steps = h.prog.split(/\s*[–-]\s*/).map(x => x.trim()).filter(Boolean);
-    const root = 43 + ((KEYPC[h.key] - 7 + 12) % 12);   // G2 to F#3
-    const notes = []; let t = 0, top = root + 28;
-    const chordBar = (deg, seventh) => {
-      const tones = deg.map(x => root + 12 + x).concat(seventh ? [root + 12 + deg[0] + 10] : []);
-      notes.push([t, bar, root + deg[0] - (deg[0] > 6 ? 12 : 0), 3]);
-      // a soft top line that moves to the nearest note of each chord
-      const cands = []; deg.forEach(x => [24, 36].forEach(o => cands.push(root + x + o)));
-      top = cands.filter(m => m >= 64 && m <= 79).sort((a, z) => Math.abs(a - top) - Math.abs(z - top))[0] || top;
-      notes.push([t, bar, top, 0]);
-      for (let i = 0; i < bn; i++) notes.push([t + i * beat, beat * 1.5, tones[(i * 2 + (i > 2 ? 1 : 0)) % tones.length], 1]);
+  /* ---------------- Keyboard backing ----------------
+   * For songs with no public-domain score (and the two hymns whose tunes are still under copyright): the song's
+   * chords in its key, played in its keyboard style, for singing along. */
+  const STYLE = st => {
+    st = (st || '').toLowerCase();
+    if (/afro-?beat/.test(st)) return 'afrobeat';
+    if (/highlife|afro-praise|mid-tempo|joyful|^praise/.test(st)) return 'highlife';
+    if (/syncopated/.test(st)) return 'syncmarch';
+    if (/march|processional/.test(st)) return 'march';
+    if (/ballad/.test(st)) return 'ballad';
+    if (/worship|meditative|slow praise/.test(st)) return 'worship';
+    return 'hymn';
+  };
+  const STYLE_BPM = { hymn: 76, march: 96, syncmarch: 104, highlife: 112, afrobeat: 116, worship: 66, ballad: 72 };
+  // a close chord near middle C, moving as little as possible from the last one
+  function voicing(pcs, prev) {
+    let best = null, cost = 1e9;
+    for (let lo = 53; lo <= 61; lo++) {
+      const ch = pcs.map(pc => lo + ((pc - lo) % 12 + 12) % 12).sort((x, y) => x - y);
+      const c2 = prev ? ch.reduce((acc, m, i) => acc + Math.abs(m - prev[Math.min(i, prev.length - 1)]), 0) : Math.abs(ch[0] - 57);
+      if (c2 < cost) { cost = c2; best = ch; }
+    }
+    return best;
+  }
+  function backing(h) {
+    const sty = STYLE(h.backing), T = 24;
+    const [bn, bd] = (h.ts.match(/(\d+)\/(\d+)/) || [0, 4, 4]).slice(1).map(Number);
+    const beat = bd === 8 ? T / 2 : T * 4 / bd, bar = bn * beat, three = bn === 3;
+    const steps = h.prog.split(/\s*[–-]\s*/).map(x => x.trim()).filter(Boolean).map(x => ({ deg: DEG[x.replace(/[^IViv]/g, '')] || DEG.I, sev: /7/.test(x) }));
+    const key = KEYPC[h.key], notes = [];
+    const add = (st, du, m, v, vel) => notes.push([st, du, m, v, vel]);
+    let t = 0, prev = null, top = 72;
+    const rounds = Math.max(2, Math.round(16 / steps.length));
+    const playBar = ({ deg, sev }, last) => {
+      const pcs = deg.map(x => (key + x) % 12).concat(sev ? [(key + deg[0] + 10) % 12] : []);
+      const ch = voicing(pcs, prev); prev = ch;
+      const bass = 36 + (key + deg[0]) % 12, fifth = bass + 7, hi = ch.map(m => m + 12);
+      const cands = []; pcs.forEach(pc => [60, 72].forEach(o => cands.push(o + pc)));
+      top = cands.filter(m => m >= 64 && m <= 79).sort((x, y) => Math.abs(x - top) - Math.abs(y - top))[0] || top;
+      const chord = (st, du, vel) => ch.forEach(m => add(t + st, du, m, 1, vel));
+      if (last) { add(t, bar * 2, bass, 3, 0.3); add(t, bar * 2, bass - 12, 3, 0.18); chord(0, bar * 2, 0.17); add(t, bar * 2, top, 0, 0.26); t += bar * 2; return; }
+      if (sty === 'hymn') {
+        const hits = three ? [[0, 48], [48, 24]] : bn === 4 ? [[0, 48], [48, 48]] : [[0, bar]];
+        hits.forEach(([st, du]) => { add(t + st, du, bass, 3, 0.4); add(t + st, du, bass - 12, 3, 0.16); chord(st, du, 0.26); add(t + st, du, top, 0, 0.4); });
+      } else if (sty === 'worship' || sty === 'ballad') {
+        add(t, bar, bass, 3, 0.34); chord(0, bar, 0.1);
+        const arp = [ch[0], ch[1], ch[2], ch[0] + 12, ch[2], ch[1]];
+        for (let i = 0; i < bn * 2; i++) add(t + i * beat / 2, beat * 1.4, arp[i % arp.length], 1, i % 2 ? 0.16 : 0.21);
+        if (sty === 'ballad') { add(t, 1, 1, 4, 0.5); add(t + beat * (three ? 2 : 2), 1, 5, 4, 0.3); add(t + beat * (three ? 2.5 : 2.5), 1, 1, 4, 0.3); }
+      } else if (sty === 'march' || sty === 'syncmarch') {
+        add(t, beat, bass, 3, 0.32); if (!three) add(t + beat * 2, beat, fifth, 3, 0.26);
+        for (let i = three ? 1 : 0; i < bn; i++) chord(i * beat, beat * 0.75, i === 0 ? 0.2 : 0.15);
+        if (sty === 'syncmarch') {
+          chord(beat * 1.5, beat * 0.5, 0.14);
+          for (let i = 0; i < bn; i++) { add(t + i * beat, 1, i % 2 ? 5 : 1, 4, i % 2 ? 0.45 : 0.6); add(t + i * beat + beat / 2, 1, 2, 4, 0.35); }
+        }
+      } else {   // highlife and afro-beat: bouncing bass, guitar-like picking on the off-beats, light percussion
+        const e = beat / 2;
+        if (three) { add(t, beat, bass, 3, 0.32); chord(beat, e, 0.15); chord(beat * 2, e, 0.15); }
+        else {
+          add(t, e * 1.5, bass, 3, 0.32); add(t + e * 2.5, e, fifth, 3, 0.24); add(t + e * 4, e * 1.5, bass + 12, 3, 0.26); add(t + e * 7, e, fifth, 3, 0.22);
+          const pick = [hi[2], hi[1], hi[2], hi[0], hi[2], hi[1], hi[2], hi[0]];
+          pick.forEach((m, i) => add(t + i * e, e * 0.9, m, 1, i % 2 ? 0.15 : 0.1));
+          chord(e * 3, e, 0.13); chord(e * 5, e, 0.13);
+        }
+        const div = sty === 'afrobeat' ? beat / 4 : e;
+        for (let x = 0; x < bar; x += div) add(t + x, 1, 2, 4, (x / div) % 2 ? 0.5 : 0.3);   // shaker
+        add(t, 1, 1, 4, 0.6); if (!three) add(t + e * 3, 1, 1, 4, 0.45);                       // kick
+        (three ? [e * 3, e * 5] : sty === 'afrobeat' ? [e * 1.5, e * 3, e * 5.5, e * 7] : [e * 3, e * 6, e * 7]).forEach((x, i) => add(t + x, 1, i % 2 ? 4 : 3, 4, 0.45));   // congas
+        if (sty === 'afrobeat' && !three) [beat, beat * 3].forEach(x => add(t + x, 1, 5, 4, 0.4));
+      }
       t += bar;
     };
-    for (let round = 0; round < 2; round++) steps.forEach(st => { const d = DEG[st.replace(/[^IViv]/g, '')] || DEG.I; chordBar(d, /7/.test(st)); chordBar(d, /7/.test(st)); });
-    notes.push([t, bar * 2, root, 3], [t, bar * 2, root + 12 + 4, 1], [t, bar * 2, root + 12 + 7, 1], [t, bar * 2, root + 24, 0]);
-    return { notes, len: t + bar * 2, bpm: bd === 8 ? 100 : 76 };
+    for (let r = 0; r < rounds; r++) steps.forEach(stp => playBar(stp, false));
+    playBar({ deg: DEG.I, sev: false }, true);
+    notes.sort((x, y) => x[0] - y[0]);
+    return { notes, len: t, bpm: STYLE_BPM[sty], pace: 1 };
+  }
+  /* light percussion: 1 kick, 2 shaker, 3 high conga, 4 low conga, 5 rim */
+  let noiseBuf = null;
+  function drum(c, type, t, vel) {
+    vel *= 0.55;
+    const g = c.createGain(); g.connect(dry);
+    if (type === 1) {
+      const o = c.createOscillator(); o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.12);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vel, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+      o.connect(g); o.start(t); o.stop(t + 0.36); keep(o);
+    } else if (type === 2 || type === 5) {
+      if (!noiseBuf) noiseBuf = noiseBuffer(c, 1, false);
+      const s = c.createBufferSource(), f = c.createBiquadFilter(), dur = type === 2 ? 0.045 : 0.07;
+      s.buffer = noiseBuf; f.type = type === 2 ? 'highpass' : 'bandpass'; f.frequency.value = type === 2 ? 6500 : 1900; f.Q.value = type === 2 ? 0.7 : 2;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vel * (type === 2 ? 0.16 : 0.35), t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f).connect(g); s.start(t, Math.random() * 0.9); s.stop(t + dur + 0.01); keep(s);
+    } else {
+      const o = c.createOscillator(), f0 = type === 3 ? 340 : 230;
+      o.frequency.setValueAtTime(f0 * 1.35, t); o.frequency.exponentialRampToValueAtTime(f0, t + 0.03);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vel * 0.5, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g); g.connect(verb); o.start(t); o.stop(t + 0.22); keep(o);
+    }
   }
   function score(h) {
-    if (h.chordsOnly) return chordPiece(h);
+    if (h.backing) return backing(h);
     const a = h.notes, notes = [];
     for (let i = 0; i < a.length; i += 4) notes.push([a[i], a[i + 1], a[i + 2], a[i + 3]]);
     return { notes, len: h.len, bpm: h.bpm };
@@ -183,7 +313,7 @@
       const h = hymnBy(order[pos]); hymnNow = h.n;
       current = h.title + (hs.one ? ' (repeat)' : '');
       changed();
-      const d = score(h), sh = shiftFor(h), spt = 60 / (d.bpm * PACE) / 24;   // seconds per tick
+      const d = score(h), sh = shiftFor(h), spt = 60 / (d.bpm * (d.pace || PACE)) / 24;   // seconds per tick
       const t0 = c.currentTime + 0.4, notes = d.notes;
       let k = 0;
       // schedule a little ahead at a time, so a long hymn does not start hundreds of sounds at once
@@ -191,8 +321,9 @@
         if (token !== hymnToken || kind !== 'hymns') return;
         const horizon = c.currentTime + 1.6;
         while (k < notes.length && t0 + notes[k][0] * spt < horizon) {
-          const [st, du, m, v] = notes[k++];
-          piano(c, m + sh, Math.max(t0 + st * spt, c.currentTime + 0.01), VEL[v] || 0.2, Math.max(1.2, du * spt * 1.3 + 0.4));
+          const [st, du, m, v, vel] = notes[k++], at = Math.max(t0 + st * spt, c.currentTime + 0.01);
+          if (v === 4) { if (hs.drums !== false) drum(c, m, at, vel); }
+          else piano(c, m + sh, at, vel || VEL[v] || 0.2, Math.max(du * spt < 0.3 ? 0.6 : 1.2, du * spt * 1.3 + 0.4));
         }
         if (k >= notes.length && c.currentTime > t0 + d.len * spt + 2.2) playAt(hs.one ? pos : pos + 1);   // a short rest, then on
       };
@@ -375,26 +506,30 @@
 
   /* ---------------- The music panel and the "now playing" bar ---------------- */
   function hymnsHTML() {
-    const esc = window.Core.escapeHTML, list = HYMNAL(), sel = ticked().length, looping = kind === 'hymns' && !hs.one;
-    if (!list.length) return '<p class="muted small">The hymns could not be loaded.</p>';
+    const esc = window.Core.escapeHTML, list = shown(), sel = ticked().length, looping = kind === 'hymns' && !hs.one;
+    if (!HYMNAL().length) return '<p class="muted small">The hymns could not be loaded.</p>';
+    const tab = (k, label) => `<button class="chip ${hs.show === k ? 'active' : ''}" data-show="${k}">${label}</button>`;
     return `
-      <p class="muted small">Tap 🔂 to play one hymn over and over. Or tick the hymns you want and tap <b>Play selected</b> (or a hymn's name to start there): they play one after another, then start again from the first.</p>
+      <p class="muted small">Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
+      <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('african', 'African songs')}</div>
       <div class="row gap wrap hy-tools">
         <button class="btn ${looping ? 'ghost' : 'primary'} small" id="hyPlaySel">${looping ? '⏸ Stop' : `▶ Play selected (${sel})`}</button>
-        <button class="btn ghost small" id="hyAll">Tick all</button>
-        <button class="btn ghost small" id="hyNone">Clear</button>
+        <button class="btn ghost small" id="hyAll">Tick these</button>
+        <button class="btn ghost small" id="hyNone">Untick these</button>
         <button class="btn ghost small ${hs.shuffle ? 'on' : ''}" id="hyShuffle" aria-pressed="${hs.shuffle}">🔀 Shuffle</button>
         <button class="btn ghost small ${hs.easy ? 'on' : ''}" id="hyEasy" aria-pressed="${hs.easy}">🎼 ${hs.easy ? 'Easy keys' : 'Main keys'}</button>
+        <button class="btn ghost small ${hs.drums !== false ? 'on' : ''}" id="hyDrums" aria-pressed="${hs.drums !== false}">🥁 Drums ${hs.drums !== false ? 'on' : 'off'}</button>
       </div>
       <div class="hy-list">${list.map(h => {
         const playing = kind === 'hymns' && hymnNow === h.n, ticks = !hs.sel || hs.sel.includes(h.n);
+        const what = h.backing ? '🎹 keyboard backing' : '🎼 full hymn';
         return `<div class="hy-row ${playing ? 'on' : ''}">
           <input type="checkbox" class="hy-tick" data-sel="${h.n}" ${ticks ? 'checked' : ''} aria-label="Include ${esc(h.title)}">
-          <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${keyName(hymnKey(h))} · ${h.ts} · ${esc(h.prog)}${h.chordsOnly ? ' · chords only' : ''}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
+          <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${h.lang ? esc(h.lang) + ' · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)}${h.style ? ' · ' + esc(h.style) : ''} · ${esc(h.prog)} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
           <button class="hy-play" data-n="${h.n}" aria-label="${playing && hs.one ? 'Stop' : 'Play ' + esc(h.title) + ' on repeat'}">${playing && hs.one ? '⏸' : '🔂'}</button>
         </div>`;
       }).join('')}</div>
-      <p class="muted small">Played on piano in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>Great Is Thy Faithfulness</b> (1923) and <b>How Great Thou Art</b> (1949) are still under copyright in most countries, so for those two only the chord progression is played, not the tune.</p>`;
+      <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎹 Keyboard backing</b> plays the song's chords in its key and keyboard style (march, highlife, afro-beat, worship, hymn…) for you to sing along: these songs have no public-domain score, and some are recent songs whose tunes belong to their writers. That includes <b>Great Is Thy Faithfulness</b> (1923) and <b>How Great Thou Art</b> (1949), still under copyright in most countries.</p>`;
   }
   const store = () => (window.Core.state.readerOpts = window.Core.state.readerOpts || {});
   function openPanel() {
@@ -407,7 +542,7 @@
         <div class="track-list">${TRACKS.map(([k, ic, name, sub]) => `<button class="track ${kind === k ? 'on' : ''}" data-k="${k}">
           <span class="tr-ic">${ic}</span><span class="tr-main"><b>${esc(name)}</b><small>${esc(kind === k && current ? 'Now playing: ' + current : sub)}</small></span>
           <span class="tr-btn">${kind === k ? '⏸' : '▶'}</span></button>`).join('')}</div>
-        <h3 class="section-title">⛪ Hymns</h3>
+        <h3 class="section-title">⛪ Hymns &amp; songs</h3>
         <div id="hymnList">${hymnsHTML()}</div>
         <h3 class="section-title">🎶 My music</h3>
         <div id="myMusic"><p class="muted small">Loading…</p></div>
@@ -435,11 +570,13 @@
       const on = (id, f) => { const b = host.querySelector(id); if (b) b.addEventListener('click', f); };
       on('#hyPlaySel', () => {
         if (kind === 'hymns' && !hs.one) { stop(); return; }
-        if (!ticked().length) { window.Core.toast('Tick the hymns you want first'); return; }
+        if (!ticked().length) { window.Core.toast('Tick the songs you want first'); return; }
         playHymn(ticked()[0].n, false);
       });
-      on('#hyAll', () => { hs.sel = null; saveHymns(); drawHymns(); });
-      on('#hyNone', () => { hs.sel = []; saveHymns(); drawHymns(); });
+      on('#hyAll', () => { const all = HYMNAL().map(h => h.n), cur = hs.sel || all; hs.sel = [...new Set(cur.concat(shown().map(h => h.n)))]; if (hs.sel.length === all.length) hs.sel = null; saveHymns(); drawHymns(); });
+      on('#hyNone', () => { const vis = shown().map(h => h.n); hs.sel = (hs.sel || HYMNAL().map(h => h.n)).filter(n => !vis.includes(n)); saveHymns(); drawHymns(); });
+      on('#hyDrums', () => { hs.drums = hs.drums === false; saveHymns(); drawHymns(); });
+      host.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => { hs.show = b.dataset.show; saveHymns(); drawHymns(); }));
       on('#hyShuffle', () => { hs.shuffle = !hs.shuffle; saveHymns(); drawHymns(); });
       on('#hyEasy', () => {
         hs.easy = !hs.easy; saveHymns();
@@ -546,5 +683,5 @@
   const sync = () => { if (kind === 'mine') changed(); };
   setTimeout(() => { const p = getPlayer(); p.addEventListener('play', sync); p.addEventListener('pause', sync); }, 0);
 
-  window.Ambient = { openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
+  window.Ambient = { peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
 })();
