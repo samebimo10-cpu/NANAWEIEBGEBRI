@@ -87,7 +87,8 @@
     nodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch (e) { /* already stopped */ } });
     nodes = [];
   }
-  const keep = n => { nodes.push(n); if (nodes.length > 400) nodes.splice(0, 200); return n; };
+  let rendering = false;   // true while a song is being drawn offline: those sounds are not ours to stop
+  const keep = n => { if (rendering) return n; nodes.push(n); if (nodes.length > 400) nodes.splice(0, 200); return n; };
 
   /* ---------------- A gentle piano voice ----------------
    * Each note is drawn once, ahead of time, into a short recording (every third key; the keys between play it a
@@ -427,52 +428,232 @@
     });
     return { notes: all, len: (n - 1) * span + h.len + 24, bpm: h.bpm, verses: n, verseLen: span, worship };
   }
-  let hymnNow = 0, hymnToken = 0, hymnSkip = () => {}, hymnFrom = 0, layerMute = '';
+  /* ---------------- Playing the songs ----------------
+   * Each song is drawn ahead of time into a sound file on the phone (offline, with the same piano, pad and hall),
+   * then played like a music player: phones keep it going with the screen off and show it on the lock screen.
+   * Where a phone cannot draw sound offline, the notes are played live instead (keep the screen on then). */
+  let hymnNow = 0, hymnToken = 0, hymnSkip = () => {}, hymnFrom = 0, layerMute = '', song = null, hymnAudio = null, hymnPos = 0;
+  const LEAD = 0.3;
+  function playNotes(c, d, t0, spt, sh, live) {
+    const atm = ATMOS[hs.atmos] || ATMOS.prayer;
+    return (st, du, m, v, vel) => {
+      const at = live ? Math.max(t0 + st * spt, c.currentTime + 0.01) : t0 + st * spt;
+      if (v === 4) { if (hs.drums !== false) drum(c, m, at, vel); }
+      else if (v === 5) { if (layerMute !== 'pad') padTone(c, m + sh, at, du * spt, atm.pad); }
+      else if (layerMute === 'piano') return;
+      // worship style: legato pedalling, lifted on every chord change, so nothing blurs
+      else if (d.worship) piano(c, m + sh, at, vel || VEL[v] || 0.2, du * spt * (atm.mute < 1 && v === 0 ? 0.9 : 1) + 0.06, 0.06);
+      else piano(c, m + sh, at, vel || VEL[v] || 0.2, Math.max(du * spt < 0.3 ? 0.6 : 1.2, du * spt * 1.3 + 0.4));
+    };
+  }
+  /* the hall, piano path and pad path, built in another (offline) context */
+  function graph(c, key) {
+    const a = ATMOS[key], limiter = c.createDynamicsCompressor(), out = c.createGain();
+    limiter.threshold.value = -10; limiter.knee.value = 8; limiter.ratio.value = 8; limiter.attack.value = 0.004; limiter.release.value = 0.25;
+    limiter.connect(c.destination); out.connect(limiter);
+    const g = { dry: c.createGain(), verb: c.createConvolver() };
+    g.dry.gain.value = 0.8; g.dry.connect(out);
+    g.verb.buffer = a ? hallIR(c, a.hall[0], a.hall[1]) : hallIR(c, 2.4, 0.35);
+    const w = c.createGain(); w.gain.value = a ? a.wet : 1.1; g.verb.connect(w); w.connect(out);
+    g.pianoIn = c.createBiquadFilter(); g.pianoIn.type = 'lowpass'; g.pianoIn.frequency.value = a ? a.piano : 20000; g.pianoIn.Q.value = 0.2;
+    g.pianoIn.connect(g.dry); g.pianoIn.connect(g.verb);
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 200; hp.Q.value = 0.5;
+    g.padIn = c.createGain(); g.padIn.connect(hp); hp.connect(g.dry); hp.connect(g.verb);
+    return g;
+  }
+  function withGraph(g, fn) {
+    const saved = [dry, verb, pianoIn, padIn];
+    dry = g.dry; verb = g.verb; pianoIn = g.pianoIn; padIn = g.padIn; rendering = true;
+    try { fn(); } finally { [dry, verb, pianoIn, padIn] = saved; rendering = false; }
+  }
+  function wavBlob(buf) {
+    const ch = buf.numberOfChannels, n = buf.length, data = new DataView(new ArrayBuffer(44 + n * ch * 2));
+    const str = (o, x) => { for (let i = 0; i < x.length; i++) data.setUint8(o + i, x.charCodeAt(i)); };
+    str(0, 'RIFF'); data.setUint32(4, 36 + n * ch * 2, true); str(8, 'WAVEfmt '); data.setUint32(16, 16, true);
+    data.setUint16(20, 1, true); data.setUint16(22, ch, true); data.setUint32(24, buf.sampleRate, true);
+    data.setUint32(28, buf.sampleRate * ch * 2, true); data.setUint16(32, ch * 2, true); data.setUint16(34, 16, true);
+    str(36, 'data'); data.setUint32(40, n * ch * 2, true);
+    const chans = []; for (let c = 0; c < ch; c++) chans.push(buf.getChannelData(c));
+    let o = 44;
+    for (let i = 0; i < n; i++) for (let c = 0; c < ch; c++) { const x = Math.max(-1, Math.min(1, chans[c][i])); data.setInt16(o, x < 0 ? x * 0x8000 : x * 0x7fff, true); o += 2; }
+    return new Blob([data], { type: 'audio/wav' });
+  }
+  async function samplesReady() {
+    for (let i = 0; i < 40 && [...samples.values()].some(x => typeof x !== 'object'); i++) await new Promise(r => setTimeout(r, 100));
+  }
+  const songKey = h => [h.n, hs.verses, hs.easy, hs.worship, hs.atmos, hs.drums, layerMute].join('|');
+  const prepared = new Map();
+  async function prepare(h) {
+    const key = songKey(h);
+    if (prepared.has(key)) return prepared.get(key);
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!OAC || !ac) return null;
+    await samplesReady();
+    const d = score(h), spt = 60 / (d.bpm * (d.pace || PACE)) / 24, secs = LEAD + d.len * spt + 3.5;
+    const oc = new OAC(1, Math.ceil(secs * SR), SR);
+    withGraph(graph(oc, d.worship ? (hs.atmos in ATMOS ? hs.atmos : 'prayer') : ''), () => {
+      const play = playNotes(oc, d, LEAD, spt, shiftFor(h), false);
+      d.notes.forEach(n => play(...n));
+    });
+    const buf = await Promise.resolve(oc.startRendering());
+    const out = { url: URL.createObjectURL(wavBlob(buf)), d, spt, h, key };
+    prepared.set(key, out);
+    for (const [k, v] of prepared) { if (prepared.size <= 3) break; if (v !== song) { URL.revokeObjectURL(v.url); prepared.delete(k); } }
+    return out;
+  }
+  function getHymnAudio() {
+    if (hymnAudio) return hymnAudio;
+    hymnAudio = new Audio(); hymnAudio.preload = 'auto';
+    hymnAudio.addEventListener('ended', () => { if (kind === 'hymns' && song && !song.live) hymnSkip(1, true); });
+    hymnAudio.addEventListener('timeupdate', () => verseLabel());
+    ['play', 'pause'].forEach(e => hymnAudio.addEventListener(e, () => { if (kind === 'hymns') changed(); }));
+    mediaHandlers();
+    return hymnAudio;
+  }
+  /* where we are in the song, in ticks from its start (for the verse count and the words) */
+  function songTicks() {
+    if (!song) return null;
+    const t = song.live ? (ac ? ac.currentTime - song.t0 : 0) : (hymnAudio ? hymnAudio.currentTime - LEAD : 0);
+    return t / song.spt;
+  }
+  let verseShown = 0;
+  function verseLabel(force) {
+    if (!song || kind !== 'hymns') return;
+    const d = song.d, v = Math.min(d.verses || 1, 1 + Math.floor(Math.max(0, songTicks()) / d.verseLen));
+    if (v === verseShown && !force) return;
+    verseShown = v;
+    current = song.h.title + (d.verses > 1 ? ` · verse ${v} of ${d.verses}` : '') + (hs.one ? ' (repeat)' : '');
+    changed();
+  }
   function hymns(c) {
     let order = (hs.one ? [hymnBy(hs.one)].filter(Boolean) : ticked()).map(h => h.n);
     if (!order.length) order = HYMNAL().map(h => h.n);
     if (!order.length) return;
     if (!hs.one && hs.shuffle) order.sort(() => Math.random() - 0.5);
-    let pos = 0, iv = null;
+    let iv = null;
+    const el = getHymnAudio();
+    if (!el.dataset.unlocked) {   // phones let a player start later only if it first played during a tap
+      el.dataset.unlocked = '1';
+      try { el.src = URL.createObjectURL(wavBlob(c.createBuffer(1, 2205, 22050))); el.play().catch(() => {}); } catch (e) { /* fine */ }
+    }
+    const fromFile = (s, at) => {
+      song = s;
+      el.src = s.url; el.loop = !!hs.one; el.volume = volume;
+      if (at) { const seek = () => { try { el.currentTime = at; } catch (e) { /* not yet */ } }; seek(); el.addEventListener('loadedmetadata', seek, { once: true }); }
+      el.play().catch(e => { if (e && e.name === 'NotAllowedError') window.Core.toast('Tap ▶ to start the music'); });
+      if ('mediaSession' in navigator && window.MediaMetadata) {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: s.h.title, artist: 'Hymns & songs', album: (window.Personal && window.Personal.appTitle()) || 'Lamp & Path' });
+      }
+    };
     const playAt = i => {
       const token = ++hymnToken;
       if (kind !== 'hymns') return;
-      pos = (i + order.length) % order.length;
-      const h = hymnBy(order[pos]); hymnNow = h.n;
-      const d = score(h), sh = shiftFor(h), spt = 60 / (d.bpm * (d.pace || PACE)) / 24;   // seconds per tick
-      const t0 = c.currentTime + 0.4, notes = d.notes, atm = ATMOS[hs.atmos] || ATMOS.prayer;
+      hymnPos = (i + order.length) % order.length;
+      const h = hymnBy(order[hymnPos]); hymnNow = h.n;
+      if (iv) { clearInterval(iv); iv = null; }
+      el.pause(); verseShown = 0;
+      const readyNext = () => { if (!hs.one && order.length > 1) setTimeout(() => { if (token === hymnToken) prepare(hymnBy(order[(hymnPos + 1) % order.length])).catch(() => {}); }, 2500); };
+      const ready = prepared.get(songKey(h));
+      if (ready) { fromFile(ready, 0); verseLabel(true); readyNext(); return; }
+      // start at once, played live, while the sound file is being made; then carry on from the file
+      const d = score(h), spt = 60 / (d.bpm * (d.pace || PACE)) / 24, t0 = c.currentTime + LEAD;
       applyAtmos(c, d.worship ? (hs.atmos in ATMOS ? hs.atmos : 'prayer') : '');
-      let k = 0, verse = 0;
-      const label = () => { current = h.title + (d.verses > 1 ? ` · verse ${verse} of ${d.verses}` : '') + (hs.one ? ' (repeat)' : ''); changed(); };
-      // schedule a little ahead at a time, so a long hymn does not start hundreds of sounds at once
+      master.gain.cancelScheduledValues(c.currentTime); master.gain.setTargetAtTime(volume, c.currentTime, 0.05);
+      song = { live: true, d, spt, h, t0 };
+      const play = playNotes(c, d, t0, spt, shiftFor(h), true);
+      let k = 0;
       const pump = () => {
-        if (token !== hymnToken || kind !== 'hymns') return;
-        const v = Math.min(d.verses || 1, 1 + Math.floor(Math.max(0, c.currentTime - t0) / (d.verseLen * spt)));
-        if (v !== verse) { verse = v; label(); }
+        if (token !== hymnToken || kind !== 'hymns' || !song || !song.live) return;
+        verseLabel();
         const horizon = c.currentTime + 1.6;
-        while (k < notes.length && t0 + notes[k][0] * spt < horizon) {
-          const [st, du, m, v, vel] = notes[k++], at = Math.max(t0 + st * spt, c.currentTime + 0.01);
-          if (v === 4) { if (hs.drums !== false) drum(c, m, at, vel); }
-          else if (v === 5) { if (layerMute !== 'pad') padTone(c, m + sh, at, du * spt, atm.pad); }
-          else if (layerMute === 'piano') continue;
-          // worship style: legato pedalling, lifted on every chord change, so nothing blurs
-          else if (d.worship) piano(c, m + sh, at, vel || VEL[v] || 0.2, du * spt * (atm.mute < 1 && v === 0 ? 0.9 : 1) + 0.06, 0.06);
-          else piano(c, m + sh, at, vel || VEL[v] || 0.2, Math.max(du * spt < 0.3 ? 0.6 : 1.2, du * spt * 1.3 + 0.4));
-        }
-        if (k >= notes.length && c.currentTime > t0 + d.len * spt + 2.2) playAt(hs.one ? pos : pos + 1);   // a short rest, then on
+        while (k < d.notes.length && t0 + d.notes[k][0] * spt < horizon) play(...d.notes[k++]);
+        if (k >= d.notes.length && c.currentTime > t0 + d.len * spt + 2.2) playAt(hs.one ? hymnPos : hymnPos + 1);   // a short rest, then on
       };
-      if (iv) clearInterval(iv);
       pump(); iv = setInterval(pump, 250); timers.push(iv);
+      verseLabel(true);
+      prepare(h).then(s => {
+        if (!s || token !== hymnToken || kind !== 'hymns' || !song || !song.live) return;
+        const at = LEAD + Math.max(0, c.currentTime - t0) + 0.08;
+        if (at > LEAD + d.len * spt) return;   // nearly over: let the live playing finish it
+        clearInterval(iv); iv = null;
+        fromFile(s, at);
+        // let the live notes fade as the file takes over
+        master.gain.cancelScheduledValues(c.currentTime); master.gain.setTargetAtTime(0, c.currentTime + 0.05, 0.06);
+        setTimeout(() => { if (kind === 'hymns' && song && !song.live) { clear(); } }, 600);
+        readyNext();
+      }).catch(() => {});
     };
-    hymnSkip = n => { if (kind === 'hymns') playAt(pos + n); };
+    hymnSkip = (n, auto) => { if (kind === 'hymns') playAt(hymnPos + n); };
     const from = hymnFrom ? order.indexOf(hymnFrom) : 0; hymnFrom = 0;
     playAt(Math.max(0, from));
   }
+  /* ---------------- Sing along ----------------
+   * The words on a calm, dark screen: the line being sung large and lit, the next one waiting below.
+   * The words follow the music line by line (each line starts on the note the score marks for it). */
+  let wordsTimer = null;
+  function openWords() {
+    let el = document.getElementById('singAlong');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'singAlong'; el.className = 'sing';
+      el.innerHTML = `<div class="sing-top"><div><div class="sing-title"></div><div class="sing-verse"></div></div><button class="sing-x" aria-label="Close the words">✕</button></div>
+        <div class="sing-lines" aria-live="polite"></div>
+        <div class="sing-foot"><button class="sing-btn" data-k="prev" aria-label="Previous song">⏮</button><button class="sing-btn big" data-k="play" aria-label="Pause or play">⏸</button><button class="sing-btn" data-k="next" aria-label="Next song">⏭</button></div>`;
+      document.body.appendChild(el);
+      el.querySelector('.sing-x').addEventListener('click', closeWords);
+      el.querySelectorAll('.sing-btn').forEach(b => b.addEventListener('click', () => {
+        const k = b.dataset.k;
+        if (k === 'play') { if (kind === 'hymns' && hymnAudio && song && !song.live) hymnAudio.paused ? hymnAudio.play() : hymnAudio.pause(); else if (kind === 'hymns') stop(); }
+        else hymnSkip(k === 'next' ? 1 : -1);
+      }));
+    }
+    el.classList.remove('hidden'); el.dataset.pass = '';
+    document.body.classList.add('singing');
+    clearInterval(wordsTimer); wordsTimer = setInterval(drawWords, 200); drawWords();
+  }
+  function closeWords() {
+    clearInterval(wordsTimer); wordsTimer = null;
+    const el = document.getElementById('singAlong'); if (el) el.classList.add('hidden');
+    document.body.classList.remove('singing');
+  }
+  function drawWords() {
+    const el = document.getElementById('singAlong'); if (!el || el.classList.contains('hidden')) return;
+    const esc = window.Core.escapeHTML, h = song ? song.h : hymnBy(hymnNow), lines = el.querySelector('.sing-lines');
+    const playBtn = el.querySelector('[data-k="play"]');
+    playBtn.textContent = kind === 'hymns' && hymnAudio && song && !song.live && hymnAudio.paused ? '▶' : '⏸';
+    el.querySelector('.sing-title').textContent = h ? h.title : '';
+    if (kind !== 'hymns' || !h) { el.querySelector('.sing-verse').textContent = 'Not playing'; return; }
+    if (!song) { el.querySelector('.sing-verse').textContent = 'Getting ready…'; return; }
+    const w = h.words;
+    if (!w) {
+      el.querySelector('.sing-verse').textContent = '';
+      if (el.dataset.pass !== 'none') { el.dataset.pass = 'none'; lines.innerHTML = `<p class="sl-note">${h.composed ? 'This is a new tune written for the app, so there are no words that go with it line by line.' : 'The words of this song are not available here.'}</p>`; }
+      return;
+    }
+    const d = song.d, ticks = Math.max(0, songTicks() + 0.25 / song.spt);   // show each line a moment early
+    const vi = Math.min((d.verses || 1) - 1, Math.floor(ticks / d.verseLen)), within = ticks - vi * d.verseLen;
+    const pass = w.passes[vi % w.passes.length];
+    el.querySelector('.sing-verse').textContent = (d.verses > 1 ? `Verse ${vi + 1} of ${d.verses}` : '') + (w.passes.length > (d.verses || 1) ? ` · the hymn has ${w.passes.length}` : '');
+    const key = h.n + ':' + vi;
+    if (el.dataset.pass !== key) {
+      el.dataset.pass = key;
+      lines.innerHTML = pass.map((l, i) => `<p class="sl" data-i="${i}">${esc(l)}</p>`).join('');
+    }
+    let cur = -1;
+    if (w.starts) w.starts.forEach((st, i) => { if (within >= st) cur = i; });
+    else cur = Math.min(pass.length - 1, Math.floor(within / (d.verseLen / pass.length)));
+    const after = within > (w.starts ? w.starts[w.starts.length - 1] : 0) + d.verseLen * 0.02 && cur === pass.length - 1 && within > d.verseLen - 48;
+    lines.querySelectorAll('.sl').forEach((p, i) => {
+      p.classList.toggle('now', i === cur && !after); p.classList.toggle('past', i < cur || (after && i === cur)); p.classList.toggle('next', i === cur + 1);
+    });
+    const now = lines.querySelector('.sl.now') || lines.querySelector('.sl.next');
+    if (now && now.dataset.i !== lines.dataset.shown) { lines.dataset.shown = now.dataset.i; now.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+  function stopHymnAudio() { hymnToken++; if (hymnAudio) hymnAudio.pause(); song = null; }
   /* play one hymn (alone = on repeat), or the ticked hymns starting from this one */
   function playHymn(n, alone) {
     hs.one = alone ? n : 0; saveHymns();
     hymnFrom = n;
-    if (kind === 'hymns') { clear(); hymns(ac); } else start('hymns');
+    if (kind === 'hymns') { clear(); stopHymnAudio(); kind = 'hymns'; hymns(ac); } else start('hymns');
   }
   let current = '';
 
@@ -516,16 +697,19 @@
     player.preload = 'auto';
     player.addEventListener('ended', () => { if (kind === 'mine') nextMine(mine.repeat ? 0 : 1, true); });
     player.addEventListener('error', () => { if (kind === 'mine') { window.Core.toast('This file could not be played. Skipping it.'); nextMine(1, true); } });
-    if ('mediaSession' in navigator) {
-      const ms = navigator.mediaSession;
-      const on = (a, f) => { try { ms.setActionHandler(a, f); } catch (e) { /* not supported */ } };
-      on('play', () => { if (kind === 'mine') player.play(); });
-      on('pause', () => { if (kind === 'mine') player.pause(); });
-      on('nexttrack', () => nextMine(1));
-      on('previoustrack', () => nextMine(-1));
-      on('stop', () => stop());
-    }
+    mediaHandlers();
     return player;
+  }
+  /* the lock-screen and headphone controls, for My music and the hymns */
+  function mediaHandlers() {
+    if (!('mediaSession' in navigator)) return;
+    const ms = navigator.mediaSession, el = () => kind === 'mine' ? player : kind === 'hymns' ? hymnAudio : null;
+    const on = (a, f) => { try { ms.setActionHandler(a, f); } catch (e) { /* not supported */ } };
+    on('play', () => { const e = el(); if (e) e.play(); });
+    on('pause', () => { const e = el(); if (e) e.pause(); });
+    on('nexttrack', () => { if (kind === 'hymns') hymnSkip(1); else nextMine(1); });
+    on('previoustrack', () => { if (kind === 'hymns') hymnSkip(-1); else nextMine(-1); });
+    on('stop', () => stop());
   }
   async function playMine(i) {
     if (!myList.length) await loadList();
@@ -598,6 +782,7 @@
     k = OLD[k] || k;
     clearTimeout(previewTimer);
     if (k === 'mine') {
+      if (kind === 'hymns') stopHymnAudio();
       if (kind && kind !== 'mine') fadeOutGenerated();
       const i = from ? myList.findIndex(x => x.id === from) : (kind === 'mine' ? myIndex : 0);
       playMine(i < 0 ? 0 : i);
@@ -605,6 +790,7 @@
     }
     if (kind === 'mine') { stopMine(); kind = ''; }
     if (kind === k) return;
+    if (kind === 'hymns') stopHymnAudio();
     const c = ctx(); if (!c) return;
     setup(c);
     if (k !== 'hymns') applyAtmos(c, '');
@@ -623,6 +809,7 @@
   function stop() {
     clearTimeout(previewTimer);
     if (kind === 'mine') { stopMine(); kind = ''; current = ''; if ('mediaSession' in navigator) navigator.mediaSession.metadata = null; changed(); return; }
+    if (kind === 'hymns') { stopHymnAudio(); if ('mediaSession' in navigator) navigator.mediaSession.metadata = null; }
     if (!ac || !master || !kind) return;
     kind = ''; current = '';
     master.gain.cancelScheduledValues(ac.currentTime);
@@ -633,6 +820,7 @@
   function setVolume(v) {
     volume = Math.max(0, Math.min(1, v));
     if (player) player.volume = volume;
+    if (hymnAudio) hymnAudio.volume = volume;
     if (ac && master && kind) { master.gain.cancelScheduledValues(ac.currentTime); master.gain.setTargetAtTime(volume, ac.currentTime, 0.2); }
   }
   /* a short sample in the settings */
@@ -657,11 +845,13 @@
         <button class="btn ghost small" id="hyNone">Untick these</button>
         <button class="btn ghost small ${hs.shuffle ? 'on' : ''}" id="hyShuffle" aria-pressed="${hs.shuffle}">🔀 Shuffle</button>
         <button class="btn ghost small ${hs.easy ? 'on' : ''}" id="hyEasy" aria-pressed="${hs.easy}">🎼 ${hs.easy ? 'Easy keys' : 'Main keys'}</button>
+        <button class="btn ghost small" id="hyWords">📜 Sing along</button>
+        <button class="btn ghost small ${hs.autoWords !== false ? 'on' : ''}" id="hyAutoWords" aria-pressed="${hs.autoWords !== false}">📜 Words open by themselves: ${hs.autoWords !== false ? 'on' : 'off'}</button>
         ${HYMNAL().some(h => h.backing) ? `<button class="btn ghost small ${hs.drums !== false ? 'on' : ''}" id="hyDrums" aria-pressed="${hs.drums !== false}">🥁 Drums ${hs.drums !== false ? 'on' : 'off'}</button>` : ''}
       </div>
       <div class="hy-list">${list.map(h => {
         const playing = kind === 'hymns' && hymnNow === h.n, ticks = !hs.sel || hs.sel.includes(h.n);
-        const what = h.backing ? '🎹 keyboard backing' : h.composed ? '🎵 new tune' : '🎼 full hymn';
+        const what = (h.backing ? '🎹 keyboard backing' : h.composed ? '🎵 new tune' : '🎼 full hymn') + (h.words ? ' · 📜 words' : '');
         return `<div class="hy-row ${playing ? 'on' : ''}">
           <input type="checkbox" class="hy-tick" data-sel="${h.n}" ${ticks ? 'checked' : ''} aria-label="Include ${esc(h.title)}">
           <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${h.theme ? '<i>' + esc(h.theme) + '</i> · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)} · ${esc(h.prog)} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
@@ -712,6 +902,7 @@
         if (kind === 'hymns' && !hs.one) { stop(); return; }
         if (!ticked().length) { window.Core.toast('Tick the songs you want first'); return; }
         playHymn(ticked()[0].n, false);
+        if (hs.autoWords !== false) openWords();
       });
       on('#hyAll', () => { const all = HYMNAL().map(h => h.n), cur = hs.sel || all; hs.sel = [...new Set(cur.concat(shown().map(h => h.n)))]; if (hs.sel.length === all.length) hs.sel = null; saveHymns(); drawHymns(); });
       on('#hyNone', () => { const vis = shown().map(h => h.n); hs.sel = (hs.sel || HYMNAL().map(h => h.n)).filter(n => !vis.includes(n)); saveHymns(); drawHymns(); });
@@ -731,14 +922,18 @@
         if (hs.sel.length === HYMNAL().length) hs.sel = null;
         saveHymns(); drawHymns();
       }));
+      const sing = n => { const h = hymnBy(n); if (hs.autoWords !== false && h && h.words) openWords(); };
       host.querySelectorAll('.hy-play').forEach(b => b.addEventListener('click', () => {
         const n = +b.dataset.n;
-        if (kind === 'hymns' && hymnNow === n && hs.one === n) stop(); else playHymn(n, true);
+        if (kind === 'hymns' && hymnNow === n && hs.one === n) stop(); else { playHymn(n, true); sing(n); }
       }));
       host.querySelectorAll('.hy-loop').forEach(b => b.addEventListener('click', () => {
         const n = +b.dataset.n;
         playHymn(n, !ticked().some(h => h.n === n));   // a ticked hymn starts the loop here; an unticked one plays on its own
+        sing(n);
       }));
+      on('#hyWords', () => { if (kind === 'hymns') openWords(); else window.Core.toast('Play a song first'); });
+      on('#hyAutoWords', () => { hs.autoWords = hs.autoWords === false; saveHymns(); drawHymns(); });
     };
     const drawMine = async () => {
       const host = document.getElementById('myMusic'); if (!host) return;
@@ -800,6 +995,15 @@
     el.innerHTML = `<button class="mp-open" aria-label="Music settings"><span>${t[1]}</span><span class="mp-t">${window.Core.escapeHTML(current || t[2])}</span></button><button class="mp-stop" aria-label="Stop the music">⏸</button>`;
     el.querySelector('.mp-open').addEventListener('click', openPanel);
     el.querySelector('.mp-stop').addEventListener('click', stop);
+    if (kind === 'hymns' && song && !song.live && hymnAudio) {
+      const b = el.querySelector('.mp-stop');
+      b.textContent = hymnAudio.paused ? '▶' : '⏸';
+      b.onclick = e => { e.stopImmediatePropagation(); hymnAudio.paused ? hymnAudio.play() : hymnAudio.pause(); };
+    }
+    if (kind === 'hymns' && song && song.h.words) {
+      const w = document.createElement('button'); w.className = 'mp-next'; w.textContent = '📜'; w.setAttribute('aria-label', 'Sing along: show the words');
+      w.addEventListener('click', openWords); el.appendChild(w);
+    }
     if (kind === 'hymns' && !hs.one) {
       const skip = document.createElement('button'); skip.className = 'mp-next'; skip.textContent = '⏭'; skip.setAttribute('aria-label', 'Next hymn');
       skip.addEventListener('click', () => hymnSkip(1)); el.appendChild(skip);
@@ -826,5 +1030,5 @@
   const sync = () => { if (kind === 'mine') changed(); };
   setTimeout(() => { const p = getPlayer(); p.addEventListener('play', sync); p.addEventListener('pause', sync); }, 0);
 
-  window.Ambient = { layer: x => { layerMute = x || ''; }, arrangement: n => { const h = hymnBy(n), a = h.notes, x = []; for (let i = 0; i < a.length; i += 4) x.push(a.slice(i, i + 4)); return worshipify(x, h); }, peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
+  window.Ambient = { openWords, closeWords, hymnAudio: () => hymnAudio, song: () => song && { title: song.h.title, live: !!song.live, ticks: songTicks() }, layer: x => { layerMute = x || ''; }, arrangement: n => { const h = hymnBy(n), a = h.notes, x = []; for (let i = 0; i < a.length; i += 4) x.push(a.slice(i, i + 4)); return worshipify(x, h); }, peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
 })();

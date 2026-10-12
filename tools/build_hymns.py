@@ -125,12 +125,15 @@ TOKEN = re.compile(r"""
   | (?P<rest>[zx](?P<rlen>[\d/]*))
   | (?P<bar>:?\|[\]|:]?|::|\[\|)
   | (?P<tuplet>\(\d)
+  | (?P<mark>§)
   | (?P<skip>[()\s\\.~yHTMLRSOPuv>`])
 """, re.X)
 
 
-def parse_voice(body, unit, keyacc):
-    """Return a list of [start, dur, midi, tie] in whole-note fractions, plus bar lengths."""
+def parse_voice(body, unit, keyacc, info=None):
+    """Return a list of [start, dur, midi, tie] in whole-note fractions, plus bar lengths.
+    With info: also the time at each line mark (§) and each sounding note or chord (for lining up the words)."""
+    marks, events, tied = [], [], set()
     t = F(0)
     out, bars, bar_start = [], [], F(0)
     local = {}
@@ -155,6 +158,9 @@ def parse_voice(body, unit, keyacc):
             raise ValueError('cannot read: ' + body[pos:pos + 30])
         pos = m.end()
         g = m.lastgroup
+        if g == 'mark':
+            marks.append(t)
+            continue
         if g in ('field', 'annot', 'grace', 'skip'):
             if g == 'field' and m.group(0)[1] == 'K':
                 _, keyacc = key_accidentals(m.group(0)[3:-1])
@@ -187,6 +193,8 @@ def parse_voice(body, unit, keyacc):
             midi = pitch(m.group('acc'), m.group('let'), m.group('oct'))
             if not silent:
                 out.append([t, d, midi, bool(m.group('tie'))])
+            events.append((t, midi in tied, silent))
+            tied = {midi} if m.group('tie') else set()
             silent = False
             t += d
             continue
@@ -194,12 +202,18 @@ def parse_voice(body, unit, keyacc):
             inner = m.group(0)[1:m.group(0).rindex(']')]
             clen = parse_len(m.group('clen')) * unit * factor
             longest = F(0)
+            pitches, ties = [], set()
             for nm in re.finditer(r"(\^\^|__|\^|_|=)?([A-Ga-g])([,']*)([\d/]*)(-?)", inner):
                 d = parse_len(nm.group(4)) * clen
                 midi = pitch(nm.group(1), nm.group(2), nm.group(3))
                 if not silent:
                     out.append([t, d, midi, bool(nm.group(5) or m.group('ctie'))])
+                pitches.append(midi)
+                if nm.group(5) or m.group('ctie'):
+                    ties.add(midi)
                 longest = max(longest, d) if longest else d
+            events.append((t, max(pitches) in tied, silent))
+            tied = ties
             silent = False
             t += longest
             continue
@@ -219,13 +233,15 @@ def parse_voice(body, unit, keyacc):
         merged.append(n)
         if n[3]:
             open_ties[n[2]] = n
+    if info is not None:
+        info.update(marks=marks, events=events)
     return merged, t, bars
 
 
 def parse_file(path):
     text = open(path, encoding='utf-8').read()
     head, voices, cur = {}, {}, None
-    order = []
+    order, wtok = [], {}
     for raw in text.split('\n'):
         line = raw.split('%')[0].rstrip() if not raw.startswith('%%') else ''
         if not line.strip():
@@ -239,7 +255,11 @@ def parse_file(path):
                     voices[cur] = []
                     order.append(cur)
                 continue
-            if k in 'wW+':
+            if k in 'w+':
+                if cur is not None and cur == order[0] and voices[cur]:
+                    wtok.setdefault(len(voices[cur]) - 1, []).extend(v.split())
+                continue
+            if k == 'W':
                 continue
             if cur is None:
                 head.setdefault(k, v)
@@ -256,12 +276,194 @@ def parse_file(path):
     meter = head.get('M', '4/4').strip()
     q = re.search(r'(\d+)/(\d+)\s*=\s*(\d+)', head.get('Q', ''))
     bpm = int(q.group(3)) * F(int(q.group(1)), int(q.group(2))) * 4 if q else None   # quarter notes a minute
-    parts = []
+    parts, info = [], {}
     for v in order:
-        body = ' '.join(voices[v])
-        notes, total, bars = parse_voice(body, unit, keyacc)
+        body = ' § '.join(voices[v])
+        notes, total, bars = parse_voice(body, unit, keyacc, info if v == order[0] else None)
         parts.append((v, notes, total, bars))
-    return dict(key=key, meter=meter, bpm=bpm, parts=parts, title=head.get('T', ''))
+    return dict(key=key, meter=meter, bpm=bpm, parts=parts, title=head.get('T', ''), words=(info, wtok, len(voices[order[0]])))
+
+
+def line_starts(words, skip_silent=True, count_ties=True):
+    """When each line of words begins: lyric codes like A1 B1 C1 mark the first syllable of lines A, B, C.
+    Returns ({letter: time}, how many music lines did not line up)."""
+    info, wtok, nlines = words
+    marks, events = info.get('marks', []), info.get('events', [])
+    bounds = [F(0)] + marks + [F(10 ** 6)]
+    starts, bad, counts = {}, 0, {}
+    for li, toks in wtok.items():
+        lo, hi = bounds[li], bounds[li + 1]
+        onsets = [t for t, cont, sil in events if lo <= t < hi and (count_ties or not cont) and not (skip_silent and sil)]
+        k = 0
+        for tok in toks:
+            if tok == '|':
+                continue
+            name = tok.rstrip('_')
+            mm = re.fullmatch(r'([A-Z])(\d+)', name)
+            if mm:
+                counts[mm.group(1)] = max(counts.get(mm.group(1), 0), int(mm.group(2)))
+            if k < len(onsets) and re.fullmatch(r'[A-Z]1', name):
+                starts.setdefault(name[0], onsets[k])
+            k += 1 + (len(tok) - len(name)) if name else 1
+        if k != len(onsets):
+            bad += 1
+    line_starts.counts = counts
+    return starts, bad
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# Words for singing along: public-domain texts from the freehymns project (en/*.txt), lined up with the music by the
+# lyric codes in the scores (A1 = first syllable of line A).
+WORDS_DIR = os.path.join(os.path.dirname(SRC.rstrip('/')), 'en')
+WORDS_FILE = {   # where the text file name differs from the title
+    6: 'h/HolyHolyHoly', 30: 'l/LordJesusILoveThee', 31: 'i_/INeedTheeEveryHour', 33: 'd/DrawMeNearer',
+    21: 'c/ComeThouFountOfEvryBlessing', 4: 'b/BlessedAssurance',
+}
+NO_WORDS = {2, 3}
+# lines the text files leave out because they are the same in every verse
+VERSE_ENDS = {36: ['Near-er, my God, to Thee,', 'Near-er, my God, to Thee,', 'Near-er to Thee!']}   # Great Is Thy Faithfulness and How Great Thou Art: words still under copyright
+
+
+def find_words(num, title):
+    if num in WORDS_FILE:
+        p = os.path.join(WORDS_DIR, WORDS_FILE[num] + '.txt')
+        return p if os.path.exists(p) else None
+    key = re.sub(r'[^a-z]', '', title.lower().replace("'", '').replace('’', ''))
+    best = None
+    for f in sorted(os.listdir(WORDS_DIR)):
+        if not os.path.isdir(os.path.join(WORDS_DIR, f)):
+            continue
+        for g in os.listdir(os.path.join(WORDS_DIR, f)):
+            path = os.path.join(WORDS_DIR, f, g)
+            first = open(path, encoding='utf-8').readline()
+            k = re.sub(r'[^a-z]', '', first.lower().replace('’', '').replace("'", ''))
+            if k == key:
+                return path
+            if not best and k and key.startswith(k) and len(k) > 10:
+                best = path
+    return best
+
+
+def read_words(path):
+    """Verses and refrain from a freehymns text: [[lines of verse 1], ...], [refrain lines], refrain-is-its-own-pass."""
+    verses, refrain, own_pass, cur, skip = [], [], False, None, False
+    clean = lambda line: re.sub(r'\s+', ' ', re.sub(r'(?<=\w)-(?=\w)', '', line.replace('/:', '').replace(':/', '').replace('=', ''))).strip()
+    for raw in open(path, encoding='utf-8').read().split('\n')[1:]:
+        line = raw.strip()
+        if line == '---':
+            break
+        m = re.match(r'^(Verse \d+|Refrain|Chorus)\s*:(.*)$', line)
+        if m:
+            skip = False
+            if m.group(2).strip():
+                if m.group(1) in ('Refrain', 'Chorus') and not refrain and re.match(r'^0@A1$', m.group(2).strip()):
+                    own_pass = True
+                else:
+                    skip = True
+                    continue
+            if m.group(1).startswith('Verse'):
+                cur = []
+                verses.append(cur)
+            elif not refrain:
+                cur = refrain
+            else:
+                skip = True
+            continue
+        if line.startswith('_:') or line.startswith('Road Map'):
+            skip = True
+            continue
+        if not line:
+            if skip:
+                skip = False
+            continue
+        if not skip and cur is not None:
+            cur.append(line.replace('/:', '').replace(':/', ''))
+    return [v for v in verses if v], refrain, own_pass
+
+
+def clean_line(line):
+    line = line.replace("-'", "'").replace('=', '')
+    return re.sub(r'\s+', ' ', re.sub(r'(?<=\w)-(?=\w)', '', line)).strip()
+
+
+def by_syllables(lines, counts):
+    """Cut a verse into the music's phrases by counting syllables (the texts mark them with hyphens)."""
+    syl = []   # [text, ends a word]
+    for line in lines:
+        words = line.split()
+        for wi, w in enumerate(words):
+            joined = w.endswith('=')
+            parts = [x for x in re.split(r'(?<=\w)-(?=[\w’\'])', w.rstrip('=')) if x]
+            for pi, part in enumerate(parts):
+                syl.append([part, pi == len(parts) - 1])
+            if joined and syl:
+                syl[-1].append('join')
+    # "be,= dear": two words sung on one note
+    merged = []
+    for x in syl:
+        if merged and len(merged[-1]) > 2:
+            merged[-1] = [merged[-1][0] + ' ' + x[0], x[1]]
+        else:
+            merged.append(x)
+    if sum(counts) != len(merged):
+        return None
+    out, i = [], 0
+    for c in counts:
+        text = ''
+        for part, end in merged[i:i + c]:
+            text += part + (' ' if end else '')
+        out.append(clean_line(text))
+        i += c
+    return out
+
+
+def split_lines(lines, n):
+    """Where a line of text spans two musical phrases, split it at the comma nearest its middle."""
+    lines = list(lines)
+    while len(lines) < n:
+        best = None
+        for i, l in enumerate(lines):
+            cuts = [m.end() for m in re.finditer(r'[,;:!?]\s', l)]
+            for c in cuts:
+                score = abs(c - len(l) / 2) - len(l)
+                if best is None or score < best[0]:
+                    best = (score, i, c)
+        if not best:
+            break
+        _, i, c = best
+        lines[i:i + 1] = [lines[i][:c].strip(), lines[i][c:].strip()]
+    return lines
+
+
+def words_for(num, title, h):
+    if num in NO_WORDS:
+        return None
+    path = find_words(num, title)
+    if not path:
+        return None
+    verses, refrain, own = read_words(path)
+    if not verses:
+        return None
+    verses = [v + VERSE_ENDS.get(num, []) for v in verses]
+    starts, bad = line_starts(h['words'])
+    letters = sorted(starts)
+    ticks = [int(starts[k] * 4 * TPQ) for k in letters]
+    if own and refrain:
+        passes = []
+        for v in verses:
+            passes += [v, refrain]
+    else:
+        passes = [v + refrain for v in verses]
+    counts = [line_starts.counts.get(k, 0) for k in letters]
+    fitted = []
+    for p in passes:
+        if len(p) == len(ticks):
+            fitted.append([clean_line(x) for x in p])
+        else:
+            fitted.append(by_syllables(p, counts) or split_lines([clean_line(x) for x in p], len(ticks)))
+    passes = fitted
+    exact = all(len(p) == len(ticks) for p in passes)
+    return dict(starts=ticks if exact else None, passes=passes, file=os.path.basename(path)), exact
 
 
 def nearest_shift(src, dst):
@@ -326,6 +528,12 @@ def build():
         for n in flat:
             enc += n
         item.update(meter=h['meter'], bpm=int(TEMPO.get(num) or h['bpm'] or 100), len=int(max(totals) * 4 * TPQ), source=os.path.basename(path), notes=enc)
+        w = words_for(num, title, h)
+        if w:
+            item['words'] = {k: v for k, v in w[0].items() if k != 'file' and v is not None}
+            print('   words: %s, %d verses, %s' % (w[0]['file'], len(w[0]['passes']), 'lined up' if w[1] else 'NOT lined up (%s lines vs %d starts)' % ([len(p) for p in w[0]['passes']], len(line_starts(h['words'])[0]))))
+        else:
+            print('   words: none')
         melody = [n for n in flat if n[3] == 0][:12]
         print('%2d %-38s %s->%s %+d  %s  bpm %s  notes %d  melody %s' % (num, title, h['key'], key, shift, h['meter'], item['bpm'], len(flat),
               ' '.join('CDEFGAB'[[0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6][n[2] % 12]] + ('#' if n[2] % 12 in (1, 3, 6, 8, 10) else '') for n in melody)))

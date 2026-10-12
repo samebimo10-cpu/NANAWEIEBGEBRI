@@ -1279,3 +1279,22 @@ body.listening #modal { z-index: 80; }
 .hy-row.on .hy-play { background: var(--gold); color: #2a1a06; }
 .hy-show .chip { color: inherit; cursor: pointer; }
 .hy-verses { align-items: center; } .hy-verses .chip { color: inherit; cursor: pointer; min-width: 34px; }
+
+/* Sing along: the words on a calm, dark screen */
+.sing { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; background: radial-gradient(circle at 50% 30%, #1f1a33 0%, #0b0913 70%); color: #f4ead6; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+.sing.hidden { display: none; }
+.sing-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.sing-title { font: 600 1.15rem var(--display); color: #f2c14e; }
+.sing-verse { font-size: 0.85rem; color: #b9ad95; margin-top: 2px; min-height: 1.1em; }
+.sing-x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06); color: inherit; font-size: 1.1rem; flex: none; }
+.sing-lines { flex: 1; overflow-y: auto; padding: 30vh 4px; text-align: center; scrollbar-width: none; }
+.sing-lines::-webkit-scrollbar { display: none; }
+.sl { margin: 0 auto 0.9em; max-width: 640px; font: 1.35rem/1.45 var(--serif); color: rgba(244, 234, 214, 0.38); transition: color 0.4s, transform 0.4s; }
+.sl.now { color: #fff8e6; transform: scale(1.08); text-shadow: 0 0 24px rgba(242, 193, 78, 0.35); }
+.sl.next { color: rgba(244, 234, 214, 0.65); }
+.sl.past { color: rgba(244, 234, 214, 0.25); }
+.sl-note { color: #b9ad95; max-width: 420px; margin: 0 auto; font-size: 1rem; }
+.sing-foot { display: flex; justify-content: center; gap: 18px; padding-top: 10px; }
+.sing-btn { width: 54px; height: 54px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); color: inherit; font-size: 1.3rem; }
+.sing-btn.big { width: 66px; height: 66px; background: #f2c14e; color: #2a1a06; border: 0; }
+body.singing #musicPill { display: none; }
