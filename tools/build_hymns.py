@@ -11,6 +11,9 @@ Usage:
   python3 tools/build_hymns.py /tmp/freehymns/music
 """
 import json, os, re, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from new_tunes import COMPOSED, compose   # noqa: E402
 from fractions import Fraction as F
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -277,6 +280,16 @@ def build():
         if tune: item['tune'] = tune
         if theme: item['theme'] = theme
         if style: item['style'] = style
+        if num in COMPOSED:
+            spec = COMPOSED[num]
+            flat, total = compose(num, KEY_PC[key], spec, TPQ)
+            enc = []
+            for n in flat:
+                enc += n
+            item.update(meter=spec['meter'], bpm=spec['bpm'], len=total, composed=True, notes=enc)
+            print('%2d %-38s new tune  %s  notes %d' % (num, title, spec['meter'], len(flat)))
+            out.append(item)
+            continue
         if not path:
             item['backing'] = style or 'Traditional Hymn'
             out.append(item)

@@ -528,18 +528,18 @@
         <button class="btn ghost small" id="hyNone">Untick these</button>
         <button class="btn ghost small ${hs.shuffle ? 'on' : ''}" id="hyShuffle" aria-pressed="${hs.shuffle}">🔀 Shuffle</button>
         <button class="btn ghost small ${hs.easy ? 'on' : ''}" id="hyEasy" aria-pressed="${hs.easy}">🎼 ${hs.easy ? 'Easy keys' : 'Main keys'}</button>
-        <button class="btn ghost small ${hs.drums !== false ? 'on' : ''}" id="hyDrums" aria-pressed="${hs.drums !== false}">🥁 Drums ${hs.drums !== false ? 'on' : 'off'}</button>
+        ${HYMNAL().some(h => h.backing) ? `<button class="btn ghost small ${hs.drums !== false ? 'on' : ''}" id="hyDrums" aria-pressed="${hs.drums !== false}">🥁 Drums ${hs.drums !== false ? 'on' : 'off'}</button>` : ''}
       </div>
       <div class="hy-list">${list.map(h => {
         const playing = kind === 'hymns' && hymnNow === h.n, ticks = !hs.sel || hs.sel.includes(h.n);
-        const what = h.backing ? '🎹 keyboard backing' : '🎼 full hymn';
+        const what = h.backing ? '🎹 keyboard backing' : h.composed ? '🎵 new tune' : '🎼 full hymn';
         return `<div class="hy-row ${playing ? 'on' : ''}">
           <input type="checkbox" class="hy-tick" data-sel="${h.n}" ${ticks ? 'checked' : ''} aria-label="Include ${esc(h.title)}">
           <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${h.theme ? '<i>' + esc(h.theme) + '</i> · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)} · ${esc(h.prog)} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
           <button class="hy-play" data-n="${h.n}" aria-label="${playing && hs.one ? 'Stop' : 'Play ' + esc(h.title) + ' on repeat'}">${playing && hs.one ? '⏸' : '🔂'}</button>
         </div>`;
       }).join('')}</div>
-      <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎹 Keyboard backing</b> plays the song's chords in its key for you to sing along, where there is no public-domain score: <b>Great Is Thy Faithfulness</b> (1923) and <b>How Great Thou Art</b> (1949) are still under copyright in most countries, and <b>Be Still, My Soul</b> is sung to Sibelius's <i>Finlandia</i>, under copyright in many countries until 2028.</p>`;
+      <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎵 New tunes</b> are melodies written for this app, in four parts over each song's chords, for songs with no public-domain score. They are not the traditional melodies: <b>Great Is Thy Faithfulness</b> (1923), <b>How Great Thou Art</b> (1949) and <b>Be Still, My Soul</b> (sung to Sibelius's <i>Finlandia</i>) are still under copyright in many countries, so their usual tunes cannot be included.</p>`;
   }
   const store = () => (window.Core.state.readerOpts = window.Core.state.readerOpts || {});
   function openPanel() {
