@@ -179,7 +179,7 @@
    * 27 public-domain hymns in four parts (js/data/hymns.js), played on the piano in the key from the hymn list.
    * Play one hymn on repeat, or the hymns you tick one after another in a loop. */
   const KEYPC = { C: 0, 'C#': 1, Db: 1, D: 2, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
-  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all', verses: 2 };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
+  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all', verses: 2, worship: 'devotional' };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
   try { Object.assign(hs, JSON.parse(localStorage.getItem('lamp-hymns') || '{}')); } catch (e) { /* defaults */ }
   if (!['all', 'hymns', 'devotional'].includes(hs.show)) hs.show = 'all';
   const saveHymns = () => { try { localStorage.setItem('lamp-hymns', JSON.stringify(hs)); } catch (e) { /* not saved */ } };
@@ -294,10 +294,71 @@
       o.connect(g); g.connect(verb); o.start(t); o.stop(t + 0.22); keep(o);
     }
   }
+  /* ---------------- Worship style ----------------
+   * The way a worship pianist plays these songs to hold an atmosphere of prayer:
+   *  - left hand in open voicings, root, 5th and 9th (C-G-D), spacious and never muddy, keeping the hymn's own
+   *    bass line, so its inversions (I/5, V/7…) still smooth the way from chord to chord;
+   *  - the tune on top, and gentle upward arpeggios in the right hand instead of block chords;
+   *  - a warm, quiet pad under the piano that sustains the harmony through the silences. */
+  const worshipOn = h => hs.worship === 'all' || ((hs.worship || 'devotional') === 'devotional' && !!h.theme);
+  function chordAt(notes, a, b, bassPc) {
+    const w = new Array(12).fill(0);
+    notes.forEach(([st, du, m, v]) => { const o = Math.min(b, st + du) - Math.max(a, st); if (o > 0) w[m % 12] += o * (v === 3 ? 2 : v === 0 ? 1.2 : 1); });
+    let best = { score: -1e9 };
+    for (let r = 0; r < 12; r++) for (const third of [4, 3]) {
+      const tones = [r, (r + third) % 12, (r + 7) % 12], allowed = tones.concat([(r + 10) % 12, (r + 2) % 12]);
+      const score = w[r] * 1.25 + w[tones[1]] + w[tones[2]] * 0.8 + (r === bassPc ? 2 : 0) - w.reduce((acc, x, pc) => acc + (allowed.includes(pc) ? 0 : x * 0.9), 0);
+      if (score > best.score) best = { score, root: r, third };
+    }
+    return best;
+  }
+  function worshipify(notes, h) {
+    const melody = notes.filter(n => n[3] === 0), bassLine = notes.filter(n => n[3] === 3).sort((x, y) => x[0] - y[0]);
+    const end = Math.max(...notes.map(n => n[0] + n[1]));
+    // a new chord where the bass moves (very short passing bass notes stay in the chord before)
+    const cuts = [];
+    bassLine.forEach(n => { if (!cuts.length || n[0] - cuts[cuts.length - 1].st >= 18) cuts.push({ st: n[0], bass: n[2] }); });
+    if (!cuts.length || cuts[0].st > 0) cuts.unshift({ st: 0, bass: bassLine.length ? bassLine[0][2] : 48 });
+    const out = melody.map(n => n.slice());
+    cuts.forEach((cut, i) => {
+      const a = cut.st, b = i + 1 < cuts.length ? cuts[i + 1].st : end, len = b - a;
+      if (len <= 0) return;
+      const ch = chordAt(notes, a, b, cut.bass % 12), root = ch.root;
+      // left hand: the bass as the hymn has it (low and open), then the 5th and 9th of the chord above it
+      let lo = cut.bass; while (lo > 47) lo -= 12; while (lo < 36) lo += 12;
+      const up = (from, pc) => from + 1 + ((pc - from - 1) % 12 + 12) % 12;   // the first note above 'from' with this pitch
+      const fifth = up(lo, lo % 12 === (root + 7) % 12 ? root : (root + 7) % 12), ninth = up(Math.max(fifth, lo + 9), (root + 2) % 12);
+      out.push([a, len, lo, 3, 0.3], [a + 2, len, fifth, 3, 0.17], [a + 4, len, ninth, 2, 0.13]);
+      // right hand: a gentle upward arpeggio, 1-5-9-3 style, beneath the tune, one note each eighth
+      let base = ninth + 1; while ((base % 12) !== root) base++;
+      const arp = [base, base + 7, base + 14, base + 12 + ch.third];
+      for (let x = 0, k = 0; x < len; x += 12, k++) {
+        const top = (melody.find(n => n[0] <= a + x && a + x < n[0] + n[1]) || [0, 0, 84])[2];
+        let m = arp[k % arp.length]; while (m >= top - 1) m -= 12;
+        if (m > ninth) out.push([a + x, Math.max(12, len - x), m, 1, k % arp.length === 0 ? 0.13 : 0.1]);
+      }
+      // the pad: root, 3rd, 5th and 9th held softly in the middle
+      [root, root + ch.third, root + 7, root + 14].forEach((pc, j) => { let m = 55 + ((pc - 55) % 12 + 12) % 12; out.push([a, len, m, 5, j ? 0.05 : 0.06]); });
+    });
+    return out.sort((x, y) => x[0] - y[0]);
+  }
+  /* a warm, slow pad: two softly detuned voices through a gentle filter */
+  function padTone(c, midi, t, len, vel) {
+    const g = c.createGain(), f = c.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = 900; f.Q.value = 0.4;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + Math.min(0.9, len * 0.4)); g.gain.setValueAtTime(vel, t + len); g.gain.linearRampToValueAtTime(0, t + len + 1.4);
+    f.connect(g); g.connect(dry); g.connect(verb);
+    [-5, 5].forEach((cents, i) => {
+      const o = c.createOscillator(); o.type = i ? 'sine' : 'triangle'; o.frequency.value = hz(midi); o.detune.value = cents;
+      o.connect(f); o.start(t); o.stop(t + len + 1.5); keep(o);
+    });
+  }
   function score(h) {
     if (h.backing) return backing(h);
-    const a = h.notes, notes = [];
+    const a = h.notes;
+    let notes = [];
     for (let i = 0; i < a.length; i += 4) notes.push([a[i], a[i + 1], a[i + 2], a[i + 3]]);
+    if (worshipOn(h)) notes = worshipify(notes, h);
     // at least two verses (each with its chorus), a breath of two beats between them, the last chord held longer
     const n = Math.max(2, hs.verses || 2), span = h.len + 48, all = [];
     for (let v = 0; v < n; v++) notes.forEach(x => {
@@ -332,6 +393,7 @@
         while (k < notes.length && t0 + notes[k][0] * spt < horizon) {
           const [st, du, m, v, vel] = notes[k++], at = Math.max(t0 + st * spt, c.currentTime + 0.01);
           if (v === 4) { if (hs.drums !== false) drum(c, m, at, vel); }
+          else if (v === 5) padTone(c, m + sh, at, du * spt, vel);
           else piano(c, m + sh, at, vel || VEL[v] || 0.2, Math.max(du * spt < 0.3 ? 0.6 : 1.2, du * spt * 1.3 + 0.4));
         }
         if (k >= notes.length && c.currentTime > t0 + d.len * spt + 2.2) playAt(hs.one ? pos : pos + 1);   // a short rest, then on
@@ -521,6 +583,7 @@
     return `
       <p class="muted small">Each song plays at least two verses, each with its chorus (choose 2, 3 or 4 verses). Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
       <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('devotional', 'Devotional & spirituals')}</div>
+      <div class="chips hy-verses"><span class="muted small">🕊️ Worship style:</span>${[['off', 'Off'], ['devotional', 'Devotional songs'], ['all', 'All songs']].map(([k, l]) => `<button class="chip ${(hs.worship || 'devotional') === k ? 'active' : ''}" data-worship="${k}">${l}</button>`).join('')}</div>
       <div class="chips hy-verses"><span class="muted small">Verses:</span>${[2, 3, 4].map(n => `<button class="chip ${(hs.verses || 2) === n ? 'active' : ''}" data-verses="${n}">${n}</button>`).join('')}</div>
       <div class="row gap wrap hy-tools">
         <button class="btn ${looping ? 'ghost' : 'primary'} small" id="hyPlaySel">${looping ? '⏸ Stop' : `▶ Play selected (${sel})`}</button>
@@ -539,6 +602,7 @@
           <button class="hy-play" data-n="${h.n}" aria-label="${playing && hs.one ? 'Stop' : 'Play ' + esc(h.title) + ' on repeat'}">${playing && hs.one ? '⏸' : '🔂'}</button>
         </div>`;
       }).join('')}</div>
+      <p class="muted small"><b>🕊️ Worship style</b> plays the way a worship pianist would: open left-hand chords (root, 5th and 9th) that keep the hymn's own bass line, gentle upward arpeggios under the tune instead of block chords, and a warm pad beneath that sustains the harmony.</p>
       <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎵 New tunes</b> are melodies written for this app, in four parts over each song's chords, for songs with no public-domain score. They are not the traditional melodies: <b>Great Is Thy Faithfulness</b> (1923), <b>How Great Thou Art</b> (1949) and <b>Be Still, My Soul</b> (sung to Sibelius's <i>Finlandia</i>) are still under copyright in many countries, so their usual tunes cannot be included.</p>`;
   }
   const store = () => (window.Core.state.readerOpts = window.Core.state.readerOpts || {});
@@ -587,6 +651,7 @@
       on('#hyNone', () => { const vis = shown().map(h => h.n); hs.sel = (hs.sel || HYMNAL().map(h => h.n)).filter(n => !vis.includes(n)); saveHymns(); drawHymns(); });
       on('#hyDrums', () => { hs.drums = hs.drums === false; saveHymns(); drawHymns(); });
       host.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => { hs.show = b.dataset.show; saveHymns(); drawHymns(); }));
+      host.querySelectorAll('[data-worship]').forEach(b => b.addEventListener('click', () => { hs.worship = b.dataset.worship; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
       host.querySelectorAll('[data-verses]').forEach(b => b.addEventListener('click', () => { hs.verses = +b.dataset.verses; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
       on('#hyShuffle', () => { hs.shuffle = !hs.shuffle; saveHymns(); drawHymns(); });
       on('#hyEasy', () => {
@@ -694,5 +759,5 @@
   const sync = () => { if (kind === 'mine') changed(); };
   setTimeout(() => { const p = getPlayer(); p.addEventListener('play', sync); p.addEventListener('pause', sync); }, 0);
 
-  window.Ambient = { peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
+  window.Ambient = { arrangement: n => { const h = hymnBy(n), a = h.notes, x = []; for (let i = 0; i < a.length; i += 4) x.push(a.slice(i, i + 4)); return worshipify(x, h); }, peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
 })();
