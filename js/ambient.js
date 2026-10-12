@@ -10,7 +10,7 @@
   const TRACKS = [
     ['calm', '🎹', 'Deep calm piano', 'Slow, warm piano for study and prayer'],
     ['stream', '🏞️', 'Running stream', 'Flowing water and gentle trickles'],
-    ['hymns', '⛪', 'Hymns & songs', 'Hymns in four parts, and African songs with keyboard backing'],
+    ['hymns', '⛪', 'Hymns & songs', 'Hymns and devotional songs, two verses or more'],
     ['pad', '🎻', 'Soft strings', 'A warm, slowly changing chord'],
     ['rain', '🌧️', 'Rain', 'Steady, soft rain']
   ];
@@ -179,12 +179,13 @@
    * 27 public-domain hymns in four parts (js/data/hymns.js), played on the piano in the key from the hymn list.
    * Play one hymn on repeat, or the hymns you tick one after another in a loop. */
   const KEYPC = { C: 0, 'C#': 1, Db: 1, D: 2, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
-  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all' };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
+  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all', verses: 2 };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
   try { Object.assign(hs, JSON.parse(localStorage.getItem('lamp-hymns') || '{}')); } catch (e) { /* defaults */ }
+  if (!['all', 'hymns', 'devotional'].includes(hs.show)) hs.show = 'all';
   const saveHymns = () => { try { localStorage.setItem('lamp-hymns', JSON.stringify(hs)); } catch (e) { /* not saved */ } };
   const HYMNAL = () => window.HYMNAL || [];
   const hymnBy = n => HYMNAL().find(h => h.n === n);
-  const shown = () => HYMNAL().filter(h => hs.show === 'hymns' ? !h.lang : hs.show === 'african' ? !!h.lang : true);
+  const shown = () => HYMNAL().filter(h => hs.show === 'hymns' ? !h.theme : hs.show === 'devotional' ? !!h.theme : true);
   const ticked = () => shown().filter(h => !hs.sel || hs.sel.includes(h.n));   // ticked, in the list being shown
   const keyName = k => k.replace('b', '♭').replace('#', '♯') + ' major';
   const hymnKey = h => hs.easy ? h.easy : h.key;
@@ -225,7 +226,7 @@
     const key = KEYPC[h.key], notes = [];
     const add = (st, du, m, v, vel) => notes.push([st, du, m, v, vel]);
     let t = 0, prev = null, top = 72;
-    const rounds = Math.max(2, Math.round(16 / steps.length));
+    const perVerse = Math.max(1, Math.round(8 / steps.length)), rounds = perVerse * Math.max(2, hs.verses || 2);
     const playBar = ({ deg, sev }, last) => {
       const pcs = deg.map(x => (key + x) % 12).concat(sev ? [(key + deg[0] + 10) % 12] : []);
       const ch = voicing(pcs, prev); prev = ch;
@@ -269,7 +270,7 @@
     for (let r = 0; r < rounds; r++) steps.forEach(stp => playBar(stp, false));
     playBar({ deg: DEG.I, sev: false }, true);
     notes.sort((x, y) => x[0] - y[0]);
-    return { notes, len: t, bpm: STYLE_BPM[sty], pace: 1 };
+    return { notes, len: t, bpm: STYLE_BPM[sty], pace: 1, verses: rounds / perVerse, verseLen: perVerse * steps.length * bar };
   }
   /* light percussion: 1 kick, 2 shaker, 3 high conga, 4 low conga, 5 rim */
   let noiseBuf = null;
@@ -297,7 +298,14 @@
     if (h.backing) return backing(h);
     const a = h.notes, notes = [];
     for (let i = 0; i < a.length; i += 4) notes.push([a[i], a[i + 1], a[i + 2], a[i + 3]]);
-    return { notes, len: h.len, bpm: h.bpm };
+    // at least two verses (each with its chorus), a breath of two beats between them, the last chord held longer
+    const n = Math.max(2, hs.verses || 2), span = h.len + 48, all = [];
+    for (let v = 0; v < n; v++) notes.forEach(x => {
+      const y = x.slice(); y[0] += v * span;
+      if (v === n - 1 && x[0] + x[1] >= h.len - 2) y[1] = Math.round(x[1] * 1.8);
+      all.push(y);
+    });
+    return { notes: all, len: (n - 1) * span + h.len + 24, bpm: h.bpm, verses: n, verseLen: span };
   }
   let hymnNow = 0, hymnToken = 0, hymnSkip = () => {}, hymnFrom = 0;
   function hymns(c) {
@@ -311,14 +319,15 @@
       if (kind !== 'hymns') return;
       pos = (i + order.length) % order.length;
       const h = hymnBy(order[pos]); hymnNow = h.n;
-      current = h.title + (hs.one ? ' (repeat)' : '');
-      changed();
       const d = score(h), sh = shiftFor(h), spt = 60 / (d.bpm * (d.pace || PACE)) / 24;   // seconds per tick
       const t0 = c.currentTime + 0.4, notes = d.notes;
-      let k = 0;
+      let k = 0, verse = 0;
+      const label = () => { current = h.title + (d.verses > 1 ? ` · verse ${verse} of ${d.verses}` : '') + (hs.one ? ' (repeat)' : ''); changed(); };
       // schedule a little ahead at a time, so a long hymn does not start hundreds of sounds at once
       const pump = () => {
         if (token !== hymnToken || kind !== 'hymns') return;
+        const v = Math.min(d.verses || 1, 1 + Math.floor(Math.max(0, c.currentTime - t0) / (d.verseLen * spt)));
+        if (v !== verse) { verse = v; label(); }
         const horizon = c.currentTime + 1.6;
         while (k < notes.length && t0 + notes[k][0] * spt < horizon) {
           const [st, du, m, v, vel] = notes[k++], at = Math.max(t0 + st * spt, c.currentTime + 0.01);
@@ -510,8 +519,9 @@
     if (!HYMNAL().length) return '<p class="muted small">The hymns could not be loaded.</p>';
     const tab = (k, label) => `<button class="chip ${hs.show === k ? 'active' : ''}" data-show="${k}">${label}</button>`;
     return `
-      <p class="muted small">Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
-      <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('african', 'African songs')}</div>
+      <p class="muted small">Each song plays at least two verses, each with its chorus (choose 2, 3 or 4 verses). Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
+      <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('devotional', 'Devotional & spirituals')}</div>
+      <div class="chips hy-verses"><span class="muted small">Verses:</span>${[2, 3, 4].map(n => `<button class="chip ${(hs.verses || 2) === n ? 'active' : ''}" data-verses="${n}">${n}</button>`).join('')}</div>
       <div class="row gap wrap hy-tools">
         <button class="btn ${looping ? 'ghost' : 'primary'} small" id="hyPlaySel">${looping ? '⏸ Stop' : `▶ Play selected (${sel})`}</button>
         <button class="btn ghost small" id="hyAll">Tick these</button>
@@ -525,11 +535,11 @@
         const what = h.backing ? '🎹 keyboard backing' : '🎼 full hymn';
         return `<div class="hy-row ${playing ? 'on' : ''}">
           <input type="checkbox" class="hy-tick" data-sel="${h.n}" ${ticks ? 'checked' : ''} aria-label="Include ${esc(h.title)}">
-          <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${h.lang ? esc(h.lang) + ' · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)}${h.style ? ' · ' + esc(h.style) : ''} · ${esc(h.prog)} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
+          <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${h.theme ? '<i>' + esc(h.theme) + '</i> · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)} · ${esc(h.prog)} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
           <button class="hy-play" data-n="${h.n}" aria-label="${playing && hs.one ? 'Stop' : 'Play ' + esc(h.title) + ' on repeat'}">${playing && hs.one ? '⏸' : '🔂'}</button>
         </div>`;
       }).join('')}</div>
-      <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎹 Keyboard backing</b> plays the song's chords in its key and keyboard style (march, highlife, afro-beat, worship, hymn…) for you to sing along: these songs have no public-domain score, and some are recent songs whose tunes belong to their writers. That includes <b>Great Is Thy Faithfulness</b> (1923) and <b>How Great Thou Art</b> (1949), still under copyright in most countries.</p>`;
+      <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎹 Keyboard backing</b> plays the song's chords in its key for you to sing along, where there is no public-domain score: <b>Great Is Thy Faithfulness</b> (1923) and <b>How Great Thou Art</b> (1949) are still under copyright in most countries, and <b>Be Still, My Soul</b> is sung to Sibelius's <i>Finlandia</i>, under copyright in many countries until 2028.</p>`;
   }
   const store = () => (window.Core.state.readerOpts = window.Core.state.readerOpts || {});
   function openPanel() {
@@ -577,6 +587,7 @@
       on('#hyNone', () => { const vis = shown().map(h => h.n); hs.sel = (hs.sel || HYMNAL().map(h => h.n)).filter(n => !vis.includes(n)); saveHymns(); drawHymns(); });
       on('#hyDrums', () => { hs.drums = hs.drums === false; saveHymns(); drawHymns(); });
       host.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => { hs.show = b.dataset.show; saveHymns(); drawHymns(); }));
+      host.querySelectorAll('[data-verses]').forEach(b => b.addEventListener('click', () => { hs.verses = +b.dataset.verses; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
       on('#hyShuffle', () => { hs.shuffle = !hs.shuffle; saveHymns(); drawHymns(); });
       on('#hyEasy', () => {
         hs.easy = !hs.easy; saveHymns();

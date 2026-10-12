@@ -45,40 +45,34 @@ HYMNS = [
     (24, 'Count Your Blessings', 'c/CountYourBlessings', 'BLESSINGS', 'Eb', 'D', '2/4', 'I – V – I – IV – V – I'),
     (25, 'Praise to the Lord, the Almighty', 'l/LobeDenHerren', 'LOBE DEN HERREN', 'G', 'F', '3/4', 'I – IV – V – vi – I'),
     # two the app already played before the lists here
-    (51, 'Joyful, Joyful, We Adore Thee', 'o/OdeToJoy', 'HYMN TO JOY', 'G', 'F', '4/4', 'I – V – I'),
-    (52, 'Jesus Loves Me', 'j/JesusLovesMe', 'JESUS LOVES ME', 'C', 'D', '4/4', 'I – IV – I – V – I'),
+    (45, 'Joyful, Joyful, We Adore Thee', 'o/OdeToJoy', 'HYMN TO JOY', 'G', 'F', '4/4', 'I – V – I'),
+    (46, 'Jesus Loves Me', 'j/JesusLovesMe', 'JESUS LOVES ME', 'C', 'D', '4/4', 'I – IV – I – V – I'),
 ]
-# African songs and choruses: number, title, language, freehymns file (when the tune is a public-domain hymn),
-# key (and easy key), time, keyboard style, chords. Without a public-domain score the app plays a keyboard backing
-# in this style, key and progression for singing along (the tunes of these choruses are not in any free score,
-# and some are recent songs whose tunes are under copyright).
-SONGS = [
-    (26, "Åfọpẹ́ F'Ọ́lọ́run (Now Thank We All Our God)", 'Yoruba / Classic', 'n/NunDankett', 'F', 'Eb', '4/4', 'Hymnal March', 'I - V - I - IV - V7 - I'),
-    (27, 'Báwo Ni Ma Ṣe Dupe (How Can I Express My Thanks)', 'Yoruba', None, 'G', 'F', '4/4', 'Afro-Highlife', 'I - IV - V - I'),
-    (28, 'Káṣẹ́ Mọ́gbá (Gba Gbogbo Ogo)', 'Yoruba', None, 'C', 'D', '4/4', 'Slow Worship', 'I - vi - IV - V'),
-    (29, "Ọlọ́run T'ó Dá Àwọn Òkè Ńlá", 'Yoruba', None, 'F', 'G', '4/4', 'Traditional Hymn', 'I - IV - I - V7 - I'),
-    (30, 'Ẹ Yọ̀ Nínú Olúwa (Rejoice in the Lord)', 'Yoruba', None, 'G', 'F', '3/4', 'Joyful', 'I - IV - V - I'),
-    (31, "N'ígbà Ti Mọ́ Rò Ìfẹ́ Rẹ̀ (When I Contemplate His Love)", 'Yoruba', None, 'Eb', 'D', '4/4', 'Meditative', 'I - IV - I - V7 - I'),
-    (32, 'Nitori Ti O Feran Mi', 'Yoruba', None, 'C', 'D', '4/4', 'Hymnal Call-Response', 'I - V - vi - IV'),
-    (33, 'Imela, Imela (Thank You, Thank You)', 'Igbo', None, 'C', 'D', '4/4', 'African Ballad', 'I - V - vi - IV'),
-    (34, 'Nara Ekele Mo (Accept My Thanksgiving)', 'Igbo', None, 'F', 'G', '4/4', 'Mid-Tempo Praise', 'I - IV - V - I'),
-    (35, 'Ekwueme (The One Who Keeps His Word)', 'Igbo', None, 'D', 'C', '4/4', 'Slow Worship', 'vi - IV - I - V'),
-    (36, 'Chukwu Nna, Anyị A Bịawala', 'Igbo', None, 'G', 'F', '4/4', 'Processional', 'I - IV - V - I'),
-    (37, 'Otuto Dirichukwu N’elu Kakasi Elu', 'Igbo', None, 'F', 'G', '3/4', 'Classical Mass', 'I - IV - I - V7 - I'),
-    (38, 'Kosisochukwu (As It Pleases God)', 'Igbo', None, 'C', 'D', '4/4', 'Soft Worship', 'I - vi - IV - V'),
-    (39, 'Ngozi Bụ Nke Dị Dị mma', 'Igbo', None, 'G', 'F', '4/4', 'Praise', 'I - IV - V - I'),
-    (40, 'Osó-o, Osó-o (Nagode)', 'Hausa / Indigenous', None, 'C', 'D', '4/4', 'Afro-Beat Praise', 'I - IV - V - I'),
-    (41, 'Nagode Sarki Yesu (Thank You King Jesus)', 'Hausa', None, 'G', 'F', '4/4', 'Highlife/Praise', 'I - IV - I - V'),
-    (42, 'Yesu Mai Ceto (Jesus the Savior)', 'Hausa', None, 'F', 'G', '4/4', 'Worship', 'I - vi - IV - V'),
-    (43, 'Ubangiji Shi Ne Makiyaya Na (The Lord Is My Shepherd)', 'Hausa', 'c/Crimond', 'D', 'C', '3/4', 'Psalm Tune', 'I - IV - I - V - I'),
-    (44, 'Kumbaya, My Lord', 'African-American / Gullah', None, 'C', 'D', '4/4', 'Folk Hymn', 'I - IV - I - V7'),
-    (45, 'Siyahamba (We Are Marching in the Light of God)', 'Zulu / South African', None, 'G', 'F', '4/4', 'Syncopated March', 'I - IV - V7 - I'),
-    (46, 'Senzeni Na? (What Have We Done?)', 'Xhosa / Zulu', None, 'F', 'G', '4/4', 'Choral Hymn', 'I - IV - I - V'),
-    (47, 'What Shall I Render unto Jehovah?', 'Indigenous chorus', None, 'G', 'F', '4/4', 'Highlife / Praise', 'I - IV - V - I'),
-    (48, 'Praising the Lord Always', 'Indigenous chorus', None, 'F', 'G', '4/4', 'Afro-Praise', 'I - IV - I - V'),
-    (49, 'Master Jesus, You Are the Pillar That Holds My Life', 'Indigenous chorus', None, 'C', 'D', '4/4', 'Slow Praise', 'I - IV - V - I'),
-    (50, 'We Give You All the Glory, We Worship You Our Lord', 'Indigenous chorus', None, 'F', 'G', '4/4', 'Worship', 'I - IV - I - V - I'),
+# Devotional hymns and spirituals: number, title, freehymns file (None: keyboard backing), key, easy key, time,
+# keyboard style for a backing, chords, theme. Take My Life and Let It Be is already number 18 above.
+DEVOTIONAL = [
+    (26, 'Be Still, My Soul', None, 'F', 'Eb', '4/4', 'Traditional Hymn', 'I - V - vi - IV - V - I', "Resting in God's sovereign stillness"),
+    (27, 'Dear Lord and Father of Mankind', None, 'Eb', 'D', '4/4', 'Traditional Hymn', 'I - vi - ii - V7 - I', 'Inner calm, quiet trust and peace'),
+    (28, 'More Love to Thee, O Christ', 'm/MoreLoveToThee', 'G', 'F', '4/4', None, 'I - IV - I - V7 - I', 'Heartfelt devotion and personal love'),
+    (29, 'In the Secret of His Presence', 'i/InTheSecretOfHisPresence', 'Eb', 'D', '3/4', None, 'I - IV - I - V7 - I', 'Quiet fellowship and sanctuary'),
+    (30, 'My Jesus, I Love Thee', 'g/Gordon', 'F', 'Eb', '4/4', None, 'I - IV - I - V - I', 'Adoration and declaration of love'),
+    (31, 'I Need Thee Every Hour', 'i_/INeedTheeEveryHour', 'Ab', 'G', '3/4', None, 'I - IV - I - V7 - I', 'Dependence and desperate seeking'),
+    (32, 'I Surrender All', 'i_/ISurrenderAll', 'D', 'C', '4/4', None, 'I - V - vi - IV - I', 'Absolute surrender and altar devotion'),
+    (33, 'I Am Thine, O Lord (Draw Me Nearer)', 'd/DrawMeNearer', 'Ab', 'G', '4/4', None, 'I - IV - I - V7 - I', "Drawing closer to God's presence"),
+    (34, 'Sweet Hour of Prayer', 's/SweetHour', 'C', 'Bb', '6/8', None, 'I - IV - I - V - I', 'Intimate intercession and communion'),
+    (35, 'Deeper, Deeper in the Love of Jesus', None, 'F', 'Eb', '4/4', 'Traditional Hymn', 'I - IV - I - V7 - I', 'Maturing in spiritual depth and love'),
+    (36, 'Nearer, My God, to Thee', 'b/Bethany', 'G', 'F', '6/8', None, 'I - IV - I - V7 - I', 'Drawing near through all trials'),
+    (37, 'Close to Thee', 'c/CloseToThee', 'G', 'F', '3/4', None, 'I - IV - I - V - I', 'Walking step by step with Christ'),
+    (38, 'Give Me Jesus', None, 'Eb', 'D', '4/4', 'Meditative', 'I - vi - IV - I - V', 'Denying the world for Christ alone'),
+    (39, 'Just a Closer Walk with Thee', 'j/JustACloserWalkWithThee', 'C', 'Bb', '4/4', None, 'I - V7 - I - IV - I', 'Daily intimacy and guidance'),
+    (40, 'Fairest Lord Jesus', 'c/CrusadersHymn', 'Eb', 'D', '4/4', None, 'I - V - vi - IV - V - I', "Contemplation of Christ's beauty"),
+    (41, 'Steal Away to Jesus', None, 'F', 'Eb', '4/4', 'Meditative', 'I - IV - I - V7', 'Quiet, meditative prayer chant'),
+    (42, 'Were You There When They Crucified My Lord?', 'w/WereYouThere', 'F', 'Eb', '4/4', None, 'I - IV - vi - V - I', 'Deep reflection on the Cross'),
+    (43, 'Deep River', 'd/DeepRiver', 'D', 'C', '4/4', None, 'I - IV - V - vi - I', 'Peace, quiet meditation and hope'),
+    (44, 'Every Time I Feel the Spirit', None, 'G', 'F', '4/4', 'Hymnal March', 'I - IV - V - I', 'Inner awakening and devotion'),
 ]
+# Be Still, My Soul is sung to Sibelius's FINLANDIA (Sibelius died in 1957), still under copyright in many countries
+# until 2028, so it plays as a keyboard backing for now. The other backings have no public-domain score here.
 
 # Great Is Thy Faithfulness (Runyan, 1923) and How Great Thou Art (Hine, 1949) are still under copyright in most
 # countries, so the app plays only their chord progressions (from the table above), not the melodies.
@@ -276,12 +270,12 @@ def build():
     out = []
     problems = []
     rows = [(num, title, None, path, tune, key, easy, ts, None, prog) for num, title, path, tune, key, easy, ts, prog in HYMNS]
-    rows += [(num, title, lang, path, None, key, easy, ts, style, prog.replace(' - ', ' – ')) for num, title, lang, path, key, easy, ts, style, prog in SONGS]
+    rows += [(num, title, theme, path, None, key, easy, ts, style, prog.replace(' - ', ' – ')) for num, title, path, key, easy, ts, style, prog, theme in DEVOTIONAL]
     rows.sort(key=lambda r: r[0])
-    for num, title, lang, path, tune, key, easy, ts, style, prog in rows:
+    for num, title, theme, path, tune, key, easy, ts, style, prog in rows:
         item = dict(n=num, title=title, key=key, easy=easy, ts=ts, prog=prog)
         if tune: item['tune'] = tune
-        if lang: item['lang'] = lang
+        if theme: item['theme'] = theme
         if style: item['style'] = style
         if not path:
             item['backing'] = style or 'Traditional Hymn'
