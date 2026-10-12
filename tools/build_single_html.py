@@ -52,6 +52,9 @@ html = html.replace('href="icons/icon.svg"', f'href="{icon}"')
 def inline(m):
     path = m.group(1)
     out = f'<script>\n{safe_js(read(path))}\n</script>'
+    if path == 'js/ambient.js':
+        # the 1906 hymnal is kept as text and run only when the hymn list is opened
+        out += f'\n<script type="text/plain" id="hymns1906-src">{safe_js(read("js/data/hymns1906.js"))}</script>'
     if path == 'js/bible.js':
         if BUNDLES:
             return "<script>window.BIBLE_BUNDLES = 'bundle/';</script>\n" + out

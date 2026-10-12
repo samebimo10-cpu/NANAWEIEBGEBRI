@@ -1,0 +1,506 @@
+[
+ {
+  "no": 1,
+  "first": "Praise God, from whom all blessings flow",
+  "tune": "Old Hundredth",
+  "meter": "L. M.",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/o/Old100th.abc"
+ },
+ {
+  "no": 7,
+  "first": "O worship the King, all glorious above",
+  "tune": "Lyons",
+  "meter": "10.10.11.11",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/l/Lyons.abc"
+ },
+ {
+  "no": 8,
+  "first": "Come, we who love the Lord",
+  "tune": "St. Thomas",
+  "meter": "S. M.",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/s/StThomas.abc"
+ },
+ {
+  "no": 11,
+  "first": "Come, Thou Almighty King",
+  "tune": "Italian Hymn",
+  "meter": "6.6.4.6.6.6.4",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/i/ItalianHymn.abc"
+ },
+ {
+  "no": 15,
+  "first": "High in the heavens, eternal God",
+  "tune": "Truro",
+  "meter": "L. M.",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/t/Truro.abc"
+ },
+ {
+  "no": 17,
+  "first": "Lord, we come before Thee now",
+  "tune": "St. Bees",
+  "meter": "7s",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/s/StBees.abc"
+ },
+ {
+  "no": 27,
+  "first": "Sweetly the holy hymn",
+  "tune": "Greenwood",
+  "meter": "S. M.",
+  "section": "The Beginning of Worship",
+  "score": "freehymns/music/g/Greenwood.abc"
+ },
+ {
+  "no": 78,
+  "first": "O God, our help in ages past",
+  "tune": "St. Anne",
+  "meter": "C. M.",
+  "section": "God the Father",
+  "score": "freehymns/music/s/StAnne.abc"
+ },
+ {
+  "no": 88,
+  "first": "Hark! the herald angels sing",
+  "tune": "Mendelssohn",
+  "meter": "7s. D.",
+  "section": "Nativity",
+  "score": "freehymns/music/m/Mendelssohn.abc"
+ },
+ {
+  "no": 89,
+  "first": "O come, all ye faithful",
+  "tune": "Adeste Fideles",
+  "meter": "Irregular",
+  "section": "Nativity",
+  "score": "freehymns/music/a/AdesteFideles.abc"
+ },
+ {
+  "no": 101,
+  "first": "O Master, let me walk with Thee",
+  "tune": "Maryton",
+  "meter": "L. M.",
+  "section": "Life and Ministry",
+  "score": "freehymns/music/m/Maryton.abc"
+ },
+ {
+  "no": 120,
+  "first": "In the cross of Christ I glory",
+  "tune": "Rathbun",
+  "meter": "8.7.8.7",
+  "section": "Passion and Crucifixion",
+  "score": "freehymns/music/r/Rathburn.abc"
+ },
+ {
+  "no": 134,
+  "first": "Come, ye faithful, raise the strain",
+  "tune": "St. Kevin",
+  "meter": "7.6.7.6. D.",
+  "section": "Resurrection",
+  "score": "freehymns/music/s/StKevin.abc"
+ },
+ {
+  "no": 136,
+  "first": "Our Lord is risen from the dead",
+  "tune": "Duke Street",
+  "meter": "L. M.",
+  "section": "Ascension",
+  "score": "freehymns/music/d/DukeStreet.abc"
+ },
+ {
+  "no": 139,
+  "first": "Golden harps are sounding",
+  "tune": "Hermas",
+  "meter": "6.5.6.5. D.",
+  "section": "Ascension",
+  "score": "freehymns/music/h/Hermas.abc"
+ },
+ {
+  "no": 140,
+  "first": "See the Conqueror mounts in triumph",
+  "tune": "Rex Gloriae",
+  "meter": "8.7.8.7. D.",
+  "section": "Ascension",
+  "score": "openhymnal/Complete/See_The_Lord_Ascends_In_Triumph/See_The_Lord_Ascends_In_Triumph-Rex_Gloriae.abc"
+ },
+ {
+  "no": 168,
+  "first": "The Spirit breathes upon the word",
+  "tune": "Ortonville",
+  "meter": "C. M.",
+  "section": "The Holy Spirit",
+  "score": "freehymns/music/o/Ortonville.abc"
+ },
+ {
+  "no": 173,
+  "first": "The Church's one foundation",
+  "tune": "Aurelia",
+  "meter": "7.6.7.6. D.",
+  "section": "The Church",
+  "score": "freehymns/music/a/Aurelia.abc"
+ },
+ {
+  "no": 174,
+  "first": "Glorious things of thee are spoken",
+  "tune": "Austria",
+  "meter": "8.7.8.7. D.",
+  "section": "The Church",
+  "score": "freehymns/music/a/AustrianHymn.abc"
+ },
+ {
+  "no": 194,
+  "first": "Jesus, Thou joy of loving hearts",
+  "tune": "Canonbury",
+  "meter": "L. M.",
+  "section": "The Lord's Supper",
+  "score": "freehymns/music/c/Canonbury.abc"
+ },
+ {
+  "no": 203,
+  "first": "Jesus calls us, o'er the tumult",
+  "tune": "Galilee",
+  "meter": "8.7.8.7",
+  "section": "Salvation Offered",
+  "score": "freehymns/music/g/Galilee.abc"
+ },
+ {
+  "no": 207,
+  "first": "Art thou weary, art thou languid",
+  "tune": "Stephanos",
+  "meter": "8.5.8.3",
+  "section": "Salvation Offered",
+  "score": "freehymns/music/s/Stephanos.abc"
+ },
+ {
+  "no": 209,
+  "first": "Blow ye the trumpet, blow",
+  "tune": "Lenox",
+  "meter": "6.6.6.6.8.8",
+  "section": "Salvation Offered",
+  "score": "freehymns/music/l/Lenox.abc"
+ },
+ {
+  "no": 214,
+  "first": "From every stormy wind that blows",
+  "tune": "Retreat",
+  "meter": "L. M.",
+  "section": "Salvation Offered",
+  "score": "freehymns/music/r/Retreat.abc"
+ },
+ {
+  "no": 228,
+  "first": "Lord, I hear of showers of blessing",
+  "tune": "Even Me",
+  "meter": "8.7.8.7.3",
+  "section": "Salvation Accepted",
+  "score": "freehymns/music/e/EvenMe.abc"
+ },
+ {
+  "no": 236,
+  "first": "Saviour, when in dust to Thee",
+  "tune": "Spanish Hymn",
+  "meter": "7s. D.",
+  "section": "Salvation Accepted",
+  "score": "freehymns/music/s/SpanishHymn.abc"
+ },
+ {
+  "no": 246,
+  "first": "With broken heart and contrite sigh",
+  "tune": "Woodworth",
+  "meter": "L. M.",
+  "section": "Salvation Accepted",
+  "score": "freehymns/music/w/Woodworth.abc"
+ },
+ {
+  "no": 249,
+  "first": "My faith looks up to Thee",
+  "tune": "Olivet",
+  "meter": "6.6.4.6.6.6.4",
+  "section": "Faith and Consecration",
+  "score": "freehymns/music/o/Olivet.abc"
+ },
+ {
+  "no": 265,
+  "first": "Children of the heavenly King",
+  "tune": "Pleyel's Hymn",
+  "meter": "7s",
+  "section": "Faith and Consecration",
+  "score": "freehymns/music/p/PleyelsHymn.abc"
+ },
+ {
+  "no": 273,
+  "first": "Awake, my soul, in joyful lays",
+  "tune": "Loving-Kindness",
+  "meter": "L. M.",
+  "section": "Love and Gratitude",
+  "score": "freehymns/music/l/LovingKindness.abc"
+ },
+ {
+  "no": 276,
+  "first": "O holy Saviour, friend unseen",
+  "tune": "Flemming",
+  "meter": "8.8.8.6",
+  "section": "Love and Gratitude",
+  "score": "freehymns/music/f/Flemming.abc"
+ },
+ {
+  "no": 281,
+  "first": "O could I speak the matchless worth",
+  "tune": "Ariel",
+  "meter": "8.8.6.8.8.6",
+  "section": "Love and Gratitude",
+  "score": "freehymns/music/a/Ariel.abc"
+ },
+ {
+  "no": 288,
+  "first": "Jesus, and shall it ever be",
+  "tune": "Federal Street",
+  "meter": "L. M.",
+  "section": "Love and Gratitude",
+  "score": "freehymns/music/f/FederalStreet.abc"
+ },
+ {
+  "no": 292,
+  "first": "Love divine, all loves excelling",
+  "tune": "Beecher",
+  "meter": "8.7.8.7. D.",
+  "section": "Love and Gratitude",
+  "score": "freehymns/music/b/Beecher.abc"
+ },
+ {
+  "no": 310,
+  "first": "Praise, Lord, for Thee in Zion waits",
+  "tune": "Germany",
+  "meter": "L. M.",
+  "section": "Prayer",
+  "score": "freehymns/music/g/Germany.abc"
+ },
+ {
+  "no": 321,
+  "first": "Loved with everlasting love",
+  "tune": "Everlasting Love",
+  "meter": "7s. D.",
+  "section": "Hymns of Peace",
+  "score": "freehymns/music/e/EverlastingLove.abc"
+ },
+ {
+  "no": 325,
+  "first": "Still with Thee, O my God",
+  "tune": "Boylston",
+  "meter": "S. M.",
+  "section": "Hymns of Peace",
+  "score": "freehymns/music/b/Boylston.abc"
+ },
+ {
+  "no": 332,
+  "first": "The King of love my Shepherd is",
+  "tune": "Dominus Regit Me",
+  "meter": "8.7.8.7",
+  "section": "Hymns of Peace",
+  "score": "freehymns/music/d/DominusRegitMe.abc"
+ },
+ {
+  "no": 338,
+  "first": "Oft in danger, oft in woe",
+  "tune": "University College",
+  "meter": "7s",
+  "section": "Trial and Conflict",
+  "score": "freehymns/music/u/UniversityCollege.abc"
+ },
+ {
+  "no": 354,
+  "first": "Who is on the Lord's side?",
+  "tune": "Armageddon",
+  "meter": "6.5.6.5.12",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/a/Armageddon.abc"
+ },
+ {
+  "no": 356,
+  "first": "Stand up, stand up for Jesus",
+  "tune": "Webb",
+  "meter": "7.6.7.6. D.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/w/Webb.abc"
+ },
+ {
+  "no": 357,
+  "first": "Rejoice, ye pure in heart",
+  "tune": "Marion",
+  "meter": "S. M.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/m/Marion.abc"
+ },
+ {
+  "no": 358,
+  "first": "Onward, Christian soldiers",
+  "tune": "St. Gertrude",
+  "meter": "6.5.6.5. D.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/s/StGertrude.abc"
+ },
+ {
+  "no": 359,
+  "first": "Lord, speak to me, that I may speak",
+  "tune": "Rockingham (Old)",
+  "meter": "L. M.",
+  "section": "Hymns of Service",
+  "score": "openhymnal/Complete/When_I_Survey_The_Wondrous_Cross/When_I_Survey_The_Wondrous_Cross-Rockingham_Old.abc"
+ },
+ {
+  "no": 362,
+  "first": "Must Jesus bear the cross alone",
+  "tune": "Maitland",
+  "meter": "C. M.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/m/Maitland.abc"
+ },
+ {
+  "no": 373,
+  "first": "Awake, my soul, stretch every nerve",
+  "tune": "Christmas",
+  "meter": "C. M.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/c/Christmas.abc"
+ },
+ {
+  "no": 387,
+  "first": "Oh, for the happy hour",
+  "tune": "St. Michael",
+  "meter": "S. M.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/s/StMichael.abc"
+ },
+ {
+  "no": 388,
+  "first": "Work, for the night is coming",
+  "tune": "Work Song",
+  "meter": "7.6.7.5. D.",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/w/WorkSong.abc"
+ },
+ {
+  "no": 389,
+  "first": "O Lord of heaven and earth and sea",
+  "tune": "Almsgiving",
+  "meter": "8.8.8.4",
+  "section": "Hymns of Service",
+  "score": "freehymns/music/a/Almsgiving.abc"
+ },
+ {
+  "no": 393,
+  "first": "Saints of God! the dawn is brightening",
+  "tune": "Regent Square",
+  "meter": "8.7.8.7.4.7",
+  "section": "Missions — Home",
+  "score": "freehymns/music/r/RegentSquare.abc"
+ },
+ {
+  "no": 401,
+  "first": "From Greenland's icy mountains",
+  "tune": "Missionary Hymn",
+  "meter": "7.6.7.6. D.",
+  "section": "Missions — Foreign",
+  "score": "freehymns/music/m/MissionaryHymn.abc"
+ },
+ {
+  "no": 408,
+  "first": "On the mountain's top appearing",
+  "tune": "Zion",
+  "meter": "8.7.8.7.4.7",
+  "section": "Missions — Foreign",
+  "score": "freehymns/music/z/Zion.abc"
+ },
+ {
+  "no": 420,
+  "first": "Jerusalem the golden",
+  "tune": "Ewing",
+  "meter": "7.6.7.6. D.",
+  "section": "Hymns of Hope",
+  "score": "openhymnal/Complete/Jerusalem_the_Golden/Jerusalem_the_Golden-Ewing.abc"
+ },
+ {
+  "no": 424,
+  "first": "The sands of time are sinking",
+  "tune": "Rutherford",
+  "meter": "7.6.7.6.7.6.7.5",
+  "section": "Hymns of Hope",
+  "score": "freehymns/music/r/Rutherford.abc"
+ },
+ {
+  "no": 434,
+  "first": "We are but strangers here",
+  "tune": "St. Edmund",
+  "meter": "6.4.6.4.6.6.6.4",
+  "section": "Hymns of Hope",
+  "score": "freehymns/music/s/StEdmund.abc"
+ },
+ {
+  "no": 442,
+  "first": "A few more years shall roll",
+  "tune": "Leominster",
+  "meter": "S. M. D.",
+  "section": "The Changing Year",
+  "score": "freehymns/music/l/Leominster.abc"
+ },
+ {
+  "no": 453,
+  "first": "I think when I read that sweet story of old",
+  "tune": "Sweet Story",
+  "meter": "Irregular",
+  "section": "Children's Services",
+  "score": "freehymns/music/s/SweetStory.abc"
+ },
+ {
+  "no": 455,
+  "first": "Silent night, holy night",
+  "tune": "Holy Night (Stille Nacht)",
+  "meter": "Irregular",
+  "section": "Children's Services",
+  "score": "freehymns/music/s/SilentNight.abc"
+ },
+ {
+  "no": 468,
+  "first": "Earth below is teeming",
+  "tune": "St. Alban",
+  "meter": "6.5.6.5. D.",
+  "section": "Thanksgiving",
+  "score": "openhymnal/Complete/Jesus_King_Of_Glory/Jesus_King_Of_Glory-St_Alban.abc"
+ },
+ {
+  "no": 473,
+  "first": "Now thank we all our God",
+  "tune": "Nun Danket",
+  "meter": "6.7.6.7.6.6.6.6",
+  "section": "Thanksgiving",
+  "score": "openhymnal/Complete/Now_Thank_We_All_Our_God/Now_Thank_We_All_Our_God-Nun_Danket.abc"
+ },
+ {
+  "no": 476,
+  "first": "O perfect Love, all human thought transcending",
+  "tune": "O Perfect Love",
+  "meter": "11.10.11.10",
+  "section": "Matrimony",
+  "score": "freehymns/music/oh/OPerfectLove.abc"
+ },
+ {
+  "no": 481,
+  "first": "Pour out Thy Spirit from on high",
+  "tune": "Holley",
+  "meter": "L. M.",
+  "section": "The Ministry",
+  "score": "freehymns/music/h/Holley.abc"
+ },
+ {
+  "no": 496,
+  "first": "How sweet, how heavenly is the sight",
+  "tune": "Belmont",
+  "meter": "C. M.",
+  "section": "Hymns for Reunions",
+  "score": "freehymns/music/b/Belmont.abc"
+ }
+]

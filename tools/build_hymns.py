@@ -10,7 +10,7 @@ Usage:
   git clone --depth 1 https://github.com/freehymns/hymns.git /tmp/freehymns
   python3 tools/build_hymns.py /tmp/freehymns/music
 """
-import json, os, re, sys
+import difflib, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from new_tunes import COMPOSED, compose   # noqa: E402
@@ -126,14 +126,55 @@ TOKEN = re.compile(r"""
   | (?P<bar>:?\|[\]|:]?|::|\[\|)
   | (?P<tuplet>\(\d)
   | (?P<mark>§)
+  | (?P<amp>&)
   | (?P<skip>[()\s\\.~yHTMLRSOPuv>`])
 """, re.X)
+
+
+def expand_repeats(body):
+    """Write out repeats: |: ... :| plays twice; with endings, [1 the first time and [2 the second."""
+    parts = re.split(r'(\|\]|\|\||:\|\||::|:\||\|:|\|)', body)
+    bars = [(parts[i], parts[i + 1] if i + 1 < len(parts) else '') for i in range(0, len(parts), 2)]
+    is_end = lambda b: b[1] in (':|', '::', ':||')
+    out, start, i = [], 0, 0
+    emit = lambda seq: out.extend(c + (' |' if bl in (':|', '::', ':||', '|:') else ' ' + bl) for c, bl in seq)
+    while i < len(bars):
+        c, bl = bars[i]
+        if re.match(r'^\s*\[1', c):
+            j = i
+            while j < len(bars) and not is_end(bars[j]):
+                j += 1
+            k = j + 1
+            while k < len(bars) and bars[k][1] not in ('||', '|]', ':|', '|:', '::') and k + 1 < len(bars):
+                k += 1
+            body_bars = bars[start:i]
+            end1 = [(re.sub(r'^\s*\[1', '', b[0]) if n == 0 else b[0], b[1]) for n, b in enumerate(bars[i:j + 1])]
+            end2 = [(re.sub(r'^\s*\[2', '', b[0]) if n == 0 else b[0], b[1]) for n, b in enumerate(bars[j + 1:k + 1])]
+            emit(body_bars + end1 + body_bars + end2)
+            i = start = k + 1
+            continue
+        if is_end((c, bl)):
+            emit(bars[start:i + 1] * 2)
+            start = i + 1
+            if bl == '::':
+                pass
+        elif bl == '|:':
+            emit(bars[start:i + 1])
+            start = i + 1
+        i += 1
+    emit(bars[start:])
+    return ' '.join(out)
 
 
 def parse_voice(body, unit, keyacc, info=None):
     """Return a list of [start, dur, midi, tie] in whole-note fractions, plus bar lengths.
     With info: also the time at each line mark (§) and each sounding note or chord (for lining up the words)."""
     marks, events, tied = [], [], set()
+    overlay = F(0)
+    if re.search(r'\|:|:\||\[1', body):
+        body = expand_repeats(body)
+        if info is not None:
+            info['repeats'] = True
     t = F(0)
     out, bars, bar_start = [], [], F(0)
     local = {}
@@ -161,6 +202,10 @@ def parse_voice(body, unit, keyacc, info=None):
         if g == 'mark':
             marks.append(t)
             continue
+        if g == 'amp':   # a second voice on the same staff: back to the start of the bar
+            overlay = max(overlay, t)
+            t = bar_start
+            continue
         if g in ('field', 'annot', 'grace', 'skip'):
             if g == 'field' and m.group(0)[1] == 'K':
                 _, keyacc = key_accidentals(m.group(0)[3:-1])
@@ -174,6 +219,8 @@ def parse_voice(body, unit, keyacc, info=None):
             tuplet = [F({2: 3, 3: 2, 4: 3, 6: 2}.get(n, n - 1), n), n]
             continue
         if g == 'bar':
+            t = max(t, overlay)
+            overlay = F(0)
             bars.append(t - bar_start)
             bar_start = t
             local = {}
@@ -239,13 +286,26 @@ def parse_voice(body, unit, keyacc, info=None):
 
 
 def parse_file(path):
-    text = open(path, encoding='utf-8').read()
+    raw_bytes = open(path, 'rb').read()
+    try:
+        text = raw_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        text = raw_bytes.decode('latin-1')   # some Open Hymnal files
     head, voices, cur = {}, {}, None
     order, wtok = [], {}
     for raw in text.split('\n'):
         line = raw.split('%')[0].rstrip() if not raw.startswith('%%') else ''
         if not line.strip():
             continue
+        iv = re.match(r'^\[V:\s*([^\]\s]+)[^\]]*\](.*)$', line)
+        if iv:
+            cur = iv.group(1)
+            if cur not in voices:
+                voices[cur] = []
+                order.append(cur)
+            line = iv.group(2)
+            if not line.strip():
+                continue
         m = re.match(r'^([A-Za-z+]):\s?(.*)$', line)
         if m:
             k, v = m.group(1), m.group(2)
@@ -382,7 +442,7 @@ def read_words(path):
 
 
 def clean_line(line):
-    line = line.replace("-'", "'").replace('=', '')
+    line = line.replace("-'", "'").replace('=', '').replace('\\n', ' ').replace('_', '')
     return re.sub(r'\s+', ' ', re.sub(r'(?<=\w)-(?=\w)', '', line)).strip()
 
 
@@ -435,10 +495,10 @@ def split_lines(lines, n):
     return lines
 
 
-def words_for(num, title, h):
+def words_for(num, title, h, path=None):
     if num in NO_WORDS:
         return None
-    path = find_words(num, title)
+    path = path or find_words(num, title)
     if not path:
         return None
     verses, refrain, own = read_words(path)
@@ -549,5 +609,68 @@ def build():
     print(dest, len(js) // 1024, 'KB')
 
 
+
+# ---------------------------------------------------------------------------------------------------------------
+# Hymns of Worship and Service (New York: The Century Co., 1906): the hymns whose tunes have a clean public-domain
+# score (tools/hymnal1906.json lists book number, first line, tune, meter and section, read from a scan of the book).
+# Written to js/data/hymns1906.js, which the app loads only when the collection is opened.
+def build_1906():
+    ext = os.path.dirname(os.path.dirname(SRC.rstrip('/')))
+    spec = json.load(open(os.path.join(ROOT, 'tools', 'hymnal1906.json'), encoding='utf-8'))
+    norm = lambda x: re.sub(r'[^a-z]', '', x.lower().replace('’', "'"))
+    firsts = {}
+    for f in sorted(os.listdir(WORDS_DIR)):
+        d = os.path.join(WORDS_DIR, f)
+        if not os.path.isdir(d):
+            continue
+        for g in os.listdir(d):
+            lines = [l.strip() for l in open(os.path.join(d, g), encoding='utf-8')]
+            v1 = next((lines[i + 1] for i, l in enumerate(lines) if l.startswith('Verse 1') and i + 1 < len(lines)), '')
+            firsts.setdefault(norm(re.sub(r'(?<=\w)-(?=\w)', '', v1))[:26], os.path.join(d, g))
+    out, words = [], 0
+    for o in spec:
+        h = parse_file(os.path.join(ext, o['score']))
+        totals = [p[2] for p in h['parts'] if p[1]]
+        voiced = [p for p in h['parts'] if p[1]]
+        flat = []
+        for vi, (v, notes, total, bars) in enumerate(voiced):
+            top, low = {}, {}
+            for st, d, midi, _ in notes:
+                top[st] = max(top.get(st, 0), midi)
+                low[st] = min(low.get(st, 999), midi)
+            for st, d, midi, _ in notes:
+                voice = min(vi, 3)
+                if vi == 0 and midi < top[st]:
+                    voice = 1
+                if vi == 1 and len(voiced) == 2:   # two staves of chords: the lower staff is tenor and bass
+                    voice = 3 if midi == low[st] else 2
+                flat.append([int(st * 4 * TPQ), int(d * 4 * TPQ), midi, voice])
+        flat.sort(key=lambda n: (n[0], n[3]))
+        enc = []
+        for n in flat:
+            enc += n
+        item = dict(n=1000 + o['no'], no=o['no'], book=1906, title=o['first'], tune=o['tune'].upper(), section=o['section'], key=h['key'], easy=h['key'],
+                    ts=h['meter'] if '/' in h['meter'] else '4/4', hymnMeter=o['meter'], meter=h['meter'] if '/' in h['meter'] else '4/4', bpm=int(h['bpm'] or 100), len=int(max(totals) * 4 * TPQ), notes=enc)
+        text = firsts.get(norm(o['first'])[:26])
+        if not text:   # small differences in the first line ("Our God" / "O God")
+            key = norm(o['first'])[:26]
+            best = max(firsts, key=lambda k: difflib.SequenceMatcher(None, key, k[:26]).ratio())
+            if difflib.SequenceMatcher(None, key, best[:26]).ratio() >= 0.85:
+                text = firsts[best]
+        if text and h['words'][1] and not h['words'][0].get('repeats'):
+            w = words_for(item['n'], o['first'], h, text)
+            if w and w[1]:
+                item['words'] = {k: v for k, v in w[0].items() if k != 'file' and v is not None}
+                words += 1
+        out.append(item)
+    js = ('/* Hymns of Worship and Service (New York: The Century Co., 1906): the hymns whose tunes have a clean public-domain\n'
+          ' * score, built by tools/build_hymns.py from the freehymns and Open Hymnal projects. Loaded only when opened. */\n'
+          'window.HYMNAL_1906 = %s;\n') % json.dumps(out, separators=(',', ':'), ensure_ascii=False)
+    dest = os.path.join(ROOT, 'js', 'data', 'hymns1906.js')
+    open(dest, 'w', encoding='utf-8').write(js)
+    print(dest, len(out), 'hymns,', words, 'with words,', len(js) // 1024, 'KB')
+
+
 if __name__ == '__main__':
     build()
+    build_1906()

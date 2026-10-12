@@ -207,11 +207,35 @@
   const KEYPC = { C: 0, 'C#': 1, Db: 1, D: 2, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
   const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all', verses: 2, worship: 'devotional', atmos: 'prayer' };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
   try { Object.assign(hs, JSON.parse(localStorage.getItem('lamp-hymns') || '{}')); } catch (e) { /* defaults */ }
-  if (!['all', 'hymns', 'devotional'].includes(hs.show)) hs.show = 'all';
+  if (!['all', 'hymns', 'devotional', '1906'].includes(hs.show)) hs.show = 'all';
   const saveHymns = () => { try { localStorage.setItem('lamp-hymns', JSON.stringify(hs)); } catch (e) { /* not saved */ } };
-  const HYMNAL = () => window.HYMNAL || [];
+  let hymnalAll = null;
+  const HYMNAL = () => {
+    const a = window.HYMNAL || [], b = window.HYMNAL_1906 || [];
+    if (!hymnalAll || hymnalAll.n !== a.length + b.length) { hymnalAll = a.concat(b); hymnalAll.n = a.length + b.length; }
+    return hymnalAll;
+  };
+  /* Hymns of Worship and Service (1906) is a separate file, loaded only when the hymn list is opened. */
+  let book1906 = null;
+  function load1906() {
+    if (window.HYMNAL_1906) return Promise.resolve();
+    if (book1906) return book1906;
+    book1906 = new Promise(res => {
+      const inline = document.getElementById('hymns1906-src');
+      if (inline) { try { new Function(inline.textContent)(); } catch (e) { /* not loaded */ } res(); return; }
+      const s = document.createElement('script'); s.src = 'js/data/hymns1906.js';
+      s.onload = () => res(); s.onerror = () => { book1906 = null; res(); };
+      document.head.appendChild(s);
+    });
+    return book1906;
+  }
   const hymnBy = n => HYMNAL().find(h => h.n === n);
-  const shown = () => HYMNAL().filter(h => hs.show === 'hymns' ? !h.theme : hs.show === 'devotional' ? !!h.theme : true);
+  let hymnQuery = '';
+  const shown = () => {
+    const q = hymnQuery.trim().toLowerCase();
+    return HYMNAL().filter(h => (hs.show === 'hymns' ? !h.theme && !h.book : hs.show === 'devotional' ? !!h.theme : hs.show === '1906' ? !!h.book : true) &&
+      (!q || (h.title + ' ' + (h.tune || '') + ' ' + (h.section || '') + ' ' + (h.book ? h.no : h.n)).toLowerCase().includes(q)));
+  };
   const ticked = () => shown().filter(h => !hs.sel || hs.sel.includes(h.n));   // ticked, in the list being shown
   const keyName = k => k.replace('b', '♭').replace('#', '♯') + ' major';
   const hymnKey = h => hs.easy ? h.easy : h.key;
@@ -828,13 +852,27 @@
   const track = k => (OLD[k] || k) === 'mine' ? MINE : TRACKS.find(t => t[0] === (OLD[k] || k));
 
   /* ---------------- The music panel and the "now playing" bar ---------------- */
+  function hymnRows(list) {
+    const esc = window.Core.escapeHTML;
+    if (!list.length) return '<p class="muted small">No songs match.</p>';
+    return list.map(h => {
+      const playing = kind === 'hymns' && hymnNow === h.n, ticks = !hs.sel || hs.sel.includes(h.n);
+      const what = (h.backing ? '🎹 keyboard backing' : h.composed ? '🎵 new tune' : '🎼 full hymn') + (h.words ? ' · 📜 words' : '');
+      const about = h.book ? `${esc(h.tune)} · ${esc(h.hymnMeter || '')} · ${esc(h.section || '')} · ${keyName(hymnKey(h))}` : `${h.theme ? '<i>' + esc(h.theme) + '</i> · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)} · ${esc(h.prog)}`;
+      return `<div class="hy-row ${playing ? 'on' : ''}">
+        <input type="checkbox" class="hy-tick" data-sel="${h.n}" ${ticks ? 'checked' : ''} aria-label="Include ${esc(h.title)}">
+        <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.book ? '📖 No. ' + h.no : h.n}. ${esc(h.title)}</b><small>${about} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
+        <button class="hy-play" data-n="${h.n}" aria-label="${playing && hs.one ? 'Stop' : 'Play ' + esc(h.title) + ' on repeat'}">${playing && hs.one ? '⏸' : '🔂'}</button>
+      </div>`;
+    }).join('');
+  }
   function hymnsHTML() {
     const esc = window.Core.escapeHTML, list = shown(), sel = ticked().length, looping = kind === 'hymns' && !hs.one;
     if (!HYMNAL().length) return '<p class="muted small">The hymns could not be loaded.</p>';
     const tab = (k, label) => `<button class="chip ${hs.show === k ? 'active' : ''}" data-show="${k}">${label}</button>`;
     return `
       <p class="muted small">Each song plays at least two verses, each with its chorus (choose 2, 3 or 4 verses). Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
-      <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('devotional', 'Devotional & spirituals')}</div>
+      <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('devotional', 'Devotional & spirituals')}${tab('1906', '📖 1906 Hymnal')}</div>
       <div class="chips hy-verses"><span class="muted small">🕊️ Worship style:</span>${[['off', 'Off'], ['devotional', 'Devotional songs'], ['all', 'All songs']].map(([k, l]) => `<button class="chip ${(hs.worship || 'devotional') === k ? 'active' : ''}" data-worship="${k}">${l}</button>`).join('')}</div>
       ${(hs.worship || 'devotional') !== 'off' ? `<div class="chips hy-verses"><span class="muted small">🎹 Worship sound:</span>${Object.entries(ATMOS).map(([k, a]) => `<button class="chip ${(hs.atmos || 'prayer') === k ? 'active' : ''}" data-atmos="${k}" title="${a.sub}">${a.name}</button>`).join('')}</div>
       <p class="muted small hy-atmos">${(ATMOS[hs.atmos] || ATMOS.prayer).sub}</p>` : ''}
@@ -849,15 +887,9 @@
         <button class="btn ghost small ${hs.autoWords !== false ? 'on' : ''}" id="hyAutoWords" aria-pressed="${hs.autoWords !== false}">📜 Words open by themselves: ${hs.autoWords !== false ? 'on' : 'off'}</button>
         ${HYMNAL().some(h => h.backing) ? `<button class="btn ghost small ${hs.drums !== false ? 'on' : ''}" id="hyDrums" aria-pressed="${hs.drums !== false}">🥁 Drums ${hs.drums !== false ? 'on' : 'off'}</button>` : ''}
       </div>
-      <div class="hy-list">${list.map(h => {
-        const playing = kind === 'hymns' && hymnNow === h.n, ticks = !hs.sel || hs.sel.includes(h.n);
-        const what = (h.backing ? '🎹 keyboard backing' : h.composed ? '🎵 new tune' : '🎼 full hymn') + (h.words ? ' · 📜 words' : '');
-        return `<div class="hy-row ${playing ? 'on' : ''}">
-          <input type="checkbox" class="hy-tick" data-sel="${h.n}" ${ticks ? 'checked' : ''} aria-label="Include ${esc(h.title)}">
-          <button class="hy-name hy-loop" data-n="${h.n}"><b>${h.n}. ${esc(h.title)}</b><small>${h.theme ? '<i>' + esc(h.theme) + '</i> · ' : ''}${keyName(hymnKey(h))} · ${esc(h.ts)} · ${esc(h.prog)} · ${what}${playing ? (hs.one ? ' · 🔂 on repeat' : ' · ▶ in the loop') : ''}</small></button>
-          <button class="hy-play" data-n="${h.n}" aria-label="${playing && hs.one ? 'Stop' : 'Play ' + esc(h.title) + ' on repeat'}">${playing && hs.one ? '⏸' : '🔂'}</button>
-        </div>`;
-      }).join('')}</div>
+      <input type="search" class="search hy-search" id="hySearch" placeholder="Search by title, tune or number" value="${esc(hymnQuery)}" aria-label="Search the hymns">
+      <div class="hy-list">${hymnRows(list)}</div>
+      ${hs.show === '1906' || hs.show === 'all' ? `<p class="muted small"><b>📖 1906 Hymnal</b>: ${(window.HYMNAL_1906 || []).length || 'the'} hymns from <i>Hymns of Worship and Service</i> (New York: The Century Co., 1906), the ones whose tunes have a clean public-domain score. The numbers are the book's.</p>` : ''}
       <p class="muted small"><b>🕊️ Worship style</b> plays the way a worship pianist keeps a reverent atmosphere: quiet (p to mp), with open voicings (root and 5th low, 3rd and 9th high, the middle left clear), gentle upward arpeggios under the tune, suspensions that resolve (sus2 → 3, sus4 → 3), the pedal changed on every chord, and a warm pad about a quarter as loud as the piano, kept out of the bass. Choose the sound: <b>Contemplative prayer</b>, <b>Solemn adoration</b> or <b>Sacred sanctuary</b>.</p>
       <p class="muted small"><b>🎼 Full hymns</b> play the hymn tune in four-part harmony (soprano, alto, tenor, bass) from public-domain scores (the freehymns project). <b>🎵 New tunes</b> are melodies written for this app, in four parts over each song's chords, for songs with no public-domain score. They are not the traditional melodies: <b>Great Is Thy Faithfulness</b> (1923), <b>How Great Thou Art</b> (1949) and <b>Be Still, My Soul</b> (sung to Sibelius's <i>Finlandia</i>) are still under copyright in many countries, so their usual tunes cannot be included.</p>`;
   }
@@ -916,6 +948,17 @@
         hs.easy = !hs.easy; saveHymns();
         if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns();
       });
+      bindRows(host);
+      const search = host.querySelector('#hySearch');
+      if (search) search.addEventListener('input', () => {
+        hymnQuery = search.value;
+        const box = host.querySelector('.hy-list'); box.innerHTML = hymnRows(shown()); bindRows(box);
+        const ps = host.querySelector('#hyPlaySel'); if (ps && !(kind === 'hymns' && !hs.one)) ps.textContent = `▶ Play selected (${ticked().length})`;
+      });
+      on('#hyWords', () => { if (kind === 'hymns') openWords(); else window.Core.toast('Play a song first'); });
+      on('#hyAutoWords', () => { hs.autoWords = hs.autoWords === false; saveHymns(); drawHymns(); });
+    };
+    const bindRows = host => {
       host.querySelectorAll('[data-sel]').forEach(cb => cb.addEventListener('change', () => {
         const n = +cb.dataset.sel, cur = hs.sel || HYMNAL().map(h => h.n);
         hs.sel = cb.checked ? [...new Set(cur.concat(n))] : cur.filter(x => x !== n);
@@ -932,8 +975,6 @@
         playHymn(n, !ticked().some(h => h.n === n));   // a ticked hymn starts the loop here; an unticked one plays on its own
         sing(n);
       }));
-      on('#hyWords', () => { if (kind === 'hymns') openWords(); else window.Core.toast('Play a song first'); });
-      on('#hyAutoWords', () => { hs.autoWords = hs.autoWords === false; saveHymns(); drawHymns(); });
     };
     const drawMine = async () => {
       const host = document.getElementById('myMusic'); if (!host) return;
@@ -980,6 +1021,7 @@
     const refresh = () => { const body = document.getElementById('modalBody'); if (body && body.querySelector('.music-panel')) { body.innerHTML = html(); bind(); drawMine(); } };
     drawMine();
     bind();
+    if (!window.HYMNAL_1906) load1906().then(() => { if (window.HYMNAL_1906) drawHymns(); });
     const off = () => refresh();
     listeners.push(off);
     window.UI.onModalClose(() => { const i = listeners.indexOf(off); if (i >= 0) listeners.splice(i, 1); });
@@ -1030,5 +1072,5 @@
   const sync = () => { if (kind === 'mine') changed(); };
   setTimeout(() => { const p = getPlayer(); p.addEventListener('play', sync); p.addEventListener('pause', sync); }, 0);
 
-  window.Ambient = { openWords, closeWords, hymnAudio: () => hymnAudio, song: () => song && { title: song.h.title, live: !!song.live, ticks: songTicks() }, layer: x => { layerMute = x || ''; }, arrangement: n => { const h = hymnBy(n), a = h.notes, x = []; for (let i = 0; i < a.length; i += 4) x.push(a.slice(i, i + 4)); return worshipify(x, h); }, peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
+  window.Ambient = { load1906, openWords, closeWords, hymnAudio: () => hymnAudio, song: () => song && { title: song.h.title, live: !!song.live, ticks: songTicks() }, layer: x => { layerMute = x || ''; }, arrangement: n => { const h = hymnBy(n), a = h.notes, x = []; for (let i = 0; i < a.length; i += 4) x.push(a.slice(i, i + 4)); return worshipify(x, h); }, peak: () => { if (!meter) return 0; const d = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(d); return d.reduce((a, x) => Math.max(a, Math.abs(x)), 0) / Math.max(0.01, master.gain.value); }, nodeCount: () => nodes.length, sampled: () => [...samples.values()].filter(x => typeof x === 'object').length, openPanel, addFiles, playable, myMusic: () => loadList(), player: () => player, level, TRACKS, HYMNAL, playHymn, nextHymn: () => hymnSkip(1), hymnState: () => Object.assign({ now: hymnNow }, hs), start, stop, preview, setVolume, volume: () => volume, track, playing: () => kind, nowPlaying: () => current, onChange: fn => listeners.push(fn) };
 })();
