@@ -35,7 +35,16 @@
     milestones: [],    // { id, date 'YYYY-MM-DD', title, story, ref, kind 'milestone'|'fast'|'plan' }
     fasts: [],         // { id, start ms, days, type, focus, notes { dayIndex: text }, status 'active'|'done'|'ended', endedAt }
     topics: {},        // topicId -> { step, done, answer, at }
-    cardsShared: 0
+    cardsShared: 0,
+    // schema 2 (cleanup and growth release)
+    schema: 2,
+    family: [],        // { id, name, role 'adult'|'child' }        (Family altar)
+    familyLog: {},     // 'YYYY-MM-DD' -> true
+    partner: null,     // { code, partnerId, since }                (Prayer partner)
+    seasons: {},       // 'seasonId-year' -> { day, done [] }       (Seasons)
+    myLang: { name: '', prayers: [] },   // { id, title, text, ref, audioId, onDaily }   (Pray in my own language)
+    letters: [],       // { id, text, refs, written, opens, opened, reply }               (Letters to my future self)
+    packs: {}          // packId -> { version, bytes, installed }
   };
 
   function load() {
@@ -47,7 +56,19 @@
     }
   }
 
+  /* Before an older saved state is changed for the first time by this version, a copy is kept aside. */
+  let migrated = false;
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (raw && (raw.schema || 1) < 2) {
+      if (!localStorage.getItem(KEY + '-schema1')) localStorage.setItem(KEY + '-schema1', localStorage.getItem(KEY));
+      migrated = true;
+    }
+  } catch (e) { /* nothing saved yet */ }
   const state = load();
+  // Schema 2: nothing is recomputed. XP and level stay (only the title words change), the prayer count is
+  // kept but no longer shown, and the daily steps are read from the same daily flags as before.
+  if (migrated) state.schema = 2;
   // Older versions kept a simple prayer journal; move those entries into My requests once.
   if (!state.journalMigrated) {
     (state.journal || []).forEach(j => {
@@ -63,6 +84,7 @@
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage unavailable */ }
     listeners.forEach(fn => fn(state));
   }
+  if (migrated) save();
 
   function dateKey(d = new Date()) {
     const p = n => String(n).padStart(2, '0');
@@ -97,13 +119,29 @@
   }
 
   /* ---------- Levels ---------- */
-  const TITLES = ['Seeker', 'Listener', 'Learner', 'Disciple', 'Scribe', 'Shepherd', 'Pilgrim', 'Psalmist', 'Teacher', 'Elder', 'Prophet', 'Apostle'];
+  /* Growth, not rank: the titles follow the tree of Psalm 1:3 (church offices are not earned in an app). */
+  const TITLES = ['Seed', 'Sprout', 'Rooted', 'Growing', 'Branch', 'Budding', 'Fruitful', 'Evergreen', 'Planted', 'Deep Roots', 'Shade Tree', 'Cedar of Lebanon'];
+  const TITLE_VERSES = [
+    ['Mark 4:31', 'It is like a grain of mustard seed, which, when it is sown in the earth, is less than all the seeds that be in the earth.'],
+    ['Mark 4:28', 'For the earth bringeth forth fruit of herself; first the blade, then the ear, after that the full corn in the ear.'],
+    ['Colossians 2:7', 'Rooted and built up in him, and stablished in the faith, as ye have been taught, abounding therein with thanksgiving.'],
+    ['2 Peter 3:18', 'But grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ.'],
+    ['John 15:5', 'I am the vine, ye are the branches: He that abideth in me, and I in him, the same bringeth forth much fruit.'],
+    ['Song of Solomon 2:12', 'The flowers appear on the earth; the time of the singing of birds is come.'],
+    ['Colossians 1:10', 'That ye might walk worthy of the Lord unto all pleasing, being fruitful in every good work.'],
+    ['Psalm 1:3', 'And he shall be like a tree planted by the rivers of water, that bringeth forth his fruit in his season; his leaf also shall not wither.'],
+    ['Psalm 92:13', 'Those that be planted in the house of the LORD shall flourish in the courts of our God.'],
+    ['Jeremiah 17:8', 'For he shall be as a tree planted by the waters, and that spreadeth out her roots by the river.'],
+    ['Mark 4:32', 'It groweth up, and becometh greater than all herbs, and shooteth out great branches; so that the fowls of the air may lodge under the shadow of it.'],
+    ['Psalm 92:12', 'The righteous shall flourish like the palm tree: he shall grow like a cedar in Lebanon.']
+  ];
   function levelFor(xp) { return Math.floor(Math.sqrt(xp / 60)) + 1; }
   function xpForLevel(l) { return (l - 1) * (l - 1) * 60; }
   function levelInfo() {
     const level = levelFor(state.xp);
     const base = xpForLevel(level), next = xpForLevel(level + 1);
-    return { level, title: TITLES[Math.min(level - 1, TITLES.length - 1)], progress: (state.xp - base) / (next - base), toNext: next - state.xp };
+    const i = Math.min(level - 1, TITLES.length - 1);
+    return { level, title: TITLES[i], verse: { ref: TITLE_VERSES[i][0], text: TITLE_VERSES[i][1] }, progress: (state.xp - base) / (next - base), toNext: next - state.xp };
   }
 
   function addXP(n, reason) {
@@ -114,7 +152,8 @@
     const after = levelFor(state.xp);
     if (after > before) {
       setTimeout(() => {
-        toast(`Level ${after}! You are now a ${levelInfo().title}.`, 'level');
+        const li = levelInfo();
+        toast(`🌱 Level ${after}: ${li.title}. "${li.verse.text.split(/[;:.]/)[0]}" (${li.verse.ref})`, 'level');
         Sound.play('level');
       }, 600);
     }

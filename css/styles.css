@@ -1298,3 +1298,26 @@ body.listening #modal { z-index: 80; }
 .sing-btn { width: 54px; height: 54px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.06); color: inherit; font-size: 1.3rem; }
 .sing-btn.big { width: 66px; height: 66px; background: #f2c14e; color: #2a1a06; border: 0; }
 body.singing #musicPill { display: none; }
+
+/* Phase 1 cleanup: three daily steps, level verse, praise for answered prayer */
+.daily-track.three { grid-template-columns: repeat(3, 1fr); max-width: 420px; margin-left: auto; margin-right: auto; }
+.daily-track .dot.optional:not(.done) { opacity: 0.75; }
+.daily-track .dot.optional:not(.done) span { border-style: dashed; }
+.daily-track .dot small i { font-style: normal; font-size: 0.68rem; color: var(--muted); }
+.pv-verse { margin: 4px 0 8px; font: italic 0.95rem/1.45 var(--serif); color: var(--ink, inherit); opacity: 0.9; }
+.ask-card.praise { text-align: center; }
+.ask-card.praise .big-emoji { font-size: 2.6rem; }
+.ask-card.praise .row { justify-content: center; margin-top: 12px; }
+.grow-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.grow-tile.off { opacity: 0.5; filter: grayscale(0.6); }
+.offline-note { margin-top: 10px; }
+.offline-note h3 { margin: 0 0 4px; }
+.sel-more { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; margin-top: 6px; border-top: 1px solid var(--line); }
+.sel-more.hidden { display: none; }
+.sel-actions .sel-x { margin-left: auto; }
+.hero.slim:has(.bell-btn) { position: relative; padding-right: 64px; }
+.hero.slim .bell-btn { position: absolute; top: 14px; right: 14px; font-size: 1.2rem; padding: 7px 11px; }
+.seg.ptabs { display: grid; grid-template-columns: repeat(4, 1fr); overflow: visible; }
+.seg.ptabs .seg-btn { padding-left: 4px; padding-right: 4px; font-size: 0.86rem; white-space: nowrap; justify-content: center; }
+.hero.slim .bell-btn.on { border-color: var(--gold); }
+.hero.slim .bell-btn .count { position: absolute; top: -6px; right: -6px; }

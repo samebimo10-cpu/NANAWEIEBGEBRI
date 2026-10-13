@@ -49,6 +49,38 @@
     });
   }
 
+  /* An answered prayer: no points, a moment of praise, and an offer to keep it in My faith story. */
+  function praise(r, host) {
+    const box = document.createElement('div');
+    box.className = 'ask-overlay';
+    const kept = (state.milestones || []).some(m => m.fromRequest === r.id);
+    box.innerHTML = `<div class="ask-card praise" role="dialog" aria-modal="true">
+        <div class="big-emoji">🙌</div>
+        <div class="eyebrow">Praise God, He answered</div>
+        <h3>${esc(r.title)}</h3>
+        ${r.answeredHow ? `<p class="muted">${esc(r.answeredHow)}</p>` : ''}
+        <p class="oc-verse">"Bless the <span class="sc">Lord</span>, O my soul, and forget not all his benefits." (Psalm 103:2)</p>
+        <div class="row gap wrap center">
+          <button class="btn primary" data-p="story" ${kept ? 'disabled' : ''}>${kept ? '✓ In My faith story' : '🪨 Add to my faith story'}</button>
+          <button class="btn ghost" data-p="card">🖼️ Testimony card</button>
+          <button class="btn ghost" data-p="close">Amen</button>
+        </div>
+      </div>`;
+    document.body.appendChild(box);
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-p]');
+      if (!b) { if (e.target === box) box.remove(); return; }
+      if (b.dataset.p === 'story') {
+        state.milestones.push({ id: 'm' + Date.now(), date: window.Core.dateKey(new Date(r.answeredAt || Date.now())), title: `God answered: ${r.title}`, story: r.answeredHow || '', ref: 'Psalm 103:2', kind: 'answered', fromRequest: r.id });
+        save(); window.Core.checkBadges();
+        b.textContent = '✓ In My faith story'; b.disabled = true; toast('🪨 Added to My faith story');
+        return;
+      }
+      if (b.dataset.p === 'card') { box.remove(); window.Cards.testimony(r); return; }
+      box.remove();
+    });
+  }
+
   /* ================= My requests ================= */
   let reqTab = 'open';
   function counts() {
@@ -70,10 +102,13 @@
         <button class="seg-btn ${reqTab === 'open' ? 'active' : ''}" data-rt="open">🙏 Praying <span class="count">${c.open}</span></button>
         <button class="seg-btn ${reqTab === 'answered' ? 'active' : ''}" data-rt="answered">🙌 Answered <span class="count">${c.answered}</span></button>
         <button class="seg-btn ${reqTab === 'passed' ? 'active' : ''}" data-rt="passed">⌛ Past needs <span class="count">${c.passed}</span></button>
+        <button class="seg-btn ${reqTab === 'led' ? 'active' : ''}" data-rt="led">🕊️ Led to pray <span class="count">${state.leadings.length}</span></button>
       </div>
+      ${reqTab === 'led' ? '<div id="leadingsHost"></div>' : ''}
       ${reqTab === 'passed' ? '<p class="muted small tab-note">Needs and wants that are no longer relevant. They are kept here so you can look back and see how your life and prayers have changed.</p>' : ''}
       ${reqTab === 'answered' && c.answered ? `<p class="muted small tab-note">${c.answered} answered prayer${c.answered === 1 ? '' : 's'}. Read these when you need to remember God's faithfulness.</p>` : ''}
-      <div class="requests">${list.length ? list.map(card).join('') : empty()}</div>`;
+      ${reqTab === 'led' ? '' : `<div class="requests">${list.length ? list.map(card).join('') : empty()}</div>`}`;
+    if (reqTab === 'led') renderLeadings(host.querySelector('#leadingsHost'));
     $('#newReq').addEventListener('click', () => editRequest());
     $$('[data-rt]').forEach(b => b.addEventListener('click', () => { reqTab = b.dataset.rt; Sound.play('tap'); renderRequests(host); }));
     const ef = $('#emptyNew'); ef && ef.addEventListener('click', () => editRequest());
@@ -126,17 +161,15 @@
     if (kind === 'prayed') {
       const firstToday = !r.lastPrayed || window.Core.dateKey(new Date(r.lastPrayed)) !== window.Core.dateKey();
       r.prayedCount = (r.prayedCount || 0) + 1; r.lastPrayed = Date.now(); save();
-      const firstPrayer = !window.Core.today().prayer;
       window.Core.markDaily('prayer');
-      if (firstToday && firstPrayer) window.Core.addXP(10, 'Prayed');
-      Sound.play('correct'); toast('🙏 Amen');
+      Sound.play('correct'); toast(firstToday ? '🙏 Amen' : '🙏 Amen, again');
     }
     if (kind === 'answered' || kind === 'edit-answer') {
       const res = await outcome('answered', r.title, kind === 'edit-answer' ? { at: r.answeredAt, text: r.answeredHow } : {});
       if (!res) return;
       const wasOpen = r.status !== 'answered';
       Object.assign(r, { status: 'answered', answeredAt: Math.max(res.at, r.created), answeredHow: res.text }); save();
-      if (wasOpen) { Sound.play('badge'); toast('Praise God for answered prayer! 🙌', 'level'); window.Core.addXP(15, 'Answered prayer'); reqTab = 'answered'; }
+      if (wasOpen) { Sound.play('badge'); reqTab = 'answered'; setTimeout(() => praise(r, host), 50); }
       window.Core.checkBadges();
     }
     if (kind === 'passed') {
@@ -266,5 +299,5 @@
     }));
   }
 
-  window.Requests = { renderRequests, renderLeadings, outcome, editRequest };
+  window.Requests = { renderRequests, renderLeadings, outcome, editRequest, setTab: t => { reqTab = t; } };
 })();

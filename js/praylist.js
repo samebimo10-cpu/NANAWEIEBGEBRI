@@ -285,9 +285,8 @@
       p.prayedCount = (p.prayedCount || 0) + 1;
       p.lastPrayed = Date.now();
       save();
-      const firstPrayer = !window.Core.today().prayer;
       window.Core.markDaily('prayer');
-      if (firstToday) window.Core.addXP(firstPrayer ? 15 : 5, `Prayed for ${p.name}`);
+      if (firstToday) window.Core.toast(`🙏 You prayed for ${p.name} today`);
       Sound.play('complete');
       openPerson(p.id);
     });

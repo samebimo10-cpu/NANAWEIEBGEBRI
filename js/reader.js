@@ -244,6 +244,18 @@
   }
   function selText() { return [...sel].sort((a, b) => a - b).map(v => vtext(cur.b, cur.c, v) || B().text(cur.b, cur.c, v)).join(' '); }
 
+  /* The verse menu: highlight colours, Note, Pray this, Share card, Copy, and More (everything else). */
+  let moreUse = {};
+  try { moreUse = JSON.parse(localStorage.getItem('lamp-verse-more') || '{}'); } catch (e) { moreUse = {}; }
+  function moreItems() {
+    const items = [
+      ['sXref', '🔗 Cross-refs'], ['sCmp', '📚 Compare'], ['sOrig', `🔤 ${cur.b < 39 ? 'Hebrew' : 'Greek'}`], ['sMem', '🧠 Memorize'],
+      ['sSoap', '✍️ Journal'], ['sBm', `🔖 ${(state.bookmarks || {})[B().key(cur.b, cur.c, Math.min(...sel))] ? 'Remove bookmark' : 'Bookmark'}`],
+      ['sRec', '🎙️ Record'], ['sListen', '🔊 Listen']
+    ];
+    if (window.Connect && window.Connect.canAsk()) items.push(['sAsk', '✨ Ask']);
+    return items.map((x, i) => [...x, i]).sort((a, b) => (moreUse[b[0]] || 0) - (moreUse[a[0]] || 0) || a[2] - b[2]);
+  }
   function updateSelBar() {
     const bar = $('#selBar');
     if (!bar) return;
@@ -256,20 +268,16 @@
       <div class="sel-actions">
         <button class="btn ghost small" id="sNote">📝 Note</button>
         <button class="btn ghost small" id="sPray">🙏 Pray this</button>
-        ${window.Connect && window.Connect.canAsk() ? '<button class="btn ghost small" id="sAsk">✨ Ask</button>' : ''}
-        <button class="btn ghost small" id="sXref">🔗 Cross-refs</button>
-        <button class="btn ghost small" id="sRec">🎙️ Record</button>
-        <button class="btn ghost small" id="sBm">🔖 ${(state.bookmarks || {})[B().key(cur.b, cur.c, Math.min(...sel))] ? 'Remove bookmark' : 'Bookmark'}</button>
-        <button class="btn ghost small" id="sOrig">🔤 ${cur.b < 39 ? 'Hebrew' : 'Greek'}</button>
-        <button class="btn ghost small" id="sCmp">📚 Compare</button>
-        <button class="btn ghost small" id="sCard">🖼️ Card</button>
-        <button class="btn ghost small" id="sMem">🧠 Memorize</button>
-        <button class="btn ghost small" id="sSoap">✍️ Journal</button>
+        <button class="btn ghost small" id="sCard">🖼️ Share card</button>
         <button class="btn ghost small" id="sCopy">📋 Copy</button>
-        <button class="btn ghost small" id="sListen">🔊</button>
-        <button class="btn ghost small" id="sClose">✕</button>
-      </div>`;
+        <button class="btn ghost small" id="sMore" aria-expanded="false">⋯ More</button>
+        <button class="btn ghost small sel-x" id="sClose" aria-label="Close">✕</button>
+      </div>
+      <div class="sel-more hidden" id="selMore">${moreItems().map(([id, label]) => `<button class="btn ghost small" id="${id}" data-more="${id}">${label}</button>`).join('')}</div>`;
     bar.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => highlight(s.dataset.c)));
+    $('#sMore').addEventListener('click', () => { const m = $('#selMore'), open = m.classList.toggle('hidden'); $('#sMore').setAttribute('aria-expanded', String(!open)); });
+    // the More sheet keeps the most used actions first (counted on this phone)
+    bar.querySelectorAll('[data-more]').forEach(b => b.addEventListener('click', () => { moreUse[b.dataset.more] = (moreUse[b.dataset.more] || 0) + 1; try { localStorage.setItem('lamp-verse-more', JSON.stringify(moreUse)); } catch (e) { /* not kept */ } }, true));
     $('#sNote').addEventListener('click', () => openNote(Math.min(...sel)));
     $('#sCopy').addEventListener('click', copySel);
     const sa = $('#sAsk'); if (sa) sa.addEventListener('click', () => { const r = selRef(), t = selText(); clearSel(); window.Connect.ask({ ref: r, text: t }); });

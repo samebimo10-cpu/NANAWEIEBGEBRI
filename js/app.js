@@ -31,7 +31,8 @@
     $('#lvl').textContent = li.level;
     $('#lvlTitle').textContent = li.title;
     $('#xpfill').style.width = Math.round(li.progress * 100) + '%';
-    $('#streak').textContent = window.Core.currentStreak();
+    const sk = window.Core.currentStreak();
+    $('#streak').textContent = sk || '';   // a missed day never shows a zero: just the flame
   }
   window.Core.onChange(updateHUD);
 
@@ -228,15 +229,17 @@
     return { verse, quiz, scramble, blank, books, seed };
   }
 
+  /* Three small steps a day: the Word (verse of the day or a chapter), prayer, and a game if you like. */
   const DAILY_ACTS = [
-    ['verse', '📜', 'Verse'], ['quiz', '❓', 'Quiz'], ['scramble', '🧩', 'Scramble'],
-    ['blank', '✍️', 'Fill-in'], ['books', '📚', 'Books'], ['read', '📖', 'Chapter'], ['prayer', '🙏', 'Prayer']
+    ['word', '📖', 'Word', t => !!(t.verse || t.read)],
+    ['prayer', '🙏', 'Prayer', t => !!t.prayer],
+    ['play', '🎲', 'Play', t => !!(t.quiz || t.scramble || t.blank || t.books), true]
   ];
 
   function renderDaily() {
     const d = dailyPicks();
     const t = window.Core.today();
-    const doneCount = DAILY_ACTS.filter(([k]) => t[k]).length;
+    const need = DAILY_ACTS.filter(a => !a[4]), doneCount = need.filter(a => a[3](t)).length;
     const date = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     const hour = new Date().getHours();
     const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -245,15 +248,15 @@
         <div>
           <div class="eyebrow">${esc(date)}</div>
           <h1>${greet}, ${esc(window.Personal.name() || 'pilgrim')}</h1>
-          <p class="muted">Seven small steps each day: read, play, pray.</p>
+          <p class="muted">${doneCount === need.length ? 'Word and prayer today ✓. "Draw nigh to God, and he will draw nigh to you." (James 4:8)' : 'Three small steps: the Word, prayer, and a game if you like.'}</p>
         </div>
         <div class="hero-stats">
-          <div class="flame-big">🔥<span>${window.Core.currentStreak()}</span></div>
-          <div class="muted small">day streak · best ${state.streak.best || 0}</div>
+          <div class="flame-big">🔥${window.Core.currentStreak() ? `<span>${window.Core.currentStreak()}</span>` : ''}</div>
+          <div class="muted small">${window.Core.currentStreak() ? `day${window.Core.currentStreak() === 1 ? '' : 's'} in a row` : 'His mercies are new every morning'}</div>
         </div>
       </section>
-      <div class="daily-track">${DAILY_ACTS.map(([k, ic, name]) => `<div class="dot ${t[k] ? 'done' : ''}" title="${name}"><span>${t[k] ? '✓' : ic}</span><small>${name}</small></div>`).join('')}</div>
-      <div class="track-bar"><i style="width:${doneCount / DAILY_ACTS.length * 100}%"></i></div>
+      <div class="daily-track three">${DAILY_ACTS.map(([k, ic, name, done, opt]) => `<div class="dot ${done(t) ? 'done' : ''} ${opt ? 'optional' : ''}" title="${name}${opt ? ' (optional)' : ''}"><span>${done(t) ? '✓' : ic}</span><small>${name}${opt ? '<br><i>optional</i>' : ''}</small></div>`).join('')}</div>
+      <div class="track-bar"><i style="width:${doneCount / need.length * 100}%"></i></div>
       <div id="dailyTop"></div>
 
       <section class="verse-card">
@@ -264,30 +267,29 @@
           <button class="btn ghost" id="vListen">🔊 Listen</button>
           <button class="btn ghost" id="vContext">📜 Read in context</button>
           <button class="btn ghost" id="vCard">🖼️ Share</button>
-          <button class="btn primary" id="vRead" ${t.verse ? 'disabled' : ''}>${t.verse ? '✓ Read today' : 'Amen, I have read it (+5 XP)'}</button>
+          <button class="btn primary" id="vRead" ${t.verse ? 'disabled' : ''}>${t.verse ? '✓ Amen' : 'Amen'}</button>
         </div>
       </section>
-      <div id="dailyGrow"></div>
-
-      <h2 class="section-title">Daily Bible games</h2>
-      <div class="game-grid">
-        ${gameCard('quiz', '❓', 'Daily Quiz', 'Five questions from across the whole Bible.', t.quiz)}
-        ${gameCard('scramble', '🧩', 'Verse Scramble', 'Put a verse back in the right order.', t.scramble)}
-        ${gameCard('blank', '✍️', 'Fill the Blank', 'Choose the missing words of a verse.', t.blank)}
-        ${gameCard('books', '📚', 'Books in Order', 'Tap five books in their Bible order.', t.books)}
-      </div>
-
       <section class="cta-card alt">
         <div>
           <div class="eyebrow">Daily prayer</div>
           <h3>${t.prayer ? 'You have prayed today ✓' : 'Take a few minutes with God'}</h3>
         </div>
         <button class="btn ghost" id="goPrayer">Guided prayer →</button>
-      </section>`;
+      </section>
+      <div id="dailyGrow"></div>
+
+      <h2 class="section-title">Play <span class="muted small">(optional)</span></h2>
+      <div class="game-grid">
+        ${gameCard('quiz', '❓', 'Daily Quiz', 'Five questions from across the whole Bible.', t.quiz)}
+        ${gameCard('scramble', '🧩', 'Verse Scramble', 'Put a verse back in the right order.', t.scramble)}
+        ${gameCard('blank', '✍️', 'Fill the Blank', 'Choose the missing words of a verse.', t.blank)}
+        ${gameCard('books', '📚', 'Books in Order', 'Tap five books in their Bible order.', t.books)}
+      </div>`;
     bindListen($('#vListen'), d.verse.ref + '. ' + d.verse.text);
     $('#vContext').addEventListener('click', () => window.Reader.openRef(d.verse.ref));
     $('#vRead').addEventListener('click', () => {
-      if (window.Core.markDaily('verse')) window.Core.addXP(5, 'Verse of the day');
+      window.Core.markDaily('verse');
       Sound.play('correct');
       renderDaily();
     });
@@ -584,23 +586,26 @@
   function stopPrayerTimer() { if (prayerTimer) { clearInterval(prayerTimer); prayerTimer = null; } }
 
   let prayerTab = 'pray';
-  const PRAYER_TABS = [['pray', '🙏 Pray'], ['requests', '📝 My requests'], ['led', '🕊️ Led to pray'], ['people', '🤲 Who I pray for'], ['reminders', '⏰ Alarms'], ['fast', '🍞 Fasting']];
+  const PRAYER_TABS = [['pray', '🙏 Pray'], ['requests', '📝 Requests'], ['people', '🤲 People'], ['fast', '🍞 Fasting']];
   function renderPrayer() {
-    if (!PRAYER_TABS.some(t => t[0] === prayerTab)) prayerTab = 'pray';
+    if (prayerTab === 'led') { window.Requests.setTab('led'); prayerTab = 'requests'; }   // Led to pray now lives inside Requests
+    if (prayerTab !== 'reminders' && !PRAYER_TABS.some(t => t[0] === prayerTab)) prayerTab = 'pray';
     const t = window.Core.today();
     const head = `
       <section class="hero slim">
         <div><div class="eyebrow">Prayer</div><h1>Pray without ceasing</h1>
         <p class="muted">"Lord, teach us to pray." (Luke 11:1)</p></div>
-        <div class="hero-stats"><div class="flame-big">🙏<span>${state.prayers}</span></div><div class="muted small">sessions prayed</div></div>
+        <button class="btn ghost bell-btn ${prayerTab === 'reminders' ? 'on' : ''}" id="pBell" aria-label="Prayer alarms and reminders">🔔${state.reminders.filter(r => r.enabled).length ? `<span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}</button>
       </section>
-      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'requests' && state.requests.some(r => r.status === 'open') ? ` <span class="count">${state.requests.filter(r => r.status === 'open').length}</span>` : ''}${k === 'reminders' && state.reminders.filter(r => r.enabled).length ? ` <span class="count">${state.reminders.filter(r => r.enabled).length}</span>` : ''}${k === 'fast' && window.Fast.active() ? ' <span class="count">●</span>' : ''}</button>`).join('')}</div>`;
-    const bindTabs = () => $$('.ptabs .seg-btn').forEach(b => b.addEventListener('click', () => { prayerTab = b.dataset.pt; Sound.play('tap'); renderPrayer(); }));
+      <div class="seg ptabs">${PRAYER_TABS.map(([k, l]) => `<button class="seg-btn ${prayerTab === k ? 'active' : ''}" data-pt="${k}">${l}${k === 'people' && state.people.length ? ` <span class="count">${state.people.length}</span>` : ''}${k === 'requests' && state.requests.some(r => r.status === 'open') ? ` <span class="count">${state.requests.filter(r => r.status === 'open').length}</span>` : ''}${k === 'fast' && window.Fast.active() ? ' <span class="count">●</span>' : ''}</button>`).join('')}</div>`;
+    const bindTabs = () => {
+      $$('.ptabs .seg-btn').forEach(b => b.addEventListener('click', () => { prayerTab = b.dataset.pt; if (prayerTab === 'requests') window.Requests.setTab('open'); Sound.play('tap'); renderPrayer(); }));
+      $('#pBell').addEventListener('click', () => { prayerTab = prayerTab === 'reminders' ? 'pray' : 'reminders'; Sound.play('tap'); renderPrayer(); });
+    };
     if (prayerTab === 'people') { $('#prayerPage').innerHTML = head + '<div id="peopleHost"></div>'; bindTabs(); window.PrayList.renderPeople($('#peopleHost')); return; }
-    if (prayerTab === 'reminders') { $('#prayerPage').innerHTML = head + '<div id="remindersHost"></div>'; bindTabs(); window.PrayList.renderReminders($('#remindersHost')); return; }
+    if (prayerTab === 'reminders') { $('#prayerPage').innerHTML = head + '<h2 class="section-title">🔔 Alarms and reminders</h2><div id="remindersHost"></div>'; bindTabs(); window.PrayList.renderReminders($('#remindersHost')); return; }
     if (prayerTab === 'requests') { $('#prayerPage').innerHTML = head + '<div id="requestsHost"></div>'; bindTabs(); window.Requests.renderRequests($('#requestsHost')); return; }
     if (prayerTab === 'fast') { $('#prayerPage').innerHTML = head + '<div id="fastHost"></div>'; bindTabs(); window.Fast.render($('#fastHost')); return; }
-    if (prayerTab === 'led') { $('#prayerPage').innerHTML = head + '<div id="leadingsHost"></div>'; bindTabs(); window.Requests.renderLeadings($('#leadingsHost')); return; }
     $('#prayerPage').innerHTML = head + `
       <section class="acts-card">
         <div class="acts-letters">${window.ACTS_STEPS.map(s => `<div class="acts-l" style="--c:${s.color}"><b>${s.key}</b><small>${s.name}</small></div>`).join('')}</div>
@@ -674,10 +679,8 @@
   function fmt(s) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
 
   function prayerDone() {
-    const first = !window.Core.today().prayer;
-    state.prayers++; save();
+    state.prayers++; save();   // kept for the record, never shown
     window.Core.markDaily('prayer');
-    if (first) window.Core.addXP(20, 'Guided prayer');
     window.Core.checkBadges();
     Sound.play('complete');
     $('#modalBody').innerHTML = `
@@ -699,7 +702,8 @@
       <div class="profile-view">
         <div class="pv-head">
           <div class="pv-level">${li.level}</div>
-          <div>${window.Personal.name() ? `<div class="pv-name">${esc(window.Personal.name())}</div>` : ''}<div class="eyebrow">Level ${li.level}</div><h2>${li.title}</h2>
+          <div>${window.Personal.name() ? `<div class="pv-name">${esc(window.Personal.name())}</div>` : ''}<div class="eyebrow">Level ${li.level}</div><h2>🌱 ${li.title}</h2>
+          <p class="pv-verse">"${verseHTML(li.verse.text)}" <span class="muted small">(${esc(li.verse.ref)})</span></p>
           <div class="xpbar big"><i style="width:${Math.round(li.progress * 100)}%"></i></div>
           <div class="muted small">${state.xp} XP · ${li.toNext} XP to next level</div></div>
         </div>
@@ -708,9 +712,8 @@
           <div><b>${(state.memory || []).length}</b><span>Verses memorizing</span></div>
           <div><b>${done}/${J.length}</b><span>Passages</span></div>
           <div><b>${stars}/${J.length * 3}</b><span>Stars</span></div>
-          <div><b>${window.Core.currentStreak()}</b><span>Streak</span></div>
+          <div><b>${window.Core.currentStreak() || '🌱'}</b><span>${window.Core.currentStreak() ? 'Days in a row' : 'A fresh start'}</span></div>
           <div><b>${state.streak.best || 0}</b><span>Best streak</span></div>
-          <div><b>${state.prayers}</b><span>Prayers</span></div>
           <div><b>${state.perfectQuizzes}</b><span>Perfect quizzes</span></div>
           <div><b>${Object.keys(state.reflections || {}).length}</b><span>Evening reflections</span></div>
         </div>
@@ -728,6 +731,7 @@
           <label class="btn ghost" id="importLbl">📂 Restore backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
           <button class="btn ghost danger" id="resetBtn">Reset all progress</button>
         </div>
+        <p class="muted small">The backup holds your progress, notes, highlights, prayers and journal. Voice recordings and music you added stay on this phone and are not in the backup file: export Bible Voices recordings from Grow → Worship & voices → Bible Voices.</p>
         <p class="muted small credit">All scripture is from the King James Version, which is in the public domain. Context notes and quizzes are original to this app.</p>
       </div>`);
     updateOfflineRow();

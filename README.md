@@ -4,6 +4,20 @@
 
 **Lamp & Path** is a Bible study and prayer app. It helps people read the whole Bible, understand it, hide it in their hearts and pray, through reading plans, Scripture memory, a devotional journal, daily Bible games and guided prayer. Everything works offline and stays on the device.
 
+## Cleanup release (phase 1 of the cleanup and growth spec)
+
+The app is simpler to find your way around, and prayer is no longer scored. The measure of success is drawing closer to God, not minutes in the app.
+
+- **No points for prayer.** Praying for someone shows a quiet "You prayed for Mama today"; an answered prayer opens a moment of praise (Psalm 103:2) with **Add to my faith story** and a testimony card; guided prayer, the feelings prayer and fasting give no points (a completed fast offers a testimony card); the verse of the day button is simply **Amen**. The prayer counter is gone from the Prayer page and the profile. Reading, memory, journal, quizzes and games keep their points.
+- **Growth titles, not church offices.** Levels follow the tree of Psalm 1:3: Seed, Sprout, Rooted, Growing, Branch, Budding, Fruitful, Evergreen, Planted, Deep Roots, Shade Tree, Cedar of Lebanon, each with its verse. Your level number is kept; only the word changes.
+- **Three daily steps**: Word (the verse of the day or a chapter), Prayer, and Play (optional). A day with the Word and prayer is complete. The games sit below the verse and the prayer card.
+- **A gentler streak.** The flame never shows a zero or a broken streak; after a gap there is only the Welcome back card.
+- **Grow in 6 groups** (every tool two taps away): Read & explore, Study & learn, Journal & reflect, My walk with God, Worship & voices, Together.
+- **Verse menu**: highlight colours, Note, Pray this, Share card, Copy and **More** (Cross-refs, Compare, Hebrew or Greek, Memorize, Journal, Bookmark, Record, Listen, Ask), with the most used first.
+- **Prayer in 4 tabs**: Pray, Requests (with Led to pray as a filter), People, Fasting. Alarms are under the 🔔 bell.
+- **Community outside Claude.** Opened as a file, the prayer wall, Read together and Ask about the Bible are shown greyed with "Open the shared link to pray with others." and a **Share the link** button.
+- **Data**: the saved state gains `schema: 2` and empty keys for the coming features; the old state is copied to `lamp-and-path-v1-schema1` first, and nothing is recomputed. Old backups restore and migrate the same way. (Led to pray entries stay in their own list and are shown as a filter in Requests.)
+
 ## Features
 
 ### ✨ Personal to each person

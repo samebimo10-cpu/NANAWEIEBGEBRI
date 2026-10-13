@@ -270,9 +270,7 @@
     fillRefs(host);
     const p = host.querySelector('#feelPrayed');
     if (p) p.addEventListener('click', () => {
-      const first = !window.Core.today().prayer;
       window.Core.markDaily('prayer');
-      if (first) window.Core.addXP(10, 'Prayed');
       Sound.play('correct'); toast('🙏 Amen. He hears you.');
     });
     const l = host.querySelector('#feelLead');
@@ -792,31 +790,67 @@
     ['wall', '🤝', 'Prayer wall', () => 'Pray for one another', () => window.Connect && window.Connect.canShare()],
     ['group', '💬', 'Read together', () => 'A group plan and chapter discussions', () => window.Connect && window.Connect.canShare()],
     ['voices', '🎙️', 'Bible Voices', () => 'Read the Bible aloud together, verse by verse'],
+    ['music', '🎵', 'Hymns & music', () => 'Hymns to sing along with, and calm music'],
     ['map', '🗺️', 'Bible places map', () => `${window.PLACES.length} places, from Ur to Rome`],
     ['dict', '🔤', 'Hebrew & Greek dictionary', () => 'Every word of the original Bible, explained'],
     ['passages', '📖', 'Study passages & quizzes', () => `${Object.keys(state.completed).length} of ${window.JOURNEY.length} completed`],
     ['books', '📚', 'Books of the Bible', () => 'All 66, with summaries']
   ];
-  let section = null, arg = null;
+  /* Six groups, so a new user can find their way in one look; every tool is two taps away. */
+  const GROUPS = [
+    ['read', '📖', 'Read & explore', 'Reading plans, the books, Bible places', ['plans', 'books', 'map']],
+    ['study', '🎓', 'Study & learn', 'Passages, topics, memory verses, Hebrew & Greek', ['passages', 'topics', 'memory', 'dict']],
+    ['journal', '✍️', 'Journal & reflect', 'S.O.A.P., evening reflection, sermon notes', ['soap', 'evening', 'sermons']],
+    ['walk', '💛', 'My walk with God', 'How I feel, My faith story, my week', ['feel', 'ebenezer', 'week']],
+    ['worship', '🎵', 'Worship & voices', 'Hymns and music, Bible Voices', ['music', 'voices']],
+    ['together', '🤝', 'Together', 'Prayer wall, read together, ask about the Bible', ['wall', 'group', 'ask']]
+  ];
+  const COMMUNITY = ['wall', 'group', 'ask'];
+  const groupOf = sec => (GROUPS.find(g => g[4].includes(sec)) || [null])[0];
+  let section = null, arg = null, group = null;
 
   function render() {
     const page = $('#growPage');
     if (!page) return;
     const s = SECTIONS.find(x => x[0] === section);
+    const g = GROUPS.find(x => x[0] === group);
+    if (!s && g) {
+      // one group: its tools; community tools outside the claude.ai link are shown greyed, with a note
+      const off = k => COMMUNITY.includes(k) && (SECTIONS.find(x => x[0] === k)[4] && !SECTIONS.find(x => x[0] === k)[4]());
+      const anyOff = g[4].some(off);
+      page.innerHTML = `
+        <div class="grow-head"><button class="btn ghost small" id="growBack">← Grow</button><h1>${g[1]} ${g[2]}</h1></div>
+        ${anyOff ? `<section class="soft-card offline-note"><div class="big-emoji">🔗</div><div><h3>${esc(window.Connect.OFFLINE_NOTE)}</h3>
+          <p class="muted small">Praying together, reading together and asking about the Bible work in the app link on claude.ai, for the people it is shared with. Everything else works right here, offline.</p>
+          <button class="btn primary small" id="growShareLink">🔗 Share the link</button></div></section>` : ''}
+        <div class="grow-list">${g[4].map(k => SECTIONS.find(x => x[0] === k)).map(([k, ic, name, sub]) => `<button class="grow-tile ${off(k) ? 'off' : ''}" data-sec="${k}" ${off(k) ? 'aria-disabled="true"' : ''}><span class="gt-ic">${ic}</span><span class="gt-t"><b>${name}</b><small>${off(k) ? esc(window.Connect.OFFLINE_NOTE) : esc(sub())}</small></span>${k === 'memory' && due().length ? `<span class="count">${due().length}</span>` : ''}</button>`).join('')}</div>`;
+      $('#growBack').addEventListener('click', () => { group = null; render(); $('#view-grow').scrollTop = 0; });
+      const sl = $('#growShareLink'); if (sl) sl.addEventListener('click', () => window.Connect.shareLink());
+      page.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => {
+        const k = b.dataset.sec;
+        if (off(k)) { window.Core.toast(window.Connect.OFFLINE_NOTE); return; }
+        Sound.play('tap');
+        if (k === 'ask') { window.Connect.ask(); return; }
+        if (k === 'music') { window.Ambient.openPanel(); return; }
+        open(k);
+      }));
+      return;
+    }
     if (!s) {
-      section = null;
+      section = null; group = null;
       page.innerHTML = `
         <section class="hero slim"><div><div class="eyebrow">Grow</div><h1>Go deeper in the Word</h1>
           <p class="muted">"But grow in grace, and in the knowledge of our Lord and Saviour Jesus Christ." (2 Peter 3:18)</p></div></section>
-        <div class="grow-grid">${SECTIONS.filter(x => !x[4] || x[4]()).map(([k, ic, name, sub]) => `<button class="grow-tile" data-sec="${k}"><span class="gt-ic">${ic}</span><span class="gt-t"><b>${name}</b><small>${esc(sub())}</small></span>${k === 'memory' && due().length ? `<span class="count">${due().length}</span>` : ''}</button>`).join('')}</div>`;
-      page.querySelectorAll('[data-sec]').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); if (b.dataset.sec === 'ask') { window.Connect.ask(); return; } open(b.dataset.sec); }));
+        <div class="grow-grid six">${GROUPS.map(([k, ic, name, sub, tools]) => `<button class="grow-tile" data-grp="${k}"><span class="gt-ic">${ic}</span><span class="gt-t"><b>${name}</b><small>${esc(sub)}</small></span>${tools.includes('memory') && due().length ? `<span class="count">${due().length}</span>` : ''}</button>`).join('')}</div>`;
+      page.querySelectorAll('[data-grp]').forEach(b => b.addEventListener('click', () => { Sound.play('tap'); group = b.dataset.grp; render(); $('#view-grow').scrollTop = 0; }));
       return;
     }
-    const back = arg && (section === 'topics') ? '← Topics' : '← Grow';
+    const gname = (GROUPS.find(x => x[0] === groupOf(section)) || [0, 0, 'Grow'])[2];
+    const back = arg && (section === 'topics') ? '← Topics' : `← ${gname}`;
     page.innerHTML = `
       <div class="grow-head"><button class="btn ghost small" id="growBack">${back}</button><h1>${s[1]} ${s[2]}</h1></div>
       <div id="growBody"></div>`;
-    $('#growBack').addEventListener('click', () => { if (arg && section === 'topics') arg = null; else { section = null; arg = null; } render(); $('#view-grow').scrollTop = 0; });
+    $('#growBack').addEventListener('click', () => { if (arg && section === 'topics') arg = null; else { group = groupOf(section); section = null; arg = null; } render(); $('#view-grow').scrollTop = 0; });
     const body = $('#growBody');
     switch (section) {
       case 'plans': body.innerHTML = plansHTML(); bindPlans(body); break;
@@ -839,7 +873,8 @@
   }
 
   function open(sec, a) {
-    section = sec; arg = a || null;
+    if (sec === 'music') { window.Ambient.openPanel(); return; }
+    section = sec; arg = a || null; group = groupOf(sec);
     if (UI().current() === 'grow') { render(); } else UI().show('grow');
     const v = $('#view-grow'); if (v) v.scrollTop = 0;
   }
@@ -897,5 +932,5 @@
     host.querySelectorAll('[data-dfeel]').forEach(b => b.addEventListener('click', () => open('feel', b.dataset.dfeel)));
   }
 
-  window.Grow = { home: () => { section = null; arg = null; }, render, open, renderDaily, fillRefs, vref, markRead, isRead, nextInPlan, planStatus, addMemory, soapEditor, review, due, schedule, weekStats, anniversaries, linkRefs, birthdayToday, addDays };
+  window.Grow = { GROUPS, home: () => { section = null; arg = null; group = null; }, render, open, renderDaily, fillRefs, vref, markRead, isRead, nextInPlan, planStatus, addMemory, soapEditor, review, due, schedule, weekStats, anniversaries, linkRefs, birthdayToday, addDays };
 })();

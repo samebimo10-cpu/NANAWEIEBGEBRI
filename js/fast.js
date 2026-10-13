@@ -112,9 +112,14 @@
       state.milestones.push({ id: 'm' + Date.now(), date: window.Core.dateKey(), title: `Completed a ${f.days}-day fast (${typeName(f.type)})`, story: f.focus ? `Sought the Lord for: ${f.focus}` : '', ref: 'Matthew 6:18', kind: 'fast' });
       save();
       Sound.play('complete');
-      window.Core.addXP(30, 'Fast completed');
-      toast('🪨 Added to your Ebenezer timeline', 'level');
+      toast('🪨 Added to My faith story', 'level');
       render(host);
+      // no points for a fast: offer a testimony card instead
+      setTimeout(async () => {
+        if (await window.UI.ask(`You completed a ${f.days}-day fast. "Thy Father, which seeth in secret, shall reward thee openly." (Matthew 6:18) Would you like to make a testimony card?`, '🖼️ Make a card')) {
+          window.Cards.testimony({ title: `I completed a ${f.days}-day fast`, answeredHow: f.focus ? `I sought the Lord for: ${f.focus}` : '', created: f.start, answeredAt: f.endedAt });
+        }
+      }, 400);
     });
   }
 

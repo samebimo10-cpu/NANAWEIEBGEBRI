@@ -242,5 +242,14 @@
     }).catch(() => {});
   }
 
-  window.Connect = { canAsk, canShare, ask, renderWall, discuss, renderGroup, ready: () => C.ready };
+  /* Community features need the app link on claude.ai: outside it they are shown greyed, with this message. */
+  const LINK = 'https://claude.ai/artifact/CTgbTYjhS8K14ZonQ9T7no';
+  const OFFLINE_NOTE = 'Open the shared link to pray with others.';
+  async function shareLink() {
+    const text = 'Pray with us on Lamp & Path: ' + LINK;
+    if (navigator.share) { try { await navigator.share({ title: 'Lamp & Path', text, url: LINK }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(LINK); window.Core.toast('🔗 Link copied. Paste it in WhatsApp or a text.'); }
+    catch (e) { window.UI.ask('Copy this link and send it: ' + LINK, 'OK'); }
+  }
+  window.Connect = { canAsk, canShare, ask, renderWall, discuss, renderGroup, ready: () => C.ready, LINK, OFFLINE_NOTE, shareLink };
 })();
