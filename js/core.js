@@ -288,37 +288,141 @@
     };
   })();
 
-  /* ---------- Read aloud ---------- */
-  const Speech = {
-    supported: 'speechSynthesis' in window,
-    speaking: false,
-    speak(text, onEnd) {
-      if (!this.supported) { toast('Read-aloud is not supported on this device'); return; }
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text.replace(/LORD/g, 'Lord'));
-      u.rate = (state.readerOpts && state.readerOpts.rate) || 0.95; u.pitch = 1;
-      const v = this.voice();
-      if (v) u.voice = v;
-      u.onend = u.onerror = () => { this.speaking = false; onEnd && onEnd(); };
-      this.speaking = true;
-      speechSynthesis.speak(u);
-    },
-    stop() { if (this.supported) speechSynthesis.cancel(); this.speaking = false; },
-    /* English voices, the most natural-sounding first (Premium, Enhanced, Natural, Neural, Siri, Google online) */
-    natural: v => /premium|enhanced|natural|neural|siri|wavenet|online|google/i.test(v.name),
-    voices() {
-      if (!this.supported) return [];
-      const rank = v => (this.natural(v) ? 0 : 2) + (v.localService === false ? 0 : 0.5);
+  /* ---------- Read aloud ----------
+   * One narrator for the whole app. It reads text the way a person would: phrase by phrase, with short breaths at
+   * commas and longer ones between sentences and verses, the words people speak "in quotes" in a slightly different
+   * tone, and small natural changes of pace. It also works around the ways phone and browser voices fail: utterances
+   * kept alive (Chrome may drop them and never finish), long text cut into pieces (some voices stop after ~15
+   * seconds), a short gap after cancelling, and a watchdog that moves on if a voice goes quiet without saying so.
+   * Only one reading owns the voice at a time: a short clip ("Listen" on a card) and the chapter reader
+   * ('reader') do not cancel each other by accident. */
+  const Speech = (() => {
+    const ok = 'speechSynthesis' in window;
+    const android = /android/i.test(navigator.userAgent);
+    let gen = 0, owner = '', timers = [], live = [], onInterrupt = null;
+    const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+    const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+    const rate = () => (state.readerOpts && state.readerOpts.rate) || 0.95;
+    const natural = v => /premium|enhanced|natural|neural|siri|wavenet|online|google/i.test(v.name);
+    function voices() {
+      if (!ok) return [];
+      const rank = v => (natural(v) ? 0 : 2) + (/en-(GB|US|AU|IE|NG|ZA)/i.test(v.lang) ? 0 : 0.3);
       return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-    },
-    /* the voice chosen in reading options, or the best English voice on this device */
-    voice() {
-      if (!this.supported) return null;
-      const all = speechSynthesis.getVoices(), want = state.readerOpts && state.readerOpts.voice;
-      const en = this.voices();
-      return (want && all.find(v => v.name === want)) || en.find(v => this.natural(v)) || all.find(v => /en-GB/i.test(v.lang)) || en[0] || null;
     }
-  };
+    function voice() {
+      if (!ok) return null;
+      const all = speechSynthesis.getVoices(), want = state.readerOpts && state.readerOpts.voice;
+      const en = voices();
+      return (want && all.find(v => v.name === want)) || en.find(natural) || all.find(v => /en-GB/i.test(v.lang)) || en[0] || null;
+    }
+    /* Text as it should be heard: no brackets read out as symbols, the Lord's name, dashes as breaths. */
+    function clean(t) {
+      return String(t)
+        .replace(/LORD/g, 'Lord').replace(/GOD/g, 'God')
+        .replace(/\s*\[([^\]]+)\]/g, ', $1,')            // the amplified meanings, read as a short aside
+        .replace(/[¶*_#]/g, '').replace(/\s*[—–]\s*/g, ', ').replace(/…/g, '.')
+        .replace(/&/g, ' and ').replace(/,\s*,/g, ',').replace(/,\s*([.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
+    }
+    /* Cut a passage into spoken phrases: [{ text, quote, pause (ms after), q (a question) }] */
+    function phrases(text, endPause) {
+      const out = [];
+      // split at quotation marks first, so spoken words can be read in their own tone
+      const parts = clean(text).split(/([“”"])/);
+      let inQ = false;
+      for (const part of parts) {
+        if (/^[“”"]$/.test(part)) { inQ = part === '“' ? true : part === '”' ? false : !inQ; if (out.length) out[out.length - 1].pause = Math.max(out[out.length - 1].pause, 140); continue; }
+        if (!part.trim()) continue;
+        // sentences, then long sentences at their commas
+        const sentences = part.match(/[^.!?;:]+(?:[.!?;:]+['’)\]]*|$)/g) || [part];
+        for (let sen of sentences) {
+          sen = sen.trim(); if (!/[A-Za-z0-9]/.test(sen)) continue;
+          const pieces = [];
+          if (sen.length > 170) {
+            let buf = '';
+            for (const bit of sen.split(/(?<=,)\s+/)) { if ((buf + ' ' + bit).length > 150 && buf) { pieces.push(buf); buf = bit; } else buf = buf ? buf + ' ' + bit : bit; }
+            if (buf) pieces.push(buf);
+          } else pieces.push(sen);
+          pieces.forEach((pc, i) => {
+            const last = i === pieces.length - 1, end = pc.slice(-1);
+            const pause = !last ? 120 : /[.!?]/.test(end) || /[.!?]['’)]$/.test(pc) ? 300 : /[;:]/.test(end) ? 200 : 90;
+            out.push({ text: pc, quote: inQ, pause, q: /\?['’]?$/.test(pc) });
+          });
+        }
+      }
+      if (out.length) out[out.length - 1].pause = endPause;
+      return out;
+    }
+    function stopNow() { gen++; clearTimers(); live = []; if (ok) speechSynthesis.cancel(); }
+    /* Speak a list of phrases; done(true) when finished, done(false) if it was stopped. */
+    function run(list, opts, done) {
+      const my = ++gen; clearTimers();
+      const v = voice(), base = rate() * (opts.rate || 1);
+      const keepAlive = v && v.localService === false && !android;   // online voices on computers stop after ~15 s
+      let i = 0, tries = 0;
+      const next = () => {
+        if (my !== gen) return;
+        if (i >= list.length) { live = []; owner = ''; done && done(true); return; }
+        const ph = list[i];
+        const u = new SpeechSynthesisUtterance(ph.text);
+        live = [u];   // keep a reference: Chrome otherwise drops it and never says it has finished
+        if (v) u.voice = v;
+        // a person's voice is never perfectly even: a little variation, a touch slower and warmer for spoken words
+        const wobble = 1 + (Math.random() - 0.5) * 0.05;
+        u.rate = Math.max(0.5, Math.min(1.6, base * wobble * (ph.quote ? 0.97 : 1)));
+        u.pitch = (ph.quote ? 0.96 : 1) + (ph.q ? 0.04 : 0) + (Math.random() - 0.5) * 0.03;
+        let finished = false, ka = 0;
+        const words = ph.text.split(/\s+/).length;
+        const finish = () => {
+          if (finished || my !== gen) return; finished = true; clearInterval(ka);
+          i++; tries = 0;
+          if (opts.onPhrase) opts.onPhrase(i, list.length);
+          later(next, ph.pause);
+        };
+        u.onend = finish;
+        u.onerror = e => {
+          if (my !== gen || finished) return;
+          if (e && (e.error === 'interrupted' || e.error === 'canceled')) { finished = true; clearInterval(ka); if (onInterrupt && owner === 'reader') onInterrupt(); return; }
+          finished = true; clearInterval(ka);
+          if (tries++ < 1) { later(next, 250); return; }   // try a phrase once more, then go on
+          i++; tries = 0; later(next, 100);
+        };
+        if (keepAlive) ka = setInterval(() => { if (speechSynthesis.speaking && !speechSynthesis.paused) { speechSynthesis.pause(); speechSynthesis.resume(); } }, 9000);
+        // watchdog: if the voice goes quiet without an end, carry on
+        const expect = (words / 2.6 / u.rate) * 1000;
+        const check = n => later(() => {
+          if (finished || my !== gen) return;
+          if (speechSynthesis.speaking && n < 3) check(n + 1); else { speechSynthesis.cancel(); finish(); }
+        }, expect * 1.6 + 3000);
+        check(0);
+        speechSynthesis.speak(u);
+      };
+      // after a cancel, some voices drop the next thing said straight away
+      if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); later(next, 80); } else next();
+    }
+    return {
+      supported: ok,
+      get speaking() { return owner === 'clip'; },
+      natural, voices, voice, clean, phrases,
+      /* a short passage (a verse on a card, a prayer); it pauses the chapter reader if that is reading */
+      speak(text, onEnd) {
+        if (!ok) { toast('Read-aloud is not supported on this device'); return; }
+        if (owner === 'reader' && onInterrupt) onInterrupt();
+        stopNow(); owner = 'clip';
+        run(phrases(text, 0), {}, () => { onEnd && onEnd(); });
+      },
+      /* the chapter reader: one verse; done(true) when it has been read */
+      read(text, opts, done) {
+        if (!ok) return;
+        stopNow(); owner = 'reader';
+        run(phrases(text, opts.endPause == null ? 380 : opts.endPause), opts, done);
+      },
+      onReaderInterrupted(fn) { onInterrupt = fn; },
+      owner: () => owner,
+      /* stop a short clip (closing a card, changing page); the chapter reader is stopped only by its own buttons */
+      stop() { if (owner === 'clip') { stopNow(); owner = ''; } },
+      stopAll() { stopNow(); owner = ''; }
+    };
+  })();
 
   window.Core = { state, save, dateKey, daySeed, rng, shuffle, escapeHTML, levelInfo, addXP, today, markDaily, currentStreak, BADGES, checkBadges, toast, Sound, Speech, onChange: fn => listeners.push(fn) };
 })();

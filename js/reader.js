@@ -516,7 +516,7 @@
     $('#bListen').textContent = '⏹';
     if (!continuing) sleepUntil = opts().sleep ? Date.now() + opts().sleep * 60000 : 0;
     keepAwake();
-    speechSynthesis.cancel();
+    window.Core.Speech.stopAll();
     if (opts().ambient && window.Ambient) window.Ambient.start(opts().ambient);
     if (opts().screen !== false) ListenScreen.show();
     if (window.Voices) window.Voices.loadIndex().then(speakVerse, speakVerse); else speakVerse();
@@ -560,18 +560,17 @@
     ttsVerse(b, c, t, gen);
   }
   function ttsVerse(b, c, t, gen) {
-    const u = new SpeechSynthesisUtterance((reading.v === 1 ? `${B().NAMES[b]} chapter ${c}. ` : '') + t.replace(/LORD/g, 'Lord'));
-    u.rate = opts().rate || 0.95;
-    const voice = window.Core.Speech.voice(); if (voice) u.voice = voice;
-    u.onend = () => { if (gen !== speakGen || !reading || reading.paused) return; reading.v++; speakVerse(); };
-    u.onerror = e => { if (gen !== speakGen || !reading || reading.paused) return; if (e && (e.error === 'interrupted' || e.error === 'canceled')) return; stopListen(); };
-    speechSynthesis.speak(u);
+    // the chapter is announced first, with a pause before the first verse
+    const text = (reading.v === 1 ? `${B().NAMES[b]}, chapter ${c}. ` : '') + t;
+    window.Core.Speech.read(text, {}, () => { if (gen !== speakGen || !reading || reading.paused) return; reading.v++; speakVerse(); });
   }
+  // a short clip read elsewhere in the app (or the phone) took the voice: pause, so the reading can carry on from here
+  window.Core.Speech.onReaderInterrupted(() => { if (reading && !reading.paused) { reading.paused = true; speakGen++; if (window.Voices) window.Voices.stopAll(); ListenScreen.update(); } });
   function pauseListen() {
     if (!reading || reading.paused) return;
     reading.paused = true; speakGen++;
     if (window.Voices) window.Voices.stopAll();
-    speechSynthesis.cancel();
+    window.Core.Speech.stopAll();
     ListenScreen.update();
   }
   function resumeListen() {
@@ -583,7 +582,7 @@
   function skipVerse(d) {
     if (!reading) return;
     reading.v = Math.max(1, Math.min(countVerses(), reading.v + d));
-    speakGen++; speechSynthesis.cancel(); if (window.Voices) window.Voices.stopAll();
+    speakGen++; window.Core.Speech.stopAll(); if (window.Voices) window.Voices.stopAll();
     if (!reading.paused) speakVerse(); else ListenScreen.update();
   }
   const countVerses = () => { let n = 0; while (vtext(reading.b, reading.c, n + 1) !== undefined) n++; return n; };
@@ -595,7 +594,7 @@
     if (document.visibilityState !== 'visible' || !reading) return;
     keepAwake();
     // if the phone silenced the voice while hidden, carry on from the same verse
-    if (!reading.paused && !speechSynthesis.speaking && !(window.Voices && window.Voices.busy())) { speakGen++; speakVerse(); }
+    if (!reading.paused && window.Core.Speech.owner() !== 'reader' && !(window.Voices && window.Voices.busy())) { speakGen++; speakVerse(); }
   });
   function stopListen(continuing) {
     if (!reading) return;
@@ -603,7 +602,7 @@
     sleepUntil = 0;
     speakGen++;
     if (!continuing && wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    window.Core.Speech.stopAll();
     if (window.Voices) window.Voices.stopAll();
     $$('#chapter .v.reading').forEach(x => x.classList.remove('reading'));
     const b = $('#bListen'); if (b) b.textContent = '🔊';
@@ -743,6 +742,16 @@
         <label class="flabel" for="oVoice">Voice</label>
         <select class="search" id="oVoice"></select>
         <small class="muted" id="oVoiceNote"></small>
+        <details class="voice-help"><summary>🗣️ Get a more natural, human-sounding voice</summary>
+          <p class="muted small">Phones come with a plain voice and keep far better ones as free downloads. After adding one, choose it above (★).</p>
+          <ul class="muted small">
+            <li><b>Android:</b> Settings → search “Text-to-speech” → Preferred engine: <b>Speech Services by Google</b> → ⚙️ → Install voice data → English → download a voice, then pick it in Speech Services (the voices marked high quality sound most natural).</li>
+            <li><b>iPhone / iPad:</b> Settings → Accessibility → Spoken Content → Voices → English → choose a voice marked <b>Enhanced</b> or <b>Premium</b> and tap to download.</li>
+            <li><b>Windows:</b> open the app in Microsoft Edge: its <b>Natural</b> voices (Aria, Guy, Sonia…) appear here by themselves.</li>
+            <li><b>Mac:</b> System Settings → Accessibility → Spoken Content → System voice → Manage voices → download a Premium or Enhanced English voice.</li>
+          </ul>
+          <p class="muted small">For a real human voice, record readings with family or church in <b>Grow → Worship & voices → Bible Voices</b>: recorded verses always play in that person’s voice.</p>
+        </details>
         <label class="flabel">Speed</label>
         <div class="seg small wrap-seg" id="oRate">${[[0.75, 'Slow'], [0.95, 'Normal'], [1.15, 'Brisk'], [1.4, 'Fast']].map(([r, l]) => `<button class="seg-btn ${Math.abs((o.rate || 0.95) - r) < 0.01 ? 'active' : ''}" data-v="${r}">${l}</button>`).join('')}</div>
         <div class="opt-row"><span><b>🎵 Background music</b><small>${o.ambient && window.Ambient.track(o.ambient) ? 'Plays while you listen: ' + esc(window.Ambient.track(o.ambient)[2]) : 'Calm piano, running stream, hymns and more'}</small></span><button class="btn ghost small" id="oMusic">Choose</button></div>
