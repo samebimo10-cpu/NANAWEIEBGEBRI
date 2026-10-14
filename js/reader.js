@@ -126,7 +126,7 @@
     const par = o.par && o.par !== ver() && B().verText(o.par, b, c, 1) !== undefined;
     const orig = o.orig && window.Orig.isLoaded(b);
     const main = B().version(ver()), side = par ? B().version(o.par) : null;
-    const notYet = o.ver !== ver() ? `<p class="ver-notyet">The ${esc(B().version(o.ver).name)} has ${B().version(o.ver).books.map(x => esc(B().NAMES[x])).join(', ')} so far. Here is the KJV.</p>` : '';
+    const notYet = o.ver !== ver() ? `<p class="ver-notyet">The ${esc(B().version(o.ver).name)} ${(bs => bs.length <= 4 ? `has ${bs.map(x => esc(B().NAMES[x])).join(', ')} so far` : `does not have ${esc(B().NAMES[cur.b])} yet (${bs.length} books so far)`)(B().version(o.ver).books)}. Here is the KJV.</p>` : '';
     art.innerHTML = `
       <h1 class="ch-title"><span class="ch-book">${esc(B().NAMES[b])}</span><span class="ch-num">${c}</span></h1>
       ${c === 1 && window.OVERVIEWS ? `<button class="about-book" id="aboutBook"><span>ℹ️</span><span><b>About ${esc(B().NAMES[b])}</b><small>${esc((t => t.indexOf(':') > 0 && t.indexOf(':') < 40 ? t.split(':')[0] : t.slice(0, 60).replace(/\s+\S*$/, '') + '…')(window.OVERVIEWS[b].theme))} · ${esc(window.OVERVIEWS[b].author)}</small></span><span>›</span></button>` : ''}
