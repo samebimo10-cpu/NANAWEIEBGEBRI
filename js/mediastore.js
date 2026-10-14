@@ -4,7 +4,7 @@
  */
 (function () {
   'use strict';
-  const NAME = 'lamp-media', VERSION = 1;
+  const NAME = 'lamp-media', VERSION = 2;
   let dbp = null;
 
   function open() {
@@ -20,6 +20,7 @@
           s.createIndex('key', 'key');        // 'book.chapter.verse'
           s.createIndex('reader', 'reader');
         }
+        if (!db.objectStoreNames.contains('mylang')) db.createObjectStore('mylang', { keyPath: 'id' });   // Pray in my own language
       };
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error || new Error('Could not open storage.'));

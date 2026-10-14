@@ -277,6 +277,7 @@
         </div>
         <button class="btn ghost" id="goPrayer">Guided prayer →</button>
       </section>
+      <div id="dailyLang"></div>
       <div id="dailyGrow"></div>
 
       <h2 class="section-title">Play <span class="muted small">(optional)</span></h2>
@@ -302,6 +303,7 @@
     }));
     $('#vCard').addEventListener('click', () => window.Cards.verse(d.verse.ref, d.verse.text));
     window.Grow.renderDaily($('#dailyTop'), $('#dailyGrow'));
+    window.MyLang.renderDaily($('#dailyLang'));
     $('#goPrayer').addEventListener('click', () => show('prayer'));
   }
 
@@ -617,6 +619,12 @@
         </div>
       </section>
 
+      <section class="cta-card ml-cta">
+        <div><div class="eyebrow">🗣️ Pray in my own language</div><h3>${state.myLang && state.myLang.prayers.length ? `${state.myLang.prayers.length} prayer${state.myLang.prayers.length === 1 ? '' : 's'}${state.myLang.name ? ' in ' + esc(state.myLang.name) : ''}` : 'Pray the way you pray at home'}</h3>
+        <p class="muted small">Write or record prayers in Pidgin, Ijaw, Igbo, Yoruba, Twi… and hear them in your own voice.</p></div>
+        <button class="btn ghost" id="goMyLang">Open →</button>
+      </section>
+
       <h2 class="section-title">Prayers from Scripture</h2>
       <div class="prayer-list">${window.SCRIPTURE_PRAYERS.map((p, i) => `
         <details class="prayer-item">
@@ -635,6 +643,7 @@
     $$('[data-listen]').forEach(b => { const p = window.SCRIPTURE_PRAYERS[+b.dataset.listen]; bindListen(b, p.text); });
     $$('[data-ctx]').forEach(b => b.addEventListener('click', () => window.Reader.openRef(b.dataset.ctx)));
     $('#goPeople').addEventListener('click', () => { prayerTab = 'people'; renderPrayer(); });
+    $('#goMyLang').addEventListener('click', () => window.MyLang.open());
   }
 
   function guidedPrayer(stepIdx) {

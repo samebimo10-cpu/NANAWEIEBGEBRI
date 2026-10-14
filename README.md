@@ -137,6 +137,10 @@ These use the viewer's own Claude account, and only people the owner shares the 
 - **Prayer reminders**: set the times and days, and optionally link a person.
   - **Notifications** fire while the app is open (including in a background tab), and missed reminders catch up when you return within the hour.
   - **📅 Add to calendar** downloads a repeating calendar event with an alert, so your phone reminds you **even when the app is closed**. A browser web app cannot schedule notifications by itself once it is closed.
+- **🗣️ Pray in my own language**: write or record prayers in your own language or dialect (Pidgin, Ijaw, Igbo, Yoruba, Twi…), the way you pray at home, and hear them in your own voice.
+  - Each prayer can have a scripture to pray with it (looked up from the KJV), a recording made in the app (or an audio file from your phone), and a "Show on the Daily page" choice. One of the chosen prayers appears on the Daily page each day, with ▶ Listen and 🙏 Amen.
+  - **📤 Share my prayers** sends the whole set, recordings included, as one small file over WhatsApp or email. On another phone, **📥 Add a shared set** adds them (prayers already there are skipped).
+  - Nothing is translated by machine and no prayers are shipped with the app: every prayer is your own. Recordings stay on the phone and, like Bible Voices, are not part of the settings backup; share them with the pack file instead.
 - **Guided A.C.T.S. prayer** (Adoration, Confession, Thanksgiving, Supplication), with a scripture for each step, a timer ring and a breathing cue.
 - **Prayers from Scripture**: the Lord's Prayer, Psalm 23, the Priestly Blessing and more, with "pray along" read-aloud.
 - **🍞 Fasting companion**: choose the length (1 to 40 days) and the kind of fast (partial, Daniel, sunrise to sunset, water only, media), and what you are seeking God about. Each day has its own scripture and a place to write what God shows you. Health guidance is included, and a completed fast is added to your faith story.
@@ -209,6 +213,7 @@ js/reader.js          Bible reader: highlights, notes, search, listen, sleep tim
 js/praylist.js        "Who I'm praying for", alarms & reminders, calendar export, scheduler
 js/alarm.js           Wake-up alarm sounds, ringing screen, snooze, bedside mode
 js/requests.js        My requests (praying / answered / past needs) and Led to pray
+js/mylang.js          Pray in my own language: written and recorded prayers, the Daily card, share packs
 js/core.js            Saving, XP/levels, streaks, badges, sound, read-aloud, toasts
 js/grow.js            Grow: plans, feelings, memory, topics, journal, evening, sermons, faith story, week
 js/cards.js           Shareable verse and testimony images

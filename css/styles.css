@@ -1321,3 +1321,25 @@ body.singing #musicPill { display: none; }
 .seg.ptabs .seg-btn { padding-left: 4px; padding-right: 4px; font-size: 0.86rem; white-space: nowrap; justify-content: center; }
 .hero.slim .bell-btn.on { border-color: var(--gold); }
 .hero.slim .bell-btn .count { position: absolute; top: -6px; right: -6px; }
+
+/* ---------- Pray in my own language ---------- */
+.cta-card.ml-cta { background: linear-gradient(135deg, rgba(79, 201, 143, 0.15), rgba(79, 201, 143, 0.03)); }
+.cta-card.ml-cta p { margin: 4px 0 0; }
+.mylang h2 { margin: 4px 0 10px; font-family: var(--display); }
+.mylang label:not(.btn) { display: block; margin: 10px 0; font-size: 0.9rem; color: var(--muted); }
+.mylang label:not(.btn) .search, .mylang textarea { display: block; width: 100%; margin-top: 4px; box-sizing: border-box; }
+.mylang textarea { font: 1.05rem/1.5 var(--serif); resize: vertical; }
+.mylang .btn > input[type=file] { display: none; }
+.ml-list { display: grid; gap: 10px; margin: 14px 0; }
+.ml-item, .ml-daily { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); }
+.ml-daily { margin-top: 14px; padding: 18px 22px; border-radius: 18px; background: linear-gradient(135deg, rgba(79, 201, 143, 0.14), rgba(79, 201, 143, 0.02)); }
+.ml-daily h3 { margin: 4px 0 6px; font-family: var(--display); }
+.ml-text { font: 1.08rem/1.55 var(--serif); white-space: pre-wrap; margin: 6px 0; }
+.ml-item .ml-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.ml-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; background: rgba(242, 193, 78, 0.16); color: var(--gold2); margin-left: 4px; }
+.ml-rec { margin: 12px 0; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--line); display: grid; gap: 10px; }
+.ml-rec .st-rec { width: 64px; height: 64px; font-size: 1.4rem; flex: none; }
+.mylang label.ml-check { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.ml-share { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ml-share h3 { margin: 0 0 4px; }
+.ml-empty { padding: 10px 0; }
