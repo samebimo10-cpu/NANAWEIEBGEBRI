@@ -10,7 +10,7 @@
   const TRACKS = [
     ['calm', '🎹', 'Deep calm piano', 'Slow, warm piano for study and prayer'],
     ['stream', '🏞️', 'Running stream', 'Flowing water and gentle trickles'],
-    ['hymns', '⛪', 'Hymns & songs', 'Hymns and devotional songs, two verses or more'],
+    ['hymns', '⛪', 'Hymns & songs', 'Hymns and devotional songs, every verse'],
     ['pad', '🎻', 'Soft strings', 'A warm, slowly changing chord'],
     ['rain', '🌧️', 'Rain', 'Steady, soft rain']
   ];
@@ -205,8 +205,11 @@
    * 27 public-domain hymns in four parts (js/data/hymns.js), played on the piano in the key from the hymn list.
    * Play one hymn on repeat, or the hymns you tick one after another in a loop. */
   const KEYPC = { C: 0, 'C#': 1, Db: 1, D: 2, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
-  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all', verses: 2, worship: 'devotional', atmos: 'prayer' };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
+  const hs = { sel: null, one: 0, easy: false, shuffle: false, drums: true, show: 'all', verses: 'all', worship: 'devotional', atmos: 'prayer' };   // sel: ticked hymn numbers (null = all); one: the hymn on repeat
   try { Object.assign(hs, JSON.parse(localStorage.getItem('lamp-hymns') || '{}')); } catch (e) { /* defaults */ }
+  if (!hs.full) { hs.full = 1; if (hs.verses === 2) hs.verses = 'all'; }   // every verse is now the default
+  /* how many times a song goes round: every verse it has (at least two), or the number chosen */
+  const verseCount = h => hs.verses === 'all' ? Math.max(2, h.words ? h.words.passes.length : h.vn || 3) : Math.max(2, +hs.verses || 2);
   if (!['all', 'hymns', 'devotional', '1906'].includes(hs.show)) hs.show = 'all';
   const saveHymns = () => { try { localStorage.setItem('lamp-hymns', JSON.stringify(hs)); } catch (e) { /* not saved */ } };
   let hymnalAll = null;
@@ -276,7 +279,7 @@
     const key = KEYPC[h.key], notes = [];
     const add = (st, du, m, v, vel) => notes.push([st, du, m, v, vel]);
     let t = 0, prev = null, top = 72;
-    const perVerse = Math.max(1, Math.round(8 / steps.length)), rounds = perVerse * Math.max(2, hs.verses || 2);
+    const perVerse = Math.max(1, Math.round(8 / steps.length)), rounds = perVerse * verseCount(h);
     const playBar = ({ deg, sev }, last) => {
       const pcs = deg.map(x => (key + x) % 12).concat(sev ? [(key + deg[0] + 10) % 12] : []);
       const ch = voicing(pcs, prev); prev = ch;
@@ -444,7 +447,7 @@
     const worship = worshipOn(h);
     if (worship) notes = worshipify(notes, h);
     // at least two verses (each with its chorus), a breath of two beats between them, the last chord held longer
-    const n = Math.max(2, hs.verses || 2), span = h.len + 48, all = [];
+    const n = verseCount(h), span = h.len + 48, all = [];
     for (let v = 0; v < n; v++) notes.forEach(x => {
       const y = x.slice(); y[0] += v * span;
       if (v === n - 1 && x[0] + x[1] >= h.len - 2) y[1] = Math.round(x[1] * 1.8);
@@ -871,12 +874,12 @@
     if (!HYMNAL().length) return '<p class="muted small">The hymns could not be loaded.</p>';
     const tab = (k, label) => `<button class="chip ${hs.show === k ? 'active' : ''}" data-show="${k}">${label}</button>`;
     return `
-      <p class="muted small">Each song plays at least two verses, each with its chorus (choose 2, 3 or 4 verses). Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
+      <p class="muted small">Each song plays every verse it has, each with its chorus (or choose 2, 3 or 4 verses). Tap 🔂 to play one song over and over. Or tick the ones you want and tap <b>Play selected</b> (it plays the ticked songs in the list you are viewing) (or a song's name to start there): they play one after another, then start again from the first.</p>
       <div class="chips hy-show">${tab('all', 'All')}${tab('hymns', 'Hymns')}${tab('devotional', 'Devotional & spirituals')}${tab('1906', '📖 1906 Hymnal')}</div>
       <div class="chips hy-verses"><span class="muted small">🕊️ Worship style:</span>${[['off', 'Off'], ['devotional', 'Devotional songs'], ['all', 'All songs']].map(([k, l]) => `<button class="chip ${(hs.worship || 'devotional') === k ? 'active' : ''}" data-worship="${k}">${l}</button>`).join('')}</div>
       ${(hs.worship || 'devotional') !== 'off' ? `<div class="chips hy-verses"><span class="muted small">🎹 Worship sound:</span>${Object.entries(ATMOS).map(([k, a]) => `<button class="chip ${(hs.atmos || 'prayer') === k ? 'active' : ''}" data-atmos="${k}" title="${a.sub}">${a.name}</button>`).join('')}</div>
       <p class="muted small hy-atmos">${(ATMOS[hs.atmos] || ATMOS.prayer).sub}</p>` : ''}
-      <div class="chips hy-verses"><span class="muted small">Verses:</span>${[2, 3, 4].map(n => `<button class="chip ${(hs.verses || 2) === n ? 'active' : ''}" data-verses="${n}">${n}</button>`).join('')}</div>
+      <div class="chips hy-verses"><span class="muted small">Verses:</span>${['all', 2, 3, 4].map(n => `<button class="chip ${hs.verses === n ? 'active' : ''}" data-verses="${n}">${n === 'all' ? 'All' : n}</button>`).join('')}</div>
       <div class="row gap wrap hy-tools">
         <button class="btn ${looping ? 'ghost' : 'primary'} small" id="hyPlaySel">${looping ? '⏸ Stop' : `▶ Play selected (${sel})`}</button>
         <button class="btn ghost small" id="hyAll">Tick these</button>
@@ -942,7 +945,7 @@
       host.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => { hs.show = b.dataset.show; saveHymns(); drawHymns(); }));
       host.querySelectorAll('[data-worship]').forEach(b => b.addEventListener('click', () => { hs.worship = b.dataset.worship; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
       host.querySelectorAll('[data-atmos]').forEach(b => b.addEventListener('click', () => { hs.atmos = b.dataset.atmos; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
-      host.querySelectorAll('[data-verses]').forEach(b => b.addEventListener('click', () => { hs.verses = +b.dataset.verses; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
+      host.querySelectorAll('[data-verses]').forEach(b => b.addEventListener('click', () => { hs.verses = b.dataset.verses === 'all' ? 'all' : +b.dataset.verses; saveHymns(); if (kind === 'hymns') playHymn(hymnNow, !!hs.one); else drawHymns(); }));
       on('#hyShuffle', () => { hs.shuffle = !hs.shuffle; saveHymns(); drawHymns(); });
       on('#hyEasy', () => {
         hs.easy = !hs.easy; saveHymns();

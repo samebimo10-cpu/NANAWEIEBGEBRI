@@ -380,6 +380,10 @@ WORDS_FILE = {   # where the text file name differs from the title
     21: 'c/ComeThouFountOfEvryBlessing', 4: 'b/BlessedAssurance',
 }
 NO_WORDS = {2, 3}
+# words for the new tunes where a public-domain text fits: the text file, and the bar each line begins on
+COMPOSED_WORDS = {26: ('b/BeStillMySoul', [0, 2, 4, 6, 8, 12])}
+# how many verses the songs without words here have, so they still play in full
+VERSE_COUNT = {2: 3, 3: 4}
 # lines the text files leave out because they are the same in every verse
 VERSE_ENDS = {36: ['Near-er, my God, to Thee,', 'Near-er, my God, to Thee,', 'Near-er to Thee!']}   # Great Is Thy Faithfulness and How Great Thou Art: words still under copyright
 
@@ -443,7 +447,8 @@ def read_words(path):
 
 def clean_line(line):
     line = line.replace("-'", "'").replace('=', '').replace('\\n', ' ').replace('_', '')
-    return re.sub(r'\s+', ' ', re.sub(r'(?<=\w)-(?=\w)', '', line)).strip()
+    line = re.sub(r'\s+', ' ', re.sub(r'(?<=\w)-(?=\w)', '', line)).strip()
+    return line.replace('wellpleased', 'well-pleased')
 
 
 def by_syllables(lines, counts):
@@ -549,6 +554,13 @@ def build():
             for n in flat:
                 enc += n
             item.update(meter=spec['meter'], bpm=spec['bpm'], len=total, composed=True, notes=enc)
+            if num in COMPOSED_WORDS:
+                f, bars = COMPOSED_WORDS[num]
+                verses, refrain, _ = read_words(os.path.join(WORDS_DIR, f + '.txt'))
+                bar = int(spec['meter'].split('/')[0]) * TPQ
+                item['words'] = dict(starts=[b * bar for b in bars], passes=[[clean_line(x) for x in v + refrain] for v in verses])
+            if num in VERSE_COUNT:
+                item['vn'] = VERSE_COUNT[num]
             print('%2d %-38s new tune  %s  notes %d' % (num, title, spec['meter'], len(flat)))
             out.append(item)
             continue
@@ -614,9 +626,53 @@ def build():
 # Hymns of Worship and Service (New York: The Century Co., 1906): the hymns whose tunes have a clean public-domain
 # score (tools/hymnal1906.json lists book number, first line, tune, meter and section, read from a scan of the book).
 # Written to js/data/hymns1906.js, which the app loads only when the collection is opened.
+def melody_starts(flat, syl, total):
+    """When each line begins, for a score without lyric codes: count the syllables along the melody, or, where the
+    tune has more notes than syllables (slurs), start each line after the longest note near where it should fall."""
+    dur = {}
+    for a, b, m, v in flat:
+        if v == 0:
+            dur[a] = max(dur.get(a, 0), b)
+    on = sorted(dur)
+    if len(on) == sum(syl):
+        out, i = [], 0
+        for c in syl:
+            out.append(on[i])
+            i += c
+        return out
+    n, out = len(syl), [on[0]]
+    for i in range(1, n):
+        target, span = on[0] + i * (total - on[0]) / n, total / n
+        cands = [k for k in range(1, len(on)) if abs(on[k] - target) < span * 0.45 and on[k] > out[-1]]
+        if not cands:
+            return None
+        k = max(cands, key=lambda k: dur[on[k - 1]] - abs(on[k] - target) / span * 24)
+        out.append(on[k])
+    return out
+
+
+def own_words(h, entry, flat, total):
+    """The words in tools/words1906.json, lined up with the tune."""
+    passes = [v + entry.get('refrain', []) for v in entry['verses']]
+    n = len(passes[0])
+    if any(len(p) != n for p in passes):
+        return None
+    starts = None
+    if h['words'][1] and not h['words'][0].get('repeats'):
+        st, bad = line_starts(h['words'])
+        if len(st) == n:
+            starts = [int(st[k] * 4 * TPQ) for k in sorted(st)]
+    if entry.get('beats') and len(entry['beats']) == n:   # where each line begins, in beats, read from the score
+        starts = [int(b * TPQ) for b in entry['beats']]
+    if starts is None and entry.get('syl') and len(entry['syl']) == n:
+        starts = melody_starts(flat, entry['syl'], total)
+    return dict(starts=starts, passes=passes) if starts else None
+
+
 def build_1906():
     ext = os.path.dirname(os.path.dirname(SRC.rstrip('/')))
     spec = json.load(open(os.path.join(ROOT, 'tools', 'hymnal1906.json'), encoding='utf-8'))
+    own = json.load(open(os.path.join(ROOT, 'tools', 'words1906.json'), encoding='utf-8'))
     norm = lambda x: re.sub(r'[^a-z]', '', x.lower().replace('’', "'"))
     firsts = {}
     for f in sorted(os.listdir(WORDS_DIR)):
@@ -646,11 +702,25 @@ def build_1906():
                     voice = 3 if midi == low[st] else 2
                 flat.append([int(st * 4 * TPQ), int(d * 4 * TPQ), midi, voice])
         flat.sort(key=lambda n: (n[0], n[3]))
+        mine = own.get(str(o['no']))
+        total = int(max(totals) * 4 * TPQ)
+        if mine and mine.get('cut'):   # the score goes on with a setting for another verse: keep the tune itself
+            total = mine['cut']
+            flat = [[a, min(b, total - a), m, v] for a, b, m, v in flat if a < total]
         enc = []
         for n in flat:
             enc += n
         item = dict(n=1000 + o['no'], no=o['no'], book=1906, title=o['first'], tune=o['tune'].upper(), section=o['section'], key=h['key'], easy=h['key'],
-                    ts=h['meter'] if '/' in h['meter'] else '4/4', hymnMeter=o['meter'], meter=h['meter'] if '/' in h['meter'] else '4/4', bpm=int(h['bpm'] or 100), len=int(max(totals) * 4 * TPQ), notes=enc)
+                    ts=h['meter'] if '/' in h['meter'] else '4/4', hymnMeter=o['meter'], meter=h['meter'] if '/' in h['meter'] else '4/4', bpm=int(h['bpm'] or 100), len=total, notes=enc)
+        if mine:
+            w = own_words(h, mine, flat, total)
+            if w:
+                item['words'] = w
+                words += 1
+            else:
+                print('CHECK: words for %d do not fit the tune' % o['no'])
+            out.append(item)
+            continue
         text = firsts.get(norm(o['first'])[:26])
         if not text:   # small differences in the first line ("Our God" / "O God")
             key = norm(o['first'])[:26]

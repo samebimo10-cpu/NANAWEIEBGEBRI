@@ -1,0 +1,195 @@
+{
+ "_about": "Words for the 1906 hymns (Hymns of Worship and Service, 1906) whose texts are not in the freehymns project: the verses printed in the book, read from a scan of it and checked against the public-domain texts. One line per phrase of the tune; where the tune repeats a line, the line is written again. 'syl' gives the syllables of each line where the score does not mark them.",
+ "8": {"verses": [
+  ["Come, we who love the Lord,", "And let our joys be known;", "Join in a song with sweet accord,", "And thus surround the throne."],
+  ["Let those refuse to sing", "Who never knew our God;", "But children of the heavenly King", "Should speak their joys abroad."],
+  ["The men of grace have found", "Glory begun below;", "Celestial fruits on earthly ground", "From faith and hope may grow."],
+  ["The hill of Zion yields", "A thousand sacred sweets", "Before we reach the heavenly fields,", "Or walk the golden streets."],
+  ["Then let our songs abound,", "And every tear be dry;", "We’re marching through Immanuel’s ground", "To fairer worlds on high."]]},
+ "15": {"verses": [
+  ["High in the heavens, eternal God,", "Thy goodness in full glory shines;", "Thy truth shall break through every cloud", "That veils and darkens Thy designs."],
+  ["Forever firm Thy justice stands,", "As mountains their foundations keep;", "Wise are the wonders of Thy hands;", "Thy judgments are a mighty deep."],
+  ["My God, how excellent Thy grace,", "Whence all our hope and comfort springs!", "The sons of Adam in distress", "Fly to the shadow of Thy wings."],
+  ["Life, like a fountain rich and free,", "Springs from the presence of my Lord;", "And in Thy light our souls shall see", "The glories promised in Thy word."]]},
+ "17": {"verses": [
+  ["Lord, we come before Thee now,", "At Thy feet we humbly bow;", "O do not our suit disdain;", "Shall we seek Thee, Lord, in vain?"],
+  ["Lord, on Thee our souls depend;", "In compassion now descend;", "Fill our hearts with Thy rich grace,", "Tune our lips to sing Thy praise."],
+  ["In Thine own appointed way,", "Now we seek Thee, here we stay;", "Lord, we know not how to go,", "Till a blessing Thou bestow."],
+  ["Send some message from Thy word,", "That may joy and peace afford;", "Let Thy Spirit now impart", "Full salvation to each heart."],
+  ["Comfort those who weep and mourn,", "Let the time of joy return;", "Those that are cast down lift up,", "Strong in faith, in love, and hope."],
+  ["Grant that those who seek may find", "Thee a God sincere and kind;", "Heal the sick, the captive free,", "Let us all rejoice in Thee."]]},
+ "27": {"verses": [
+  ["Sweetly the holy hymn", "Breaks on the morning air;", "Before the world with smoke is dim", "We meet to offer prayer."],
+  ["While flowers are wet with dews,", "Dew of our souls, descend;", "Ere yet the sun the day renews,", "O Lord, Thy Spirit send."],
+  ["Upon the battle-field,", "Before the fight begins,", "We seek, O Lord, Thy sheltering shield,", "To guard us from our sins."],
+  ["Ere yet our vessel sails", "Upon the stream of day,", "We plead, O Lord, for heavenly gales", "To speed us on our way."]]},
+ "89": {"verses": [
+  ["O come, all ye faithful, joyful and triumphant,", "O come ye, O come ye to Bethlehem;", "Come and behold Him, born the King of angels:", "O come, let us adore Him, O come, let us adore Him,", "O come, let us adore Him, Christ the Lord."],
+  ["God of God, Light of Light,", "Lo! He abhors not the Virgin’s womb;", "Very God, begotten, not created:", "O come, let us adore Him, O come, let us adore Him,", "O come, let us adore Him, Christ the Lord."],
+  ["Sing, choirs of angels, sing in exultation,", "Sing, all ye citizens of heaven above:", "Glory to God in the highest:", "O come, let us adore Him, O come, let us adore Him,", "O come, let us adore Him, Christ the Lord."],
+  ["Yea, Lord, we greet Thee, born this happy morning,", "Jesus, to Thee be glory given;", "Word of the Father, now in flesh appearing:", "O come, let us adore Him, O come, let us adore Him,", "O come, let us adore Him, Christ the Lord."]]},
+ "136": {"verses": [
+  ["Our Lord is risen from the dead,", "Our Jesus is gone up on high;", "The powers of hell are captive led,", "Dragged to the portals of the sky."],
+  ["There His triumphal chariot waits,", "And angels chant the solemn lay:", "“Lift up your heads, ye heavenly gates!", "Ye everlasting doors, give way!”"],
+  ["Loose all your bars of massy light,", "And wide unfold the radiant scene;", "He claims these mansions as His right;", "Receive the King of glory in."],
+  ["Who is the King of glory, who?", "The Lord that all His foes o’ercame,", "The world, sin, death, and hell o’erthrew,", "And Jesus is the Conqueror’s name."],
+  ["Who is the King of glory, who?", "The Lord, of boundless power possessed,", "The King of saints and angels too,", "God over all, forever blest."]]},
+ "139": {"verses": [
+  ["Golden harps are sounding,", "Angel voices ring,", "Pearly gates are opened,", "Opened for the King;", "Christ, the King of glory,", "Jesus, King of love,", "Is gone up in triumph", "To His throne above."],
+  ["He who came to save us,", "He who bled and died,", "Now is crowned with glory", "At His Father’s side.", "Nevermore to suffer,", "Nevermore to die,", "Jesus, King of glory,", "Is gone up on high."],
+  ["Pleading for His children", "In that blessèd place,", "Calling them to glory,", "Sending them His grace;", "His bright home preparing,", "Faithful ones, for you;", "Jesus ever liveth,", "Ever loveth too."]],
+  "refrain": ["All His work is ended,", "Joyfully we sing;", "Jesus hath ascended!", "Glory to our King!"]},
+ "140": {"beats": [0, 8, 16, 24, 32, 40, 48, 56], "cut": 1536, "verses": [
+  ["See the Conqueror mounts in triumph;", "See the King in royal state,", "Riding on the clouds, His chariot,", "To His heavenly palace gate!", "Hark! the choirs of angel voices", "Joyful alleluias sing,", "And the portals high are lifted", "To receive their heavenly King."],
+  ["Who is this that comes in glory,", "With the trump of jubilee?", "Lord of battles, God of armies,", "He hath gained the victory.", "He who on the cross did suffer,", "He who from the grave arose,", "He has vanquished sin and Satan;", "He by death has spoiled His foes."],
+  ["While He raised His hands in blessing,", "He was parted from His friends;", "While their eager eyes behold Him,", "He upon the clouds ascends;", "He who walked with God and pleased Him,", "Preaching truth and doom to come,", "He, our Enoch, is translated", "To His everlasting home."],
+  ["Now our heavenly Aaron enters,", "With His blood, within the veil;", "Joshua now is come to Canaan,", "And the kings before Him quail;", "Now He plants the tribes of Israel", "In their promised resting-place;", "Now our great Elijah offers", "Double portion of His grace."],
+  ["Thou hast raised our human nature", "On the clouds to God’s right hand;", "There we sit in heavenly places,", "There with Thee in glory stand.", "Jesus reigns, adored by angels;", "Man with God is on the throne;", "Mighty Lord, in Thine ascension", "We by faith behold our own."]]},
+ "168": {"verses": [
+  ["The Spirit breathes upon the word,", "And brings the truth to sight;", "Precepts and promises afford", "A sanctifying light,", "A sanctifying light."],
+  ["A glory gilds the sacred page,", "Majestic like the sun;", "It gives a light to every age;", "It gives, but borrows none,", "It gives, but borrows none."],
+  ["The hand that gave it still supplies", "The gracious light and heat;", "His truths upon the nations rise;", "They rise, but never set,", "They rise, but never set."],
+  ["Let everlasting thanks be Thine,", "For such a bright display", "As makes a world of darkness shine", "With beams of heavenly day,", "With beams of heavenly day."],
+  ["My soul rejoices to pursue", "The steps of Him I love,", "Till glory breaks upon my view", "In brighter worlds above,", "In brighter worlds above."]]},
+ "207": {"verses": [
+  ["Art thou weary, art thou languid,", "Art thou sore distrest?", "“Come to Me,” saith One, “and, coming,", "Be at rest.”"],
+  ["Hath He marks to lead me to Him,", "If He be my guide?", "“In His feet and hands are wound-prints,", "And His side.”"],
+  ["Is there diadem, as monarch,", "That His brow adorns?", "“Yea, a crown, in very surety,", "But of thorns.”"],
+  ["If I find Him, if I follow,", "What His guerdon here?", "“Many a sorrow, many a labor,", "Many a tear.”"],
+  ["If I still hold closely to Him,", "What hath He at last?", "“Sorrow vanquished, labor ended,", "Jordan passed.”"],
+  ["If I ask Him to receive me,", "Will He say me nay?", "“Not till earth and not till heaven", "Pass away.”"],
+  ["Finding, following, keeping, struggling,", "Is He sure to bless?", "“Saints, apostles, prophets, martyrs,", "Answer, Yes.”"]]},
+ "209": {"verses": [
+  ["Blow ye the trumpet, blow!", "The gladly solemn sound", "Let all the nations know,", "To earth’s remotest bound:", "The year of jubilee is come!", "The year of jubilee is come!", "Return, ye ransomed sinners, home."],
+  ["Jesus, our great High-Priest,", "Hath full atonement made;", "Ye weary spirits, rest;", "Ye mournful souls, be glad:", "The year of jubilee is come!", "The year of jubilee is come!", "Return, ye ransomed sinners, home."],
+  ["Extol the Lamb of God,", "The all-atoning Lamb;", "Redemption by His blood", "Throughout the world proclaim:", "The year of jubilee is come!", "The year of jubilee is come!", "Return, ye ransomed sinners, home."]]},
+ "228": {"verses": [
+  ["Lord, I hear of showers of blessing", "Thou art scattering full and free,", "Showers the thirsty land refreshing;", "Let some portion fall on me,", "Even me, even me,", "Let some portion fall on me."],
+  ["Pass me not, O gracious Father,", "Sinful though my heart may be;", "Thou might’st leave me, but the rather", "Let Thy mercy light on me,", "Even me, even me,", "Let Thy mercy light on me."],
+  ["Pass me not, O tender Saviour,", "Let me love and cling to Thee;", "I am longing for Thy favor;", "Whilst Thou’rt calling, oh, call me,", "Even me, even me,", "Whilst Thou’rt calling, oh, call me."],
+  ["Pass me not, O mighty Spirit,", "Thou canst make the blind to see;", "Witnesser of Jesus’ merit,", "Speak the word of power to me,", "Even me, even me,", "Speak the word of power to me."],
+  ["Love of God, so pure and changeless,", "Blood of Christ, so rich and free,", "Grace of God, so strong and boundless,", "Magnify them all in me,", "Even me, even me,", "Magnify them all in me."],
+  ["Pass me not! this lost one bringing,", "’Tis but one more, Lord, for Thee;", "All my heart to Thee is springing;", "Blessing others, oh, bless me,", "Even me, even me,", "Blessing others, oh, bless me."]]},
+ "236": {"verses": [
+  ["Saviour, when in dust to Thee", "Low we bow the adoring knee;", "When, repentant, to the skies", "Scarce we lift our weeping eyes;", "Oh, by all Thy pains and woe", "Suffered once for man below,", "Bending from Thy throne on high,", "Hear our solemn litany!"],
+  ["By Thy helpless infant years,", "By Thy life of want and tears,", "By Thy days of sore distress", "In the savage wilderness,", "By the dread mysterious hour", "Of the insulting tempter’s power:", "Turn, oh, turn a favoring eye,", "Hear our solemn litany!"],
+  ["By the sacred grief that wept", "O’er the grave where Lazarus slept;", "By the boding tears that flowed", "Over Salem’s loved abode;", "By the anguished sigh that told", "Treachery lurked within Thy fold:", "From Thy seat above the sky,", "Hear our solemn litany!"],
+  ["By Thine hour of dire despair,", "By Thine agony of prayer,", "By the cross, the nail, the thorn,", "Piercing spear, and torturing scorn;", "By the gloom that veiled the skies", "O’er the dreadful sacrifice:", "Listen to our humble cry,", "Hear our solemn litany!"],
+  ["By Thy deep expiring groan;", "By the sad sepulchral stone;", "By the vault, whose dark abode", "Held in vain the rising God:", "Oh, from earth to heaven restored,", "Mighty, reascended Lord,", "Listen, listen to the cry", "Of our solemn litany!"]]},
+ "246": {"verses": [
+  ["With broken heart and contrite sigh,", "A trembling sinner, Lord, I cry;", "Thy pardoning grace is rich and free:", "O God, be merciful to me!"],
+  ["I smite upon my troubled breast,", "With deep and conscious guilt oppressed;", "Christ and His cross my only plea:", "O God, be merciful to me!"],
+  ["Far off I stand with tearful eyes,", "Nor dare uplift them to the skies;", "But Thou dost all my anguish see:", "O God, be merciful to me!"],
+  ["Nor alms, nor deeds that I have done,", "Can for a single sin atone;", "To Calvary alone I flee:", "O God, be merciful to me!"],
+  ["And when, redeemed from sin and hell,", "With all the ransomed throng I dwell,", "My raptured song shall ever be,", "God has been merciful to me!"]]},
+ "265": {"verses": [
+  ["Children of the heavenly King,", "As ye journey, sweetly sing;", "Sing your Saviour’s worthy praise,", "Glorious in His works and ways."],
+  ["We are traveling home to God,", "In the way the fathers trod;", "They are happy now, and we", "Soon their happiness shall see."],
+  ["Lift your eyes, ye sons of light,", "Zion’s city is in sight;", "There our endless home shall be,", "There our Lord we soon shall see."],
+  ["Fear not, brethren; joyful stand", "On the borders of your land;", "Jesus Christ, your Father’s Son,", "Bids you undismayed go on."],
+  ["Lord, obediently we go,", "Gladly leaving all below;", "Only Thou our Leader be,", "And we still will follow Thee."]]},
+ "276": {"verses": [
+  ["O holy Saviour, Friend unseen,", "Since on Thine arm Thou bid’st me lean,", "Help me, throughout life’s changing scene,", "By faith to cling to Thee!"],
+  ["Without a murmur I dismiss", "My former dreams of earthly bliss;", "My joy, my recompense be this,", "Each hour to cling to Thee!"],
+  ["What though the world deceitful prove,", "And earthly friends and hopes remove?", "With patient, uncomplaining love,", "Still would I cling to Thee."],
+  ["Though oft I seem to tread alone", "Life’s dreary waste, with thorns o’ergrown,", "Thy voice of love, in gentlest tone,", "Still whispers, “Cling to Me!”"],
+  ["Though faith and hope are often tried,", "I ask not, need not, aught beside;", "So safe, so calm, so satisfied,", "The soul that clings to Thee!"]]},
+ "281": {"verses": [
+  ["O could I speak the matchless worth,", "O could I sound the glories forth", "Which in my Saviour shine,", "I’d soar, and touch the heavenly strings,", "And vie with Gabriel while he sings", "In notes almost divine,", "In notes almost divine."],
+  ["I’d sing the precious blood He spilt,", "My ransom from the dreadful guilt", "Of sin, and wrath divine;", "I’d sing His glorious righteousness,", "In which all-perfect, heavenly dress", "My soul shall ever shine,", "My soul shall ever shine."],
+  ["I’d sing the characters He bears,", "And all the forms of love He wears,", "Exalted on His throne;", "In loftiest songs of sweetest praise,", "I would to everlasting days", "Make all His glories known,", "Make all His glories known."],
+  ["Well, the delightful day will come", "When my dear Lord will bring me home,", "And I shall see His face;", "Then with my Saviour, Brother, Friend,", "A blest eternity I’ll spend,", "Triumphant in His grace,", "Triumphant in His grace."]]},
+ "310": {"verses": [
+  ["Praise, Lord, for Thee in Zion waits;", "Prayer shall besiege Thy temple gates;", "All flesh shall to Thy throne repair,", "And find, through Christ, salvation there."],
+  ["Our spirits faint; our sins prevail;", "Leave not our trembling hearts to fail:", "O Thou that hearest prayer, descend,", "And still be found the sinner’s Friend."],
+  ["Thy hand sets fast the mighty hills,", "Thy voice the troubled ocean stills;", "Evening and morning hymn Thy praise,", "And earth Thy bounty wide displays."]]},
+ "321": {"syl": [7, 7, 7, 7, 7, 7, 7, 7, 7, 7], "verses": [
+  ["Loved with everlasting love,", "Led by grace that love to know;", "Spirit, breathing from above,", "Thou hast taught me it is so.", "Oh, this full and perfect peace!", "Oh, this transport all divine!", "In a love which cannot cease,", "I am His, and He is mine.", "In a love which cannot cease,", "I am His, and He is mine."],
+  ["Heaven above is softer blue,", "Earth around is sweeter green;", "Something lives in every hue", "Christless eyes have never seen;", "Birds with gladder songs o’erflow,", "Flowers with deeper beauties shine,", "Since I know, as now I know,", "I am His, and He is mine.", "Since I know, as now I know,", "I am His, and He is mine."],
+  ["Things that once were wild alarms", "Cannot now disturb my rest;", "Closed in everlasting arms,", "Pillowed on the loving breast.", "Oh, to lie forever here,", "Doubt and care and self resign,", "While He whispers in my ear,", "I am His, and He is mine.", "While He whispers in my ear,", "I am His, and He is mine."],
+  ["His forever, only His;", "Who the Lord and me shall part?", "Ah, with what a rest of bliss", "Christ can fill the loving heart!", "Heaven and earth may fade and flee,", "First-born light in gloom decline;", "But, while God and I shall be,", "I am His, and He is mine.", "But, while God and I shall be,", "I am His, and He is mine."]]},
+ "325": {"verses": [
+  ["Still with Thee, O my God,", "I would desire to be;", "By day, by night, at home, abroad,", "I would be still with Thee."],
+  ["With Thee when dawn comes in", "And calls me back to care,", "Each day returning to begin", "With Thee, my God, in prayer."],
+  ["With Thee when day is done,", "And evening calms the mind;", "The setting as the rising sun", "With Thee my heart would find."]]},
+ "338": {"verses": [
+  ["Oft in danger, oft in woe,", "Onward, Christians, onward go;", "Fight the fight, maintain the strife,", "Strengthened with the bread of life."],
+  ["Let your drooping hearts be glad;", "March in heavenly armor clad;", "Fight, nor think the battle long,", "Soon shall victory tune your song."],
+  ["Let not sorrow dim your eye,", "Soon shall every tear be dry;", "Let not fears your course impede,", "Great your strength, if great your need."],
+  ["Onward, then, to battle move;", "More than conquerors ye shall prove;", "Though opposed by many a foe,", "Christian soldiers, onward go."]]},
+ "359": {"beats": [0, 12, 24, 36], "verses": [
+  ["Lord, speak to me, that I may speak", "In living echoes of Thy tone;", "As Thou hast sought, so let me seek", "Thy erring children lost and lone."],
+  ["Oh, lead me, Lord, that I may lead", "The wandering and the wavering feet;", "Oh, feed me, Lord, that I may feed", "Thy hungering ones with manna sweet."],
+  ["Oh, strengthen me, that while I stand", "Firm on the Rock, and strong in Thee,", "I may stretch out a loving hand", "To wrestlers with the troubled sea."],
+  ["Oh, teach me, Lord, that I may teach", "The precious things Thou dost impart;", "And wing my words, that they may reach", "The hidden depths of many a heart."],
+  ["Oh, give Thine own sweet rest to me,", "That I may speak with soothing power", "A word in season, as from Thee,", "To weary ones in needful hour."],
+  ["Oh, fill me with Thy fullness, Lord,", "Until my very heart o’erflow", "In kindling thought and glowing word,", "Thy love to tell, Thy praise to show."],
+  ["Oh, use me, Lord, use even me,", "Just as Thou wilt, and when, and where;", "Until Thy blessèd face I see,", "Thy rest, Thy joy, Thy glory share."]]},
+ "373": {"verses": [
+  ["Awake, my soul, stretch every nerve,", "And press with vigor on;", "A heavenly race demands thy zeal,", "And an immortal crown,", "And an immortal crown."],
+  ["A cloud of witnesses around", "Hold thee in full survey;", "Forget the steps already trod,", "And onward urge thy way,", "And onward urge thy way."],
+  ["’Tis God’s all-animating voice", "That calls thee from on high;", "’Tis His own hand presents the prize", "To thine aspiring eye,", "To thine aspiring eye."],
+  ["Blest Saviour, introduced by Thee,", "Have I my race begun;", "And, crowned with victory, at Thy feet", "I’ll lay my honors down,", "I’ll lay my honors down."]]},
+ "387": {"verses": [
+  ["Oh, for the happy hour", "When God will hear our cry,", "And send, with a reviving power,", "His Spirit from on high!"],
+  ["While many crowd Thy house,", "How few, around Thy board,", "Meet to recount their solemn vows,", "And bless Thee as their Lord!"],
+  ["Thou, Thou alone canst give", "Thy gospel sure success;", "Canst bid the dying sinner live", "Anew in holiness."],
+  ["Come, then, with power divine,", "Spirit of life and love!", "Then shall this people all be Thine,", "This church like that above."]]},
+ "389": {"verses": [
+  ["O Lord of heaven and earth and sea,", "To Thee all praise and glory be;", "How shall we show our love to Thee,", "Who givest all?"],
+  ["For souls redeemed, for sins forgiven,", "For means of grace and hopes of heaven,", "What can to Thee, O Lord, be given,", "Who givest all?"],
+  ["We lose what on ourselves we spend,", "We have, as treasure without end,", "Whatever, Lord, to Thee we lend,", "Who givest all."],
+  ["Whatever, Lord, we lend to Thee,", "Repaid a thousandfold will be;", "Then gladly will we give to Thee,", "Who givest all."],
+  ["To Thee, from whom we all derive", "Our life, our gifts, our power to give;", "Oh, may we ever with Thee live,", "Who givest all!"]]},
+ "393": {"verses": [
+  ["Saints of God! the dawn is brightening,", "Token of our coming Lord;", "O’er the earth the field is whitening;", "Louder rings the Master’s word:", "Pray for reapers, pray for reapers,", "In the harvest of the Lord!"],
+  ["Now, O Lord, fulfil Thy pleasure,", "Breathe upon Thy chosen band,", "And, with Pentecostal measure,", "Send forth reapers o’er our land;", "Faithful reapers, faithful reapers,", "Gathering sheaves for Thy right hand."],
+  ["Broad the shadow of our nation,", "Eager millions hither roam;", "Lo! they wait for Thy salvation;", "Come, Lord Jesus, quickly come;", "By Thy Spirit, by Thy Spirit,", "Bring Thy ransomed people home."],
+  ["Soon shall end the time of weeping,", "Soon the reaping time will come;", "Heaven and earth together keeping", "God’s eternal Harvest-Home:", "Saints and angels, saints and angels,", "Shout the world’s great Harvest-Home."]]},
+ "401": {"verses": [
+  ["From Greenland’s icy mountains,", "From India’s coral strand,", "Where Afric’s sunny fountains", "Roll down their golden sand,", "From many an ancient river,", "From many a palmy plain,", "They call us to deliver", "Their land from error’s chain."],
+  ["What though the spicy breezes", "Blow soft o’er Ceylon’s isle;", "Though every prospect pleases,", "And only man is vile:", "In vain with lavish kindness", "The gifts of God are strown;", "The heathen in his blindness", "Bows down to wood and stone."],
+  ["Shall we, whose souls are lighted", "With wisdom from on high,", "Shall we to men benighted", "The lamp of life deny?", "Salvation! oh, salvation!", "The joyful sound proclaim,", "Till earth’s remotest nation", "Has learned Messiah’s name."],
+  ["Waft, waft, ye winds, His story,", "And you, ye waters, roll,", "Till, like a sea of glory,", "It spreads from pole to pole;", "Till o’er our ransomed nature", "The Lamb for sinners slain,", "Redeemer, King, Creator,", "In bliss returns to reign."]]},
+ "408": {"verses": [
+  ["On the mountain’s top appearing,", "Lo! the sacred herald stands,", "Welcome news to Zion bearing,", "Zion long in hostile lands:", "Mourning captive! God Himself will loose thy bands.", "Mourning captive! God Himself will loose thy bands."],
+  ["Has thy night been long and mournful?", "Have thy friends unfaithful proved?", "Have thy foes been proud and scornful,", "By thy sighs and tears unmoved?", "Cease thy mourning; Zion still is well beloved.", "Cease thy mourning; Zion still is well beloved."],
+  ["God, thy God, will now restore thee;", "He Himself appears thy Friend;", "All thy foes shall flee before thee;", "Here their boasts and triumphs end:", "Great deliverance Zion’s King vouchsafes to send.", "Great deliverance Zion’s King vouchsafes to send."],
+  ["Enemies no more shall trouble;", "All thy wrongs shall be redressed;", "For thy shame thou shalt have double,", "In thy Maker’s favor blessed:", "All thy conflicts end in everlasting rest.", "All thy conflicts end in everlasting rest."]]},
+ "420": {"syl": [7, 6, 7, 6, 7, 6, 7, 6], "verses": [
+  ["Jerusalem the golden,", "With milk and honey blest,", "Beneath thy contemplation", "Sink heart and voice opprest.", "I know not, oh, I know not", "What joys await us there;", "What radiancy of glory,", "What bliss beyond compare!"],
+  ["They stand, those halls of Zion,", "All jubilant with song,", "And bright with many an angel,", "And all the martyr throng:", "The Prince is ever in them;", "The daylight is serene;", "The pastures of the blessèd", "Are decked in glorious sheen."],
+  ["There is the throne of David;", "And there, from care released,", "The song of them that triumph,", "The shout of them that feast;", "And they who with their Leader", "Have conquered in the fight,", "Forever and forever", "Are clad in robes of white."],
+  ["O sweet and blessèd country,", "The home of God’s elect!", "O sweet and blessèd country,", "That eager hearts expect!", "Jesus, in mercy bring us", "To that dear land of rest;", "Who art, with God the Father", "And Spirit, ever blest."]]},
+ "434": {"verses": [
+  ["We are but strangers here,", "Heaven is our home;", "Earth is a desert drear,", "Heaven is our home.", "Danger and sorrow stand", "Round us on every hand;", "Heaven is our fatherland,", "Heaven is our home."],
+  ["What though the tempests rage?", "Heaven is our home;", "Short is our pilgrimage,", "Heaven is our home.", "And time’s wild wintry blast", "Soon shall be overpast;", "We shall reach home at last;", "Heaven is our home."],
+  ["There at our Saviour’s side,", "Heaven is our home;", "May we be glorified;", "Heaven is our home.", "There are the good and blest,", "Those we love most and best;", "Grant us with them to rest;", "Heaven is our home."],
+  ["Grant us to murmur not,", "Heaven is our home;", "Whate’er our earthly lot,", "Heaven is our home.", "Grant us at last to stand", "There at Thine own right hand,", "Jesus, in fatherland;", "Heaven is our home."]]},
+ "442": {"verses": [
+  ["A few more years shall roll,", "A few more seasons come,", "And we shall be with those that rest", "Asleep within the tomb:", "Then, O my Lord, prepare", "My soul for that great day;", "Oh, wash me in Thy precious blood,", "And take my sins away."],
+  ["A few more suns shall set", "O’er these dark hills of time,", "And we shall be where suns are not,", "A far serener clime:", "Then, O my Lord, prepare", "My soul for that blest day;", "Oh, wash me in Thy precious blood,", "And take my sins away."],
+  ["A few more storms shall beat", "On this wild rocky shore,", "And we shall be where tempests cease,", "And surges swell no more:", "Then, O my Lord, prepare", "My soul for that calm day;", "Oh, wash me in Thy precious blood,", "And take my sins away."],
+  ["A few more struggles here,", "A few more partings o’er,", "A few more toils, a few more tears,", "And we shall weep no more:", "Then, O my Lord, prepare", "My soul for that bright day;", "Oh, wash me in Thy precious blood,", "And take my sins away."],
+  ["’Tis but a little while", "And He shall come again,", "Who died that we might live, who lives", "That we with Him may reign:", "Then, O my Lord, prepare", "My soul for that glad day;", "Oh, wash me in Thy precious blood,", "And take my sins away."]]},
+ "468": {"syl": [6, 5, 6, 5, 6, 5, 6, 5, 6, 5, 6, 5], "verses": [
+  ["Earth below is teeming,", "Heaven is bright above;", "Every brow is beaming", "In the light of love;", "Every eye rejoices,", "Every thought is praise;", "Happy hearts and voices", "Gladden nights and days."],
+  ["For the sun and showers,", "For the rain and dew,", "For the nurturing hours", "Spring and summer knew;", "For the golden autumn,", "And its precious stores,", "For the love that brought them", "Teeming to our doors."],
+  ["Earth’s broad harvest whitens", "In a brighter sun", "Than the orb that lightens", "All we tread upon;", "Send out laborers, Father!", "Where fields ripening wave;", "All the nations gather,", "Gather in and save."]],
+  "refrain": ["O Almighty Giver!", "Bountiful and free,", "As the joy in harvest,", "Joy we before Thee."]},
+ "473": {"syl": [6, 7, 6, 7, 6, 6, 6, 6], "verses": [
+  ["Now thank we all our God,", "With heart and hands and voices,", "Who wondrous things hath done,", "In whom His world rejoices;", "Who, from our mother’s arms,", "Hath blessed us on our way", "With countless gifts of love,", "And still is ours today."],
+  ["Oh, may this bounteous God", "Through all our life be near us,", "With ever joyful hearts", "And blessèd peace to cheer us;", "And keep us in His grace,", "And guide us when perplexed,", "And free us from all ills", "In this world and the next."],
+  ["All praise and thanks to God", "The Father now be given,", "The Son, and Him who reigns", "With them in highest heaven,", "The one eternal God,", "Whom earth and heaven adore;", "For thus it was, is now,", "And shall be evermore."]]},
+ "481": {"verses": [
+  ["Pour out Thy Spirit from on high;", "Lord, Thine ordainèd servants bless;", "Graces and gifts to each supply,", "And clothe Thy priests with righteousness."],
+  ["Within Thy temple when they stand,", "To teach the truth as taught by Thee,", "Saviour, like stars in Thy right hand", "The angels of the churches be."],
+  ["Wisdom and zeal and faith impart,", "Firmness with meekness, from above,", "To bear Thy people on their heart,", "And love the souls whom Thou dost love;"],
+  ["To watch and pray, and never faint;", "By day and night strict guard to keep;", "To warn the sinner, cheer the saint,", "Nourish Thy lambs, and feed Thy sheep;"],
+  ["Then, when their work is finished here,", "In humble hope their charge resign;", "When the Chief Shepherd shall appear,", "O God, may they and we be Thine."]]},
+ "496": {"verses": [
+  ["How sweet, how heavenly is the sight,", "When those that love the Lord", "In one another’s peace delight,", "And so fulfil the word!"],
+  ["When each can feel his brother’s sigh,", "And with him bear a part!", "When sorrow flows from every eye,", "And joy from heart to heart!"],
+  ["Let love, in one delightful stream,", "Through every bosom flow;", "And union sweet, and dear esteem", "In every action glow."],
+  ["Love is the golden chain that binds", "The happy souls above;", "And he’s an heir of heaven who finds", "His bosom glow with love."]]}
+}
