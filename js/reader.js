@@ -31,7 +31,8 @@
     if (o.par && !has(o.par)) o.par = '';
     return o;
   };
-  const ver = () => opts().ver;
+  // a version that does not have this book yet is read in the KJV
+  const ver = () => { const o = opts(); return B().hasBook(o.ver, cur.b) ? o.ver : 'kjv'; };
   const vtext = (b, c, v) => B().verText(ver(), b, c, v);
   const abbr = () => B().version(ver()).abbr;
   const MISSING = 'This verse is not in the manuscripts this translation follows.';
@@ -39,6 +40,7 @@
   const GLOSS_SKIP = new Set(['hath', 'doth', 'saith', 'lest', 'verily', 'spake', 'thereof', 'therein', 'wherefore', 'abide']);
   function kjvHTML(t) {
     let h = esc(t);
+    if (ver() === 'lpa') h = h.replace(/\[([^\]]+)\]/g, '<span class="amp">[$1]</span>');   // the fuller meanings, set apart
     if (opts().gloss && window.GLOSSARY && (ver() === 'kjv' || ver() === 'webster')) {
       h = h.replace(/\b([A-Za-z]+)\b/g, w => {
         const k = w.toLowerCase();
@@ -113,25 +115,27 @@
     let book;
     const o = opts();
     try {
-      book = await B().loadVersion(o.ver, b);
+      book = await B().loadVersion(ver(), b);
       await B().load(b);   // the KJV is always kept for highlights and notes
-      if (o.par && o.par !== o.ver) await B().loadVersion(o.par, b).catch(() => null);
+      if (o.par && o.par !== ver()) await B().loadVersion(o.par, b).catch(() => null);
       if (o.orig) await window.Orig.load(b).catch(() => null);
       if (window.Voices) await window.Voices.loadIndex().catch(() => null);
     } catch (e) { art.innerHTML = `<p class="muted">${esc(e.message)}</p><button class="btn ghost" id="retryLoad">Try again</button>`; $('#retryLoad').onclick = () => drawChapter(); return; }
     if (cur.b !== b || cur.c !== c) return; // navigated away while loading
     const verses = book[c - 1];
-    const par = o.par && o.par !== o.ver && B().verText(o.par, b, c, 1) !== undefined;
+    const par = o.par && o.par !== ver() && B().verText(o.par, b, c, 1) !== undefined;
     const orig = o.orig && window.Orig.isLoaded(b);
-    const main = B().version(o.ver), side = par ? B().version(o.par) : null;
+    const main = B().version(ver()), side = par ? B().version(o.par) : null;
+    const notYet = o.ver !== ver() ? `<p class="ver-notyet">The ${esc(B().version(o.ver).name)} has ${B().version(o.ver).books.map(x => esc(B().NAMES[x])).join(', ')} so far. Here is the KJV.</p>` : '';
     art.innerHTML = `
       <h1 class="ch-title"><span class="ch-book">${esc(B().NAMES[b])}</span><span class="ch-num">${c}</span></h1>
       ${c === 1 && window.OVERVIEWS ? `<button class="about-book" id="aboutBook"><span>ℹ️</span><span><b>About ${esc(B().NAMES[b])}</b><small>${esc((t => t.indexOf(':') > 0 && t.indexOf(':') < 40 ? t.split(':')[0] : t.slice(0, 60).replace(/\s+\S*$/, '') + '…')(window.OVERVIEWS[b].theme))} · ${esc(window.OVERVIEWS[b].author)}</small></span><span>›</span></button>` : ''}
       ${par || orig ? `<div class="par-key"><span>${esc(main.abbr)}</span>${side ? `<span class="w">${esc(side.abbr)} · ${esc(side.name)}</span>` : ''}${orig ? `<span class="o">${b < 39 ? 'Hebrew' : 'Greek'} · tap a word</span>` : ''}</div>` : ''}
+      ${notYet}
       <p class="verses${par || orig ? ' parallel' : ''}">${verses.map((t, i) => verseSpan(b, c, i + 1, t)).join(' ')}</p>
       <div class="read-done-row" id="readRow"></div>`;
     $('#bVer').textContent = main.abbr + ' ▾';
-    if ($('#kjvNote')) $('#kjvNote').textContent = [main, side].filter(Boolean).map(v => `${v.name} (${v.year})`).join(' and ') + ' · public domain' + (orig ? ` · ${b < 39 ? 'Hebrew: Westminster Leningrad Codex' : 'Greek: Robinson-Pierpont Byzantine text'}` : '');
+    if ($('#kjvNote')) $('#kjvNote').textContent = [main, side].filter(Boolean).map(v => `${v.name} (${v.year})`).join(' and ') + ([main, side].some(v => v && v.id === 'lpa') ? ' · LPA is our own study rendering, made with AI help from public-domain sources' : ' · public domain') + (orig ? ` · ${b < 39 ? 'Hebrew: Westminster Leningrad Codex' : 'Greek: Robinson-Pierpont Byzantine text'}` : '');
     drawReadRow();
     const ab = $('#aboutBook'); if (ab) ab.addEventListener('click', () => window.Study.overview(b));
     art.querySelectorAll('.v').forEach(el => el.addEventListener('click', e => verseClick(e, el)));
@@ -210,12 +214,12 @@
     const h = state.highlights[k];
     const n = state.verseNotes[k];
     const o = opts();
-    const web = o.par && o.par !== o.ver ? B().verText(o.par, b, c, v) : undefined;
+    const web = o.par && o.par !== ver() ? B().verText(o.par, b, c, v) : undefined;
     const orig = o.orig && window.Orig.isLoaded(b) ? window.Orig.lineHTML(b, c, v) : '';
     const body = t ? kjvHTML(t) : `<span class="v-missing">${MISSING}</span>`;
     const bm = (state.bookmarks || {})[k] ? '<span class="bm-ic" title="Bookmarked">🔖</span>' : '';
     const vc = window.Voices && window.Voices.has(b, c, v) ? '<button class="vc-ic" title="Play the recorded reading" aria-label="Play the recorded reading of verse ' + v + '">🎙️</button>' : '';
-    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${bm}${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${vc}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web) : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
+    return `<span class="v${h ? ' hl-' + h.color : ''}" data-v="${v}"><sup>${v}</sup>${bm}${body}${n ? '<span class="note-ic" title="View note">📝</span>' : ''}${vc}${web !== undefined && o.par ? `<span class="v-web">${web ? esc(web).replace(/\[([^\]]+)\]/g, '<span class="amp">[$1]</span>') : `<i>${MISSING}</i>`}</span>` : ''}${orig}</span>`;
   }
 
   function refreshVerse(v) {
@@ -798,7 +802,7 @@
       <div class="versions">
         <div class="eyebrow">Bible versions</div>
         <h2>Choose what to read</h2>
-        <p class="muted small">All of these are in the public domain, so they are free to read, share and keep offline.</p>
+        <p class="muted small">All of these are free to read, share and keep offline: the published versions are in the public domain, and the LPA is our own.</p>
         <div class="ver-list">${B().VERSIONS.map(v => `<button class="ver-item ${o.ver === v.id ? 'active' : ''}" data-ver="${v.id}">
           <span class="ver-abbr">${esc(v.abbr)}</span><span class="ver-main"><b>${esc(v.name)}</b><small>${esc(v.year)} · ${esc(v.note)}</small></span>${o.ver === v.id ? '<span class="pill ok">Reading</span>' : ''}</button>`).join('')}</div>
         <div class="ver-orig"><b>🔤 Hebrew and Greek</b><p class="muted small">The Old Testament in Hebrew (Westminster Leningrad Codex) and the New Testament in Greek (Robinson-Pierpont Byzantine text), with Strong's dictionary. Turn it on in <b>Aa</b>, or tap verses and choose 🔤.</p></div>

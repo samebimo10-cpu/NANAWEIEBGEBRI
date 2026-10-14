@@ -16,10 +16,10 @@ args = sys.argv[1:]
 BUNDLES = None
 if '--bundles' in args:
     BUNDLES = args[args.index('--bundles') + 1]
-VERSIONS = ['kjv', 'bsb', 'web']
+VERSIONS = ['kjv', 'bsb', 'web', 'lpa']
 if '--versions' in args:
     v = args[args.index('--versions') + 1]
-    VERSIONS = ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe'] if v == 'all' else ['kjv'] + [x for x in v.split(',') if x != 'kjv']
+    VERSIONS = ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe', 'lpa'] if v == 'all' else ['kjv'] + [x for x in v.split(',') if x != 'kjv']
 ORIGINAL = '--no-original' not in args
 positional = [a for i, a in enumerate(args) if not a.startswith('--') and (i == 0 or args[i - 1] not in ('--versions', '--bundles'))]
 OUT = positional[0] if positional else os.path.join(ROOT, 'dist', 'lamp-and-path.html')
@@ -63,7 +63,7 @@ def inline(m):
         books = ''.join(safe_js(read(f'js/kjv/{i:02d}.js')) for i in range(1, 67))
         out += f'\n<script>\n{books}\n</script>'
         for vid in VERSIONS[1:]:
-            out += ''.join(f'\n<script type="text/plain" id="{vid}-src-{i:02d}">{safe_js(read(f"js/{path_of(vid)}/{i:02d}.js"))}</script>' for i in range(1, 67))
+            out += ''.join(f'\n<script type="text/plain" id="{vid}-src-{i:02d}">{safe_js(read(f"js/{path_of(vid)}/{i:02d}.js"))}</script>' for i in range(1, 67) if os.path.exists(f'{ROOT}/js/{path_of(vid)}/{i:02d}.js'))
         out += ''.join(f'\n<script type="text/plain" id="xref-src-{i:02d}">{safe_js(read(f"js/xref/{i:02d}.js"))}</script>' for i in range(1, 67))
         if ORIGINAL:
             out += ''.join(f'\n<script type="text/plain" id="orig-src-{i:02d}">{safe_js(read(f"js/orig/{i:02d}.js"))}</script>' for i in range(1, 67))
@@ -87,7 +87,7 @@ if BUNDLES:
     rest = re.sub(r'^\s*<body>', '', rest, count=1).replace('</body>', '').replace('</html>', '')
     os.makedirs(os.path.join(BUNDLES, 'bundle'), exist_ok=True)
     open(os.path.join(BUNDLES, 'index.html'), 'w', encoding='utf-8').write(head.strip() + '\n' + rest.strip() + '\n')
-    groups = {vid: [f'js/{path_of(vid)}/{i:02d}.js' for i in range(1, 67)] for vid in ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe']}
+    groups = {vid: [f'js/{path_of(vid)}/{i:02d}.js' for i in range(1, 67) if os.path.exists(f'{ROOT}/js/{path_of(vid)}/{i:02d}.js')] for vid in ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe', 'lpa']}
     groups['orig-ot'] = [f'js/orig/{i:02d}.js' for i in range(1, 40)]
     groups['orig-nt'] = [f'js/orig/{i:02d}.js' for i in range(40, 67)]
     groups['xref'] = [f'js/xref/{i:02d}.js' for i in range(1, 67)]

@@ -18,9 +18,11 @@
     { id: 'ylt', abbr: 'YLT', name: "Young's Literal Translation", year: '1898', note: 'Follows the Hebrew and Greek word for word, and tense for tense.' },
     { id: 'darby', abbr: 'DBY', name: 'Darby Bible', year: '1889', note: 'A literal translation by J. N. Darby.' },
     { id: 'webster', abbr: 'WBS', name: 'Webster Bible', year: '1833', note: "Noah Webster's light update of the KJV's old words." },
-    { id: 'bbe', abbr: 'BBE', name: 'Bible in Basic English', year: '1949/1964', note: 'Simple English, using a vocabulary of about 1,000 words.' }
+    { id: 'bbe', abbr: 'BBE', name: 'Bible in Basic English', year: '1949/1964', note: 'Simple English, using a vocabulary of about 1,000 words.' },
+    { id: 'lpa', abbr: 'LPA', name: 'Lamp & Path Amplified', year: '2026', books: [], note: 'Our own study rendering: the BSB with the fuller meaning of key Greek words [in brackets], from Strong’s dictionary. Made with AI help. A study aid, not a committee translation. John so far.' }
   ];
   // a single-file copy of the app may hold only some versions
+  for (let i = VERSIONS.length - 1; i >= 0; i--) if (VERSIONS[i].books && !VERSIONS[i].books.length) VERSIONS.splice(i, 1);   // a version with no books yet stays hidden
   if (window.ONLY_VERSIONS) for (let i = VERSIONS.length - 1; i >= 0; i--) if (!window.ONLY_VERSIONS.includes(VERSIONS[i].id)) VERSIONS.splice(i, 1);
   const PATH = id => id === 'kjv' || id === 'web' ? id : 'ver/' + id;
   const caches = {}, waiting = {};
@@ -184,7 +186,10 @@
 
   const verText = (id, b, c, v) => caches[id] && caches[id][b] && caches[id][b][c - 1] ? caches[id][b][c - 1][v - 1] : undefined;
   const webText = (b, c, v) => verText('web', b, c, v);
-  const loadVersion = (id, b) => caches[id] ? loadKind(id, b) : Promise.reject(new Error('Unknown version'));
+  /* versions still being written hold only some books */
+  const hasBook = (id, b) => { const v = VERSIONS.find(x => x.id === id); return !!v && (!v.books || v.books.includes(b)); };
+  const loadVersion = (id, b) => !caches[id] ? Promise.reject(new Error('Unknown version'))
+    : hasBook(id, b) ? loadKind(id, b) : Promise.reject(new Error(`The ${version(id).name} does not have ${NAMES[b]} yet.`));
   const version = id => VERSIONS.find(v => v.id === id) || VERSIONS[0];
-  window.Bible = { NAMES, SHORT, CHAPTERS, VERSIONS, version, _add, _addWeb, _addVer, load, loadWeb, loadVersion, webText, verText, loadAll, parse, lookup, refString, text, search, isLoaded: i => !!cache[i], key: (b, c, v) => `${b}.${c}.${v}` };
+  window.Bible = { NAMES, SHORT, CHAPTERS, VERSIONS, version, hasBook, _add, _addWeb, _addVer, load, loadWeb, loadVersion, webText, verText, loadAll, parse, lookup, refString, text, search, isLoaded: i => !!cache[i], key: (b, c, v) => `${b}.${c}.${v}` };
 })();

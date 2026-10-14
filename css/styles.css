@@ -1343,3 +1343,8 @@ body.singing #musicPill { display: none; }
 .ml-share { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
 .ml-share h3 { margin: 0 0 4px; }
 .ml-empty { padding: 10px 0; }
+
+/* ---------- Lamp & Path Amplified ---------- */
+.amp { color: #7a5a2a; font-style: italic; font-size: 0.94em; }
+html.hc .amp { color: #4a3210; }
+.ver-notyet { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: rgba(242, 193, 78, 0.14); font: 0.85rem/1.4 var(--sans); color: #5a4630; }
