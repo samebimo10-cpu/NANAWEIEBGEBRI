@@ -16,10 +16,10 @@ args = sys.argv[1:]
 BUNDLES = None
 if '--bundles' in args:
     BUNDLES = args[args.index('--bundles') + 1]
-VERSIONS = ['kjv', 'bsb', 'web', 'lpa']
+VERSIONS = ['kjv', 'bsb', 'web']
 if '--versions' in args:
     v = args[args.index('--versions') + 1]
-    VERSIONS = ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe', 'lpa'] if v == 'all' else ['kjv'] + [x for x in v.split(',') if x != 'kjv']
+    VERSIONS = ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe'] if v == 'all' else ['kjv'] + [x for x in v.split(',') if x != 'kjv']
 ORIGINAL = '--no-original' not in args
 positional = [a for i, a in enumerate(args) if not a.startswith('--') and (i == 0 or args[i - 1] not in ('--versions', '--bundles'))]
 OUT = positional[0] if positional else os.path.join(ROOT, 'dist', 'lamp-and-path.html')
@@ -68,6 +68,7 @@ def inline(m):
         if ORIGINAL:
             out += ''.join(f'\n<script type="text/plain" id="orig-src-{i:02d}">{safe_js(read(f"js/orig/{i:02d}.js"))}</script>' for i in range(1, 67))
             out += ''.join(f'\n<script type="text/plain" id="lex-src-{n}">{safe_js(read(f"js/lex/{n}.js"))}</script>' for n in ('hebrew', 'greek'))
+            out += ''.join(f'\n<script type="text/plain" id="usage-src-{n}">{safe_js(read(f"js/lex/usage-{n}.js"))}</script>' for n in ('he', 'el'))
     return out
 
 
@@ -87,12 +88,14 @@ if BUNDLES:
     rest = re.sub(r'^\s*<body>', '', rest, count=1).replace('</body>', '').replace('</html>', '')
     os.makedirs(os.path.join(BUNDLES, 'bundle'), exist_ok=True)
     open(os.path.join(BUNDLES, 'index.html'), 'w', encoding='utf-8').write(head.strip() + '\n' + rest.strip() + '\n')
-    groups = {vid: [f'js/{path_of(vid)}/{i:02d}.js' for i in range(1, 67) if os.path.exists(f'{ROOT}/js/{path_of(vid)}/{i:02d}.js')] for vid in ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe', 'lpa']}
+    groups = {vid: [f'js/{path_of(vid)}/{i:02d}.js' for i in range(1, 67) if os.path.exists(f'{ROOT}/js/{path_of(vid)}/{i:02d}.js')] for vid in ['kjv', 'bsb', 'web', 'asv', 'ylt', 'darby', 'webster', 'bbe']}
     groups['orig-ot'] = [f'js/orig/{i:02d}.js' for i in range(1, 40)]
     groups['orig-nt'] = [f'js/orig/{i:02d}.js' for i in range(40, 67)]
     groups['xref'] = [f'js/xref/{i:02d}.js' for i in range(1, 67)]
     groups['lex-hebrew'] = ['js/lex/hebrew.js']
     groups['lex-greek'] = ['js/lex/greek.js']
+    groups['usage-he'] = ['js/lex/usage-he.js']
+    groups['usage-el'] = ['js/lex/usage-el.js']
     for name, files in groups.items():
         open(os.path.join(BUNDLES, 'bundle', name + '.js'), 'w', encoding='utf-8').write('\n'.join(read(f) for f in files))
     for f in sorted(os.listdir(os.path.join(BUNDLES, 'bundle'))):

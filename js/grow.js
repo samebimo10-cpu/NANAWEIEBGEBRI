@@ -792,7 +792,7 @@
     ['voices', '🎙️', 'Bible Voices', () => 'Read the Bible aloud together, verse by verse'],
     ['music', '🎵', 'Hymns & music', () => 'Hymns to sing along with, and calm music'],
     ['map', '🗺️', 'Bible places map', () => `${window.PLACES.length} places, from Ur to Rome`],
-    ['dict', '🔤', 'Hebrew & Greek dictionary', () => 'Every word of the original Bible, explained'],
+    ['dict', '🔤', 'Word study compendium', () => 'Every Hebrew and Greek word: its origin, how and where it is used'],
     ['passages', '📖', 'Study passages & quizzes', () => `${Object.keys(state.completed).length} of ${window.JOURNEY.length} completed`],
     ['books', '📚', 'Books of the Bible', () => 'All 66, with summaries']
   ];

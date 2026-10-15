@@ -1344,10 +1344,41 @@ body.singing #musicPill { display: none; }
 .ml-share h3 { margin: 0 0 4px; }
 .ml-empty { padding: 10px 0; }
 
-/* ---------- Lamp & Path Amplified ---------- */
-.amp { color: #7a5a2a; font-style: italic; font-size: 0.94em; }
-html.hc .amp { color: #4a3210; }
 .ver-notyet { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: rgba(242, 193, 78, 0.14); font: 0.85rem/1.4 var(--sans); color: #5a4630; }
 .voice-help { margin: 6px 0 10px; }
 .voice-help summary { cursor: pointer; font-size: 0.88rem; color: var(--gold-deep); }
 .voice-help ul { margin: 6px 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* ---------- Word study compendium ---------- */
+.lex-card.study { gap: 12px; }
+.pill.soft { background: rgba(154, 106, 36, 0.12); color: #7a5a2a; }
+.study-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.study-stats div { padding: 10px 8px; border-radius: 12px; background: rgba(154, 106, 36, 0.08); text-align: center; }
+.study-stats b { display: block; font: 600 1.3rem var(--display); color: #7a5a2a; }
+.study-stats small { font-size: 0.75rem; color: #6a5a48; }
+.study-sec { border-top: 1px solid rgba(90, 70, 40, 0.15); padding-top: 10px; }
+.study-sec h3 { margin: 0 0 6px; font: 600 1rem var(--display); color: var(--ink); }
+.study-sec p { margin: 4px 0 8px; line-height: 1.55; color: var(--ink); }
+.root-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.rc-this { font-size: 1.5rem; color: #7a5a2a; padding: 0 4px; }
+.rc-arrow { color: #9a6a24; font-weight: 700; }
+.wchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.wchip { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px; border-radius: 12px; border: 1px solid rgba(90, 70, 40, 0.2); background: rgba(255, 255, 255, 0.5); color: var(--ink); text-align: left; }
+.wchip:hover { border-color: #9a6a24; }
+.wchip .he, .wchip .el { font-size: 1.05rem; }
+.wchip .he { font-family: 'SBL Hebrew', 'Ezra SIL', 'Noto Serif Hebrew', 'Times New Roman', serif; }
+.wchip b { font-size: 0.85rem; }
+.wchip small { font-size: 0.75rem; color: #6a5a48; }
+.forms { display: grid; gap: 4px; margin-bottom: 6px; }
+.form-row { display: grid; grid-template-columns: 1fr 70px 34px; gap: 8px; align-items: center; font-size: 0.82rem; color: var(--ink); }
+.form-row i, .bbar i { display: block; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #c8862e, #f2c14e); width: var(--w); }
+.form-row b, .bbar b { text-align: right; font-size: 0.8rem; color: #7a5a2a; }
+.first-use small { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #9a6a24; margin-bottom: 4px; }
+.book-bars { display: grid; gap: 3px; margin: 6px 0 10px; }
+.bbar { display: grid; grid-template-columns: 62px 1fr 34px; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 6px; font-size: 0.8rem; color: var(--ink); text-align: left; background: none; border: 0; }
+.bbar:hover, .bbar.on { background: rgba(154, 106, 36, 0.12); }
+.link-btn { background: none; border: 0; padding: 0; color: #9a6a24; text-decoration: underline; font: inherit; cursor: pointer; }
+.study-browse { margin-top: 18px; }
+.study-browse .wchip { background: rgba(255, 255, 255, 0.05); color: var(--text); border-color: var(--line); }
+.study-browse .wchip small { color: var(--muted); }
+.study-browse h3 { margin: 0 0 4px; }
