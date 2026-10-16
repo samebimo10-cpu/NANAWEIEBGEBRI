@@ -784,7 +784,9 @@
       const saved = keys.includes('lamp-bible-v1') ? (await (await caches.open('lamp-bible-v1')).keys()).map(r => r.url) : [];
       const bible = saved.filter(u => u.includes('/js/kjv/')).length, web = saved.filter(u => u.includes('/js/web/')).length;
       const shell = keys.some(k => k.startsWith('lamp-shell-'));
-      if (shell && bible >= 66 && web >= 66) return { ok: true, text: '✓ Ready offline. The app, its fonts and all 66 books of the Bible (KJV and modern English) are saved on this device.' };
+      const study = saved.filter(u => /\/js\/(orig|lex)\//.test(u)).length;   // 66 books + 2 dictionaries + 2 word indexes
+      if (shell && bible >= 66 && web >= 66 && study >= 70) return { ok: true, text: '✓ Everything works offline. The app, its fonts, all 66 books of the Bible (KJV and modern English), the Hebrew and Greek, Strong\'s dictionaries and the word study compendium are saved on this device.' };
+      if (shell && bible >= 66 && web >= 66) return { ok: true, text: `✓ Ready offline. The app and all 66 books of the Bible (KJV and modern English) are saved. Hebrew, Greek and word study: ${Math.round(study / 70 * 100)}% saved so far.` };
       if (shell && bible >= 66) return { ok: true, text: `✓ Ready offline. All 66 books of the KJV are saved. Modern English: ${web}/66 books so far.` };
       return { ok: false, text: `Saving for offline use… ${bible}/66 Bible books so far. Keep the app open while connected.` };
     } catch (e) { return { ok: false, text: 'Could not check offline status.' }; }
@@ -802,7 +804,7 @@
   const nn = i => String(i + 1).padStart(2, '0');
   function packs() {
     const list = window.Bible.VERSIONS.filter(v => v.id !== 'kjv' && v.id !== 'web').map(v => ({ id: v.id, name: `${v.abbr} · ${v.name}`, size: '4 MB', files: Array.from({ length: 66 }, (_, i) => `./js/ver/${v.id}/${nn(i)}.js`) }));
-    list.push({ id: 'orig', name: '🔤 Hebrew & Greek with dictionary', size: '15 MB', files: [...Array.from({ length: 66 }, (_, i) => `./js/orig/${nn(i)}.js`), './js/lex/hebrew.js', './js/lex/greek.js'] });
+    list.push({ id: 'orig', name: '🔤 Hebrew & Greek, dictionaries and word study', size: '18 MB', files: [...Array.from({ length: 66 }, (_, i) => `./js/orig/${nn(i)}.js`), './js/lex/hebrew.js', './js/lex/greek.js', './js/lex/usage-he.js', './js/lex/usage-el.js'] });
     return list;
   }
   async function renderPacks() {
@@ -811,7 +813,7 @@
     if (!('caches' in window) || !navigator.serviceWorker || !navigator.serviceWorker.controller) { host.innerHTML = ''; return; }
     const saved = new Set((await (await caches.open('lamp-bible-v1')).keys()).map(r => new URL(r.url).pathname));
     const have = p => p.files.filter(f => saved.has(new URL(f, location.href).pathname)).length;
-    host.innerHTML = `<p class="muted small">Other versions and the Hebrew and Greek are saved on this device when you first open them. To have a whole one ready offline now, save it here.</p>
+    host.innerHTML = `<p class="muted small">The KJV, modern English, the Hebrew and Greek and the word study compendium are saved on this device by themselves. Other versions are saved when you first open them; to have a whole one ready offline now, save it here.</p>
       <div class="pack-list">${packs().map(p => { const n = have(p); return `<div class="pack"><span>${esc(p.name)}</span>${n >= p.files.length ? '<span class="pill ok">✓ Saved</span>' : `<button class="btn ghost small" data-pack="${p.id}">${n ? `Finish saving (${n}/${p.files.length})` : `Save (${p.size})`}</button>`}</div>`; }).join('')}</div>`;
     host.querySelectorAll('[data-pack]').forEach(b => b.addEventListener('click', () => {
       const p = packs().find(x => x.id === b.dataset.pack);
@@ -862,7 +864,7 @@
     if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.BIBLE_BUNDLES) {
       navigator.serviceWorker.addEventListener('message', e => {
         const m = e.data || {};
-        if (m.type === 'offline-progress') updateOfflineRow(m.web ? `Saving modern English for offline use… ${m.web}/66 books` : `Saving the Bible for offline use… ${m.done}/${m.total} books`);
+        if (m.type === 'offline-progress') updateOfflineRow(m.study ? `Saving the Hebrew, Greek and word study for offline use… ${Math.round(m.study / m.studyTotal * 100)}%` : m.web ? `Saving modern English for offline use… ${m.web}/66 books` : `Saving the Bible for offline use… ${m.done}/${m.total} books`);
         if (m.type === 'pack-progress') {
           const b = document.querySelector(`[data-pack="${m.pack}"]`);
           if (b) b.textContent = `Saving… ${m.done}/${m.total}`;
@@ -873,6 +875,10 @@
           if (m.bible === m.total && !state.offlineReady) {
             state.offlineReady = true; save();
             toast('✓ Ready to use offline: the app and all 66 books of the Bible are saved on this device', 'level');
+          }
+          if (m.study && m.study === m.studyTotal && !state.offlineStudy) {
+            state.offlineStudy = true; save();
+            toast('✓ The Hebrew, Greek and word study compendium are saved too: every feature now works offline', 'level');
           }
         }
       });

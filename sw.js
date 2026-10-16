@@ -1,9 +1,10 @@
 /*
  * Offline support. On install, everything the app needs is saved on the device:
- * the app itself, its fonts, and all 66 books of the Bible in the KJV and in modern English (about 9 MB).
- * After that the app opens and runs with no connection at all.
+ * the app itself, its fonts, all 66 books of the Bible in the KJV and in modern English (about 9 MB), and then the
+ * study tools: the Hebrew and Greek text, Strong's dictionaries and the word study index (about 18 MB).
+ * After that every feature opens and runs with no connection at all.
  */
-const VERSION = 'v32';
+const VERSION = 'v33';
 const SHELL = 'lamp-shell-' + VERSION;
 const BIBLE = 'lamp-bible-v1';   // the KJV text never changes, so it keeps its own long-lived cache
 
@@ -23,6 +24,9 @@ const KJV_FILES = Array.from({ length: 66 }, (_, i) => `./js/kjv/${BOOK(i)}.js`)
 const WEB_FILES = Array.from({ length: 66 }, (_, i) => `./js/web/${BOOK(i)}.js`);   // modern English, side by side
 const XREF_FILES = Array.from({ length: 66 }, (_, i) => `./js/xref/${BOOK(i)}.js`);   // cross-references
 const BIBLE_FILES = [...KJV_FILES, ...WEB_FILES, ...XREF_FILES];
+// the word study compendium and the Hebrew and Greek: saved straight after the Bible
+const STUDY_FILES = ['./js/lex/hebrew.js', './js/lex/greek.js', './js/lex/usage-he.js', './js/lex/usage-el.js',
+  ...Array.from({ length: 66 }, (_, i) => `./js/orig/${BOOK(i)}.js`)];
 
 async function tell(msg) {
   const clients = await self.clients.matchAll({ includeUncontrolled: true });
@@ -41,9 +45,20 @@ async function cacheBible() {
     done++;
     if (done % 6 === 0 || done === BIBLE_FILES.length) tell({ type: 'offline-progress', done: Math.min(done, 66), total: 66, web: Math.max(0, Math.min(66, done - 66)) });
   }
+  let sd = 0;
+  for (const url of STUDY_FILES) {
+    if (!(await cache.match(url))) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try { const res = await fetch(url, { cache: 'reload' }); if (res.ok) { await cache.put(url, res); break; } } catch (e) { /* retry */ }
+      }
+    }
+    sd++;
+    if (sd % 6 === 0 || sd === STUDY_FILES.length) tell({ type: 'offline-progress', study: sd, studyTotal: STUDY_FILES.length });
+  }
   const have = (await Promise.all(KJV_FILES.map(u => cache.match(u)))).filter(Boolean).length;
   const web = (await Promise.all(WEB_FILES.map(u => cache.match(u)))).filter(Boolean).length;
-  tell({ type: 'offline-ready', bible: have, total: KJV_FILES.length, web });
+  const study = (await Promise.all(STUDY_FILES.map(u => cache.match(u)))).filter(Boolean).length;
+  tell({ type: 'offline-ready', bible: have, total: KJV_FILES.length, web, study, studyTotal: STUDY_FILES.length });
   return have;
 }
 
